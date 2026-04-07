@@ -1,0 +1,955 @@
+<!-- app/views/user_details/new.html.erb -->
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <h2 class="mb-4 text-dark">Department Activity Data Entry</h2>   
+
+      <div class="excel-upload-section">
+        <div class="upload-export-container">
+          <!-- Left side - Upload Section -->
+          <div class="upload-section">
+            <%= form_with url: import_user_details_path, method: :post, multipart: true, local: true, class: "upload-form" do |form| %>
+              <%= form.file_field :file, accept: ".xlsx,.xls", style: "display: none;", id: "excel-file-input" %>
+              
+              <button type="button" class="choose-file-btn" onclick="document.getElementById('excel-file-input').click()">
+                <i class="fas fa-file-excel me-2"></i>Choose Excel File
+              </button>
+              
+              <%= form.submit "Upload Excel File", class: "upload-btn", id: "upload-submit" %>
+              
+              <div id="selected-file" class="selected-file"></div>
+            <% end %>
+          </div>
+          
+          <!-- Right side - Export Section -->
+          <div class="export-section" style="display: flex; align-items: center;">
+            <%= link_to export_department_activity_data_user_details_path(format: :xlsx, department_id: params[:department_id], employee_detail_id: params[:employee_detail_id]), 
+                class: "btn btn-success export-btn", 
+                id: "export-btn",
+                style: "display: inline-block; visibility: visible; opacity: 1;" do %>
+              <i class="fas fa-download me-2"></i>Export Excel
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Selection Form -->
+      <div class="card mb-4 shadow-sm rounded overflow-hidden">
+        <div class="card-header bg-gray text-white px-4 py-3">
+          <h5 class="mb-0"><i class="fas fa-building me-2"></i>Select Department & Employee</h5>
+        </div>
+
+        <div class="card-body p-4">
+          <%= form_with url: new_user_detail_path, method: :get, local: true do |form| %>
+            <table class="table table-bordered table-hover w-full text-sm text-gray-700 border border-gray-300">
+              <thead class="bg-gray-light">
+                <tr>
+                  <th class="px-4 py-3 text-start">Department</th>
+                  <th class="px-4 py-3 text-start">Employee Name</th>
+                  <th class="px-4 py-3 text-start">L1 Employer</th>
+                  <th class="px-4 py-3 text-start">L2 Employer</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <!-- Department Dropdown -->
+                  <td class="px-4 py-3">
+                    <%= form.select :department_id,
+                        options_from_collection_for_select(@departments, :id, :department_type, params[:department_id]),
+                        { prompt: "-- Select Department --" },
+                        class: "form-select form-select-sm w-full border-gray-300 rounded",
+                        onchange: "this.form.submit();" %>
+                  </td>
+
+                  <!-- Employee Dropdown -->
+                  <td class="px-4 py-3">
+                    <%= form.select :employee_detail_id,
+                        options_from_collection_for_select(@employee_details, :id, :employee_name, params[:employee_detail_id]),
+                        { prompt: "-- Select Employee --" },
+                        class: "form-select form-select-sm w-full border-gray-300 rounded",
+                        onchange: "this.form.submit();" %>
+                  </td>
+
+                  <!-- L1 Employer -->
+                  <td class="px-4 py-3">
+                    <input type="text"
+                          class="form-control form-control-sm w-full border-gray-300 rounded"
+                          readonly
+                          value="<%= @selected_employee&.l1_employer_name || 'Select Employee First' %>">
+                  </td>
+
+                  <!-- L2 Employer -->
+                  <td class="px-4 py-3">
+                    <input type="text"
+                          class="form-control form-control-sm w-full border-gray-300 rounded"
+                          readonly
+                          value="<%= @selected_employee&.l2_employer_name || 'Select Employee First' %>">
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Activities and Monthly Data Table -->
+<% if params[:department_id].present? && params[:employee_detail_id].present? %>
+        <div class="card">
+          <div class="card-header bg-gray text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-table me-2"></i>
+              Activities & Monthly Data - <%= @selected_employee&.employee_name || 'Selected Employee' %>
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <% 
+              # Filter activities to show only those with completely blank targets (April to March)
+              activities = []
+              if @employee_activities.present?
+                @employee_activities.each do |activity|
+                  # Check if this activity has any existing data
+                  existing_data = UserDetail.find_by(
+                    department_id: params[:department_id],
+                    activity_id: activity.id,
+                    employee_detail_id: params[:employee_detail_id]
+                  )
+                  
+                  # Only include activities that have no existing data OR have all blank target values
+                  if existing_data.nil?
+                    # No existing data - include this activity
+                    activities << activity
+                  else
+                    # Check if all target values are blank
+                    months = [:april, :may, :june, :july, :august, :september, :october, :november, :december, :january, :february, :march]
+                    all_blank = months.all? do |month|
+                      value = existing_data.send(month)
+                      # Consider blank if: nil, empty string, whitespace only, or '0'
+                      value.nil? || value.to_s.strip.empty? || value.to_s.strip == '0'
+                    end
+                    
+                    # Include only if all targets are blank
+                    activities << activity if all_blank
+                  end
+                end
+              end
+            %>
+            
+            
+            <% if activities.any? %>
+              <%= form_with url: bulk_create_user_details_path, method: :post, local: true, id: 'bulk-form' do |form| %>
+                <%= form.hidden_field :department_id, value: params[:department_id] %>
+                <%= form.hidden_field :employee_detail_id, value: params[:employee_detail_id] %>
+                
+                <div class="table-responsive">
+                  <table class="table table-bordered table-striped mb-0">
+                    <thead class="table-gray">
+                      <tr>
+                        <th rowspan="2" class="sticky-col activity-col">Activity</th>
+                        <th rowspan="2" class="sticky-col theme-col">Theme</th>
+                        <th rowspan="2" class="sticky-col unit-col">Unit</th>
+                        <th colspan="12" class="text-center">Monthly Data Entry</th>
+                      </tr>
+                      <tr>
+                        <th class="month-header">April</th>
+                        <th class="month-header">May</th>
+                        <th class="month-header">June</th>
+                        <th class="month-header">July</th>
+                        <th class="month-header">August</th>
+                        <th class="month-header">September</th>
+                        <th class="month-header">October</th>
+                        <th class="month-header">November</th>
+                        <th class="month-header">December</th>
+                        <th class="month-header">January</th>
+                        <th class="month-header">February</th>
+                        <th class="month-header">March</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% activities.each do |activity| %>
+                        <% 
+                          # Get existing data for this activity
+                          existing_data = UserDetail.find_by(
+                            department_id: params[:department_id],
+                            activity_id: activity.id,
+                            employee_detail_id: params[:employee_detail_id]
+                          )
+                        %>
+                        <tr>
+                          <td class="sticky-col activity-col">
+                            <div class="fw-bold text-dark"><%= activity.activity_name %></div>
+                            <%= form.hidden_field "user_details[#{activity.id}][activity_id]", value: activity.id %>
+                            <%= form.hidden_field "user_details[#{activity.id}][activity_name]", value: activity.activity_name %>
+                          </td>
+                          <td class="sticky-col theme-col">
+                            <%= form.text_field "user_details[#{activity.id}][theme_name]", 
+                                value: activity.theme_name.present? ? activity.theme_name : "",
+                                class: "form-control form-control-sm text-center", 
+                                placeholder: "Theme Name" %>
+                          </td>
+                          <td class="sticky-col unit-col">
+                            <%= form.text_field "user_details[#{activity.id}][unit]", 
+                                value: activity.unit.present? ? activity.unit : "",
+                                class: "form-control form-control-sm text-center", 
+                                placeholder: "Unit" %>
+                          </td>
+                          
+                          <% %w[april may june july august september october november december january february march].each do |month| %>
+                            <td>
+                              <% 
+                                # Get existing value for this activity and month
+                                existing_value = nil
+                                if existing_data
+                                  existing_value = existing_data.send(month)
+                                end
+                              %>
+                              <%= form.text_field "user_details[#{activity.id}][#{month}]", 
+                                  value: existing_value,
+                                  class: "form-control form-control-sm text-center", 
+                                  placeholder: "Target/Task" %>
+                            </td>
+                          <% end %>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div class="p-4 text-center bg-gray-light border-top">
+                  <%= form.submit "Save All Data", class: "btn btn-gray btn-lg px-5", id: 'save-btn' %>
+                </div>
+              <% end %>
+            <% else %>
+              <div class="alert alert-info m-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <% if params[:department_id].blank? || params[:employee_detail_id].blank? %>
+                  Please select both department and employee.
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Existing Data Display - Only show when filters are applied and limited results -->
+      <% if @user_details.any? && params[:department_id].present? && params[:employee_detail_id].present? %>
+        <div class="card mt-4">
+          <div class="card-header bg-gray text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-database me-2"></i>
+              Existing Data for <%= @selected_employee&.employee_name || 'Selected Employee' %> (Limited to 100 records)
+            </h5>
+            <button class="btn btn-sm btn-outline-light" onclick="toggleExistingData()">
+              <i class="fas fa-eye" id="toggle-icon"></i> Toggle View
+            </button>
+          </div>
+          
+          <div class="card-body" id="existing-data-body" style="display: none;">
+            <div class="table-responsive">
+              <table class="table table-bordered table-sm">
+                <thead class="table-gray">
+                  <tr>
+                    <th>Department</th>
+                    <th>Employee Name</th>
+                    <th>Activity</th>
+                    <th>Theme</th>
+                    <th>Unit</th>
+                    <th>April</th>
+                    <th>May</th>
+                    <th>June</th>
+                    <th>July</th>
+                    <th>August</th>
+                    <th>September</th>
+                    <th>October</th>
+                    <th>November</th>
+                    <th>December</th>
+                    <th>January</th>
+                    <th>February</th>
+                    <th>March</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% 
+                    toggle_activities = (@employee_activities.present? ? @employee_activities : (Department.find_by(id: params[:department_id])&.activities || []))
+                    details_by_activity = @user_details.index_by(&:activity_id)
+                  %>
+                  <% toggle_activities.each do |activity| %>
+                    <% detail = details_by_activity[activity.id] %>
+                    <tr>
+                      <td><%= activity.department&.department_type || '-' %></td>
+                      <td><%= @selected_employee&.employee_name || (detail&.employee_detail ? detail.employee_detail.employee_name : 'N/A') %></td>
+                      <td><%= activity.activity_name %></td>
+                      <td><%= activity.theme_name.present? ? activity.theme_name : 'No Theme' %></td>
+                      <td><%= activity.unit.present? ? activity.unit : "" %></td>
+                      <td><%= detail&.april.presence || '-' %></td>
+                      <td><%= detail&.may.presence || '-' %></td>
+                      <td><%= detail&.june.presence || '-' %></td>
+                      <td><%= detail&.july.presence || '-' %></td>
+                      <td><%= detail&.august.presence || '-' %></td>
+                      <td><%= detail&.september.presence || '-' %></td>
+                      <td><%= detail&.october.presence || '-' %></td>
+                      <td><%= detail&.november.presence || '-' %></td>
+                      <td><%= detail&.december.presence || '-' %></td>
+                      <td><%= detail&.january.presence || '-' %></td>
+                      <td><%= detail&.february.presence || '-' %></td>
+                      <td><%= detail&.march.presence || '-' %></td>
+                      <td>
+                        <% if detail %>
+                          <%= link_to "Edit", edit_user_detail_path(detail), class: "btn btn-sm btn-outline-gray me-1" %>
+                          <%= button_to "Delete", user_detail_path(detail),
+                              method: :delete,
+                              class: "btn btn-sm btn-outline-danger",
+                              form: { style: 'display: inline;' },
+                              onclick: "return confirm('Are you sure you want to delete this record?');" %>
+                        <% else %>
+                          -
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Safety check to prevent undefined variable errors
+  if (typeof bulkForm !== 'undefined') {
+    console.warn('bulkForm is defined but should not be used in this scope');
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById("excel-file-input");
+    const selectedFile = document.getElementById("selected-file");
+    const saveBtn = document.getElementById("save-btn");
+    const bulkForm = document.getElementById("bulk-form");
+
+    // File selection handler
+    if (fileInput) {
+      fileInput.addEventListener("change", function () {
+        if (fileInput.files.length > 0) {
+          selectedFile.textContent = `Selected: ${fileInput.files[0].name}`;
+        } else {
+          selectedFile.textContent = "";
+        }
+      });
+    }
+
+    // Form submission with loading state - only if both elements exist
+    if (bulkForm && saveBtn) {
+      bulkForm.addEventListener("submit", function() {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+      });
+    }
+
+    // Lazy load existing data table
+    const existingDataBody = document.getElementById("existing-data-body");
+    if (existingDataBody) {
+      const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.style.display = "block";
+            observer.unobserve(entry.target);
+          }
+        });
+      });
+      observer.observe(existingDataBody.parentElement);
+    }
+
+    // Auto-save draft functionality (optional)
+    const inputs = document.querySelectorAll('input[type="text"]');
+    const debouncedSave = debounce(function(input) {
+      const key = 'draft_' + input.name;
+      localStorage.setItem(key, input.value);
+    }, 1000);
+
+    inputs.forEach(function(input) {
+      // Load saved draft
+      const key = 'draft_' + input.name;
+      const saved = localStorage.getItem(key);
+      if (saved && !input.value) {
+        input.value = saved;
+      }
+
+      // Save on change
+      input.addEventListener('input', function() {
+        debouncedSave(this);
+      });
+    });
+
+    // Clear drafts on successful submit - only if bulkForm exists
+    if (bulkForm) {
+      bulkForm.addEventListener('submit', function() {
+        inputs.forEach(function(input) {
+          const key = 'draft_' + input.name;
+          localStorage.removeItem(key);
+        });
+      });
+    }
+  });
+
+  function toggleExistingData() {
+    const body = document.getElementById("existing-data-body");
+    const icon = document.getElementById("toggle-icon");
+    
+    if (body && icon) {
+      if (body.style.display === "none") {
+        body.style.display = "block";
+        icon.className = "fas fa-eye-slash";
+      } else {
+        body.style.display = "none";
+        icon.className = "fas fa-eye";
+      }
+    }
+  }
+
+  // Performance optimization: Debounce input changes
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+</script>
+
+<style>
+  :root {
+    --primary-gray: #6c757d;
+    --dark-gray: #495057;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --border-gray: #dee2e6;
+    --text-gray: #495057;
+    --white: #ffffff;
+  }
+
+  .container-fluid {
+    padding: 30px;
+    margin-left: 250px;
+    transition: margin-left 0.3s ease;
+    background-color: var(--light-gray);
+    min-height: 100vh;
+  }
+
+  .excel-upload-section {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-gray);
+  }
+
+  .upload-export-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+  }
+
+  .upload-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .upload-form {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .choose-file-btn, .upload-btn {
+    background: var(--primary-gray);
+    color: var(--white);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .choose-file-btn:hover, .upload-btn:hover {
+    background: var(--dark-gray);
+    transform: translateY(-1px);
+  }
+
+  .selected-file {
+    margin-top: 15px;
+    font-weight: 500;
+    color: var(--text-gray);
+  }
+
+  .card {
+    border: 1px solid var(--border-gray);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
+    background: var(--white);
+    overflow: hidden;
+  }
+
+  .card-header {
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid var(--border-gray);
+    padding: 20px 30px;
+  }
+
+  .bg-gray {
+    background-color: var(--primary-gray) !important;
+  }
+
+  .bg-gray-light {
+    background-color: var(--light-gray) !important;
+  }
+
+  .card-body {
+    padding: 30px;
+  }
+
+  .table-responsive {
+    max-height: 70vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px var(--border-gray);
+    /* Removed horizontal scroll */
+  }
+
+  .table {
+    margin-bottom: 0;
+    width: 100%; 
+    table-layout: fixed; /* Fixed table layout for consistent column widths */
+  }
+
+  .table th {
+    background-color: var(--primary-gray);
+    color: var(--white);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid var(--dark-gray);
+    padding: 15px 12px;
+    font-size: 0.9rem;
+  }
+
+  .table-gray th {
+    background-color: var(--primary-gray) !important;
+    color: var(--white) !important;
+  }
+
+  .table td {
+    vertical-align: middle;
+    border: 1px solid var(--border-gray);
+    padding: 15px 12px;
+    background-color: var(--white);
+  }
+
+  .table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: var(--light-gray);
+  }
+
+  .sticky-col {
+    position: sticky;
+    background-color: var(--white);
+    z-index: 10;
+    border-right: 2px solid var(--border-gray) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .table-striped > tbody > tr:nth-of-type(odd) > .sticky-col {
+    background-color: var(--light-gray);
+  }
+
+  .table th.sticky-col {
+    background-color: var(--primary-gray) !important;
+    z-index: 11;
+  }
+
+  .activity-col {
+    left: 0;
+    width: 20%; /* Responsive width */
+    min-width: 200px;
+  }
+
+  .theme-col {
+    left: 20%; /* Position after activity column */
+    width: 12%;
+    min-width: 120px;
+  }
+
+  .unit-col {
+    left: 32%; /* Position after theme column */
+    width: 8%;
+    min-width: 80px;
+  }
+
+  .month-header {
+    width: 5.67%; /* 68% / 12 months = 5.67% each */
+    min-width: 60px;
+  }
+
+  .form-control-sm {
+    font-size: 0.8rem;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-gray);
+    height: 40px;
+    min-height: 40px;
+    background-color: var(--white);
+    transition: all 0.3s ease;
+    width: 100%;
+  }
+
+  .form-control-sm:focus {
+    border-color: var(--primary-gray);
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    outline: none;
+  }
+
+  .form-select {
+    border-radius: 8px;
+    border: 2px solid var(--medium-gray);
+    background: var(--white);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    font-weight: 500;
+    color: var(--text-gray);
+    padding: 12px 16px;
+  }
+
+  .form-select:hover {
+    border-color: var(--primary-gray);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .form-select:focus {
+    border-color: var(--primary-gray);
+    box-shadow: 0 0 0 0.3rem rgba(108, 117, 125, 0.25);
+    outline: none;
+    transform: translateY(-1px);
+  }
+
+  .btn {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 10px 20px;
+    transition: all 0.3s ease;
+  }
+
+  .btn-gray {
+    background-color: var(--primary-gray);
+    border-color: var(--primary-gray);
+    color: var(--white);
+  }
+
+  .btn-gray:hover {
+    background-color: var(--dark-gray);
+    border-color: var(--dark-gray);
+    color: var(--white);
+    transform: translateY(-1px);
+  }
+
+  .btn-gray:disabled {
+    background-color: var(--medium-gray);
+    border-color: var(--medium-gray);
+    color: var(--text-gray);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-outline-gray {
+    color: var(--primary-gray);
+    border-color: var(--primary-gray);
+    background: transparent;
+  }
+
+  .btn-outline-gray:hover {
+    background-color: var(--primary-gray);
+    border-color: var(--primary-gray);
+    color: var(--white);
+  }
+
+  .btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    background: transparent;
+  }
+
+  .btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: var(--white);
+  }
+
+  .btn-outline-light {
+    color: var(--white);
+    border-color: var(--white);
+    background: transparent;
+  }
+
+  .btn-outline-light:hover {
+    background-color: var(--white);
+    border-color: var(--white);
+    color: var(--primary-gray);
+  }
+
+  .export-section {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .export-btn {
+    min-width: 140px;
+    white-space: nowrap;
+  }
+
+  .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: var(--white);
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+  .btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    color: var(--white);
+    transform: translateY(-1px);
+  }
+
+  #export-btn {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+  }
+
+  .badge {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .badge.bg-light {
+    background-color: var(--light-gray) !important;
+    color: var(--text-gray) !important;
+    border: 1px solid var(--border-gray);
+  }
+
+  .badge.bg-gray {
+    background-color: var(--primary-gray) !important;
+    color: var(--white) !important;
+  }
+
+  .alert {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .alert-info {
+    background-color: var(--light-gray);
+    border-color: var(--border-gray);
+    color: var(--text-gray);
+  }
+
+  .text-dark {
+    color: var(--dark-gray) !important;
+  }
+
+  .table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    background: var(--light-gray);
+    border-radius: 4px;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: var(--primary-gray);
+    border-radius: 4px;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-gray);
+  }
+
+  /* Loading states */
+  .loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Performance optimizations */
+  .table td, .table th {
+    will-change: transform;
+  }
+
+  .sticky-col {
+    will-change: transform;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 1200px) {
+    .container-fluid {
+      margin-left: 200px;
+    }
+    
+    .activity-col {
+      width: 25%;
+      min-width: 180px;
+    }
+    
+    .theme-col {
+      left: 25%;
+      width: 15%;
+      min-width: 100px;
+    }
+    
+    .unit-col {
+      left: 40%;
+      width: 10%;
+      min-width: 80px;
+    }
+    
+    .month-header {
+      width: 4.17%; /* 50% / 12 months */
+      min-width: 50px;
+    }
+  }
+
+  @media (max-width: 992px) {
+    .container-fluid {
+      margin-left: 0;
+      padding: 20px;
+    }
+    
+    .activity-col {
+      width: 30%;
+      min-width: 160px;
+    }
+    
+    .theme-col {
+      left: 30%;
+      width: 15%;
+      min-width: 80px;
+    }
+    
+    .unit-col {
+      left: 45%;
+      width: 10%;
+      min-width: 60px;
+    }
+    
+    .month-header {
+      width: 3.75%; /* 45% / 12 months */
+      min-width: 45px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .container-fluid {
+      padding: 15px;
+    }
+    
+    .card-header, .card-body {
+      padding: 20px;
+    }
+    
+    .excel-upload-section {
+      padding: 20px;
+    }
+    
+    .upload-export-container {
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .upload-section {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    
+    .export-section {
+      align-self: flex-end;
+    }
+    
+    .table-responsive {
+      font-size: 0.75rem;
+      max-height: 60vh;
+    }
+    
+    .form-control-sm {
+      font-size: 0.75rem;
+      padding: 6px 8px;
+      height: 35px;
+      min-height: 35px;
+    }
+    
+    .activity-col {
+      width: 35%;
+      min-width: 140px;
+    }
+    
+    .theme-col {
+      left: 35%;
+      width: 15%;
+      min-width: 70px;
+    }
+    
+    .unit-col {
+      left: 50%;
+      width: 10%;
+      min-width: 50px;
+    }
+    
+    .month-header {
+      width: 3.33%; /* 40% / 12 months */
+      min-width: 40px;
+    }
+    
+    .table th {
+      padding: 8px 6px;
+      font-size: 0.7rem;
+    }
+    
+    .table td {
+      padding: 8px 6px;
+    }
+  }
+</style>

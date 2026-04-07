@@ -1,0 +1,190 @@
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    /* If wkhtmltopdf leaves any tiny gaps, avoid white bands */
+    background-color: #e8f5e9;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  .certificate-wrapper {
+    /* Fill the entire A4 landscape page area */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    /* Main background gradient matching PSD */
+    background: radial-gradient(circle at center, #ffffff 0%, #e8f5e9 100%);
+    box-sizing: border-box;
+  }
+
+  /* Wavy lines patterns - Top Right and Bottom Left */
+  .waves {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding-top: 10px; /* Reduced from 20px to move logo higher */
+  }
+
+  /* Branding */
+  .logo-top {
+    height: 180px; /* Increased from 160px */
+    /* margin: 2px; */
+    width: 30%;
+  }
+
+  .main-title {
+    font-size: 38pt; /* Reduced from 44pt to save space */
+    font-weight: 500;
+    color: #333;
+    margin: 5px 0 2px 0;
+    letter-spacing: 2px;
+    font-family: 'Times New Roman', serif;
+    text-transform: uppercase;
+  }
+
+  .label-small {
+    font-size: 14pt;
+    color: #666;
+    margin-bottom: 10px;
+  }
+
+  .date-line {
+    font-size: 16pt; /* Reduced from 18pt */
+    font-weight: bold;
+    color: #333;
+    border-bottom: 2px dotted #999;
+    display: inline-block;
+    padding: 2px 50px;
+    margin-bottom: 15px; /* Reduced from 20px */
+  }
+
+  .name-display {
+    font-size: 48pt; /* Reduced from 54pt */
+    color: #1b5e20;
+    font-style: italic;
+    font-family: 'Georgia', serif;
+    margin: 5px 0;
+    display: inline-block;
+    width: 90%;
+  }
+
+  .green-line {
+    width: 80%;
+    height: 1px;
+    background-color: #81c784;
+    margin: 0 auto 10px auto; /* Reduced from 15px */
+  }
+
+  .completed-text {
+    font-size: 14pt;
+    color: #666;
+    margin-bottom: 20px;
+  }
+
+  .topic-display {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #222;
+    margin-bottom: 10px;
+    line-height: 1.2;
+  }
+
+  .attribution {
+    font-size: 16pt; /* Reduced from 18pt */
+    color: #444;
+    margin-bottom: 10px; /* Reduced from 20px */
+  }
+
+  .attribution span {
+    font-weight: bold;
+  }
+
+  /* Seal */
+  .seal-box {
+    margin-bottom: 20px;
+  }
+
+  .seal-img {
+    height: 140px; /* Slightly reduced from 160px to ensure single page */
+  }
+
+  .footer-id {
+    font-size: 13pt;
+    color: #555;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+</style>
+
+<div class="certificate-wrapper">
+  <!-- Wavy Decoration -->
+  <svg class="waves" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+    <!-- Top Right Waves -->
+    <path d="M700,0 Q850,150 1000,50 L1000,0 Z" fill="#c8e6c9" />
+    <symbol id="wave-pattern">
+       <path d="M0,0 Q100,50 200,0" stroke="#a5d6a7" fill="none" stroke-width="2" />
+    </symbol>
+    <use xlink:href="#wave-pattern" x="800" y="20" transform="rotate(20 800 20)" />
+    <use xlink:href="#wave-pattern" x="750" y="60" transform="rotate(30 750 60)" />
+    
+    <!-- Bottom Left Waves -->
+    <path d="M0,700 Q150,550 300,700 Z" fill="#c8e6c9" />
+  </svg>
+
+  <div class="content">
+    <!-- Top Logo -->
+    <img src="<%= asset_to_base64('Screenshot from 2026-03-17 16-16-06.png') %>" class="logo-top">
+
+    <h1 class="main-title">CERTIFICATE OF COMPLETION</h1>
+    
+    <div class="label-small">Date of completion</div>
+    <div class="date-line"><%= @completion_date %></div>
+
+    <div class="name-display"><%= @user_name %></div>
+    <div class="green-line"></div>
+
+    <div class="completed-text" style="font-size: 18pt; margin-bottom: 25px;">
+       has successfully completed </br>
+       </br>
+      <% if @certificate_type == "monthly" %>
+        <% @month_trainings.each_with_index do |t, i| %>
+          <%= t.title %><%= ", " unless i == @month_trainings.size - 1 %>
+        <% end %>
+      <% else %>
+        <%= @training.title %>
+      <% end %>
+    </div>
+    
+    
+    <div class="attribution">
+      an online course by <span>Ploughman Agro Pvt. Ltd.</span>
+    </div>
+
+    <!-- Official Seal & ID Footer -->
+    <div style="margin-top: 10px;">
+      <div class="seal-box">
+        <img src="<%= asset_to_base64('Screenshot_from_2026-02-26_14-16-45-removebg-preview.png') %>" class="seal-img">
+      </div>
+
+      <div class="footer-id">
+         Certificate ID: PAPL/BHOPAL/HO/<%= Time.current.year %>-<%= (Time.current.year + 1).to_s.last(2) %>/<%= @progress&.id || "M-#{Time.current.to_i}" %>
+      </div>
+    </div>
+  </div>
+</div>

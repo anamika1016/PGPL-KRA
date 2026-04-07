@@ -1,0 +1,262 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">Edit User Detail</h5>
+    </div>
+
+    <div class="card-body">
+      <%= form_with(model: @user_detail, local: true) do |form| %>
+        <div class="form-row">
+          <div class="form-group">
+            <%= form.label :department_id, "Department", class: "form-label" %>
+            <%= form.select :department_id, Department.all.map { |d| [d.department_type, d.id] }, {}, class: "form-control" %>
+          </div>
+
+          <div class="form-group">
+            <%= form.label :employee_detail_id, "Employee", class: "form-label" %>
+            <%= form.select :employee_detail_id, EmployeeDetail.all.map { |e| [e.employee_name, e.id] }, {}, class: "form-control" %>
+          </div>
+
+          <div class="form-group">
+            <%= form.label :activity_id, "Activity", class: "form-label" %>
+            <%= form.select :activity_id, Activity.all.map { |a| [a.activity_name, a.id] }, {}, class: "form-control" %>
+          </div>
+        </div>
+
+        <% months = %w[april may june july august september october november december january february march] %>
+        <% months.each_slice(4) do |group| %>
+          <div class="form-row">
+            <% group.each do |month| %>
+              <div class="form-group">
+                <%= form.label month.capitalize, class: "form-label" %>
+                <%= form.text_field month, class: "form-control", placeholder: "#{month.capitalize} data" %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <div class="text-center mt-4">
+          <%= form.submit "Update", class: "btn btn-success" %>
+          <%= link_to "Back", new_user_detail_path, class: "btn btn-secondary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f5f5f5;
+  margin: 0;
+  padding: 0;
+}
+
+.container-fluid {
+  padding: 30px;
+  margin-left: 250px; 
+  transition: margin-left 0.3s ease;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  min-height: 100vh;
+}
+
+.card {
+  background: #ffffff;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  max-width: 2000px;
+  margin: 0 auto;
+}
+
+.card-header {
+  background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+  color: #ffffff;
+  padding: 25px 35px;
+  border-bottom: none;
+}
+
+.card-header h5 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.card-body {
+  padding: 40px;
+  background-color: #ffffff;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  margin-bottom: 25px;
+}
+
+.form-group {
+  flex: 1 1 22%;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+}
+
+.form-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #495057;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-control {
+  padding: 12px 15px;
+  font-size: 0.95rem;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #495057;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #6c757d;
+  background-color: #f8f9fa;
+  box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.15);
+}
+
+.form-control:hover {
+  border-color: #adb5bd;
+}
+
+select.form-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23495057' d='M6 9L1.5 4.5h9L6 9z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.btn {
+  padding: 14px 35px;
+  margin: 0 10px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+  color: white;
+  border: 2px solid #343a40;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #343a40 0%, #212529 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(52, 58, 64, 0.3);
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: #6c757d;
+  border: 2px solid #dee2e6;
+}
+
+.btn-secondary:hover {
+  background-color: #f8f9fa;
+  color: #495057;
+  border-color: #adb5bd;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.2);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-4 {
+  margin-top: 35px;
+  padding-top: 25px;
+  border-top: 2px solid #f1f3f4;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+  .container-fluid {
+    margin-left: 0 !important;
+    padding: 20px;
+  }
+
+  .card-body {
+    padding: 25px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .form-group {
+    width: 100% !important;
+    min-width: auto;
+  }
+
+  .btn {
+    width: 100%;
+    margin: 5px 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .container-fluid {
+    padding: 15px;
+  }
+  
+  .card-header {
+    padding: 20px 25px;
+  }
+  
+  .card-body {
+    padding: 20px;
+  }
+  
+  .form-control {
+    padding: 10px 12px;
+  }
+}
+
+/* Form validation styles */
+.form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.form-control.is-valid {
+  border-color: #28a745;
+}
+
+/* Loading animation for better UX */
+.btn:active {
+  transform: translateY(0);
+}
+</style>

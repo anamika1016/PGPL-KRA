@@ -1,0 +1,598 @@
+<!-- L2 Employee View - Only L1+ Approved Records -->
+<div class="main-content sidebar-hidden bg-gray-50 min-h-screen">
+  <div class="min-h-screen pl-64 pr-4 pt-4 pb-12 overflow-x-auto bg-gradient-to-br from-gray-50 to-gray-100">
+    <div class="w-full max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-xl border border-gray-200">
+      <div class="flex items-center justify-between mb-8 pb-4 border-b-2 border-gray-200">
+        <div class="flex items-center">
+          <i class="fas fa-user-tie text-2xl text-emerald-600 mr-3"></i>
+          <h2 class="text-3xl font-bold text-gray-800">L2 Employee View - L1+ Approved Activities</h2>
+        </div>
+        
+        <!-- Search Box -->
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fas fa-search text-gray-400"></i>
+          </div>
+          <input type="text" 
+                 id="searchInput" 
+                 placeholder="Search employees..." 
+                 class="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200">
+        </div>
+      </div>
+
+      <div class="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">  
+        <table id="employeeTable" class="min-w-full divide-y divide-gray-300 text-sm">
+          <thead class="bg-gradient-to-r from-gray-800 to-gray-700">
+            <tr>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-gray-600">Name</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-gray-600">Employee Code</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-gray-600">Department</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-gray-600">Months</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-gray-600">L1 Manager</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-gray-600">L2 Manager</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-gray-600">Status</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% 
+              row_index = 0 
+              processed_records = {}
+              
+              # Define quarters
+              quarters = {
+                'Q1' => ['april', 'may', 'june'],
+                'Q2' => ['july', 'august', 'september'], 
+                'Q3' => ['october', 'november', 'december'],
+                'Q4' => ['january', 'february', 'march']
+              }
+            %>
+            
+            <% @employee_details.each do |emp| %>
+              <% 
+                # Group all activities and achievements by employee and quarter
+                # ENHANCED: Only process achievements that are L1+ approved
+                employee_quarters = {}
+                
+                emp.user_details.each do |ud|
+                  # ENHANCED: Only process user_details with L1+ approved achievements
+                  l1_plus_achievements = ud.achievements.select { |ach| 
+                    ['l1_approved', 'l2_approved', 'l2_returned'].include?(ach.status) 
+                  }
+                  next if l1_plus_achievements.empty?
+                  
+                  quarters.each do |quarter_name, quarter_months|
+                    # ENHANCED: Get only L1+ approved achievements for this quarter
+                    quarter_achievements = l1_plus_achievements.select { |ach| 
+                      quarter_months.include?(ach.month) 
+                    }
+                    next if quarter_achievements.empty?
+                    
+                    employee_quarters[quarter_name] ||= {
+                      achievements: [],
+                      activities: Set.new,
+                      user_details: []
+                    }
+                    
+                    employee_quarters[quarter_name][:achievements].concat(quarter_achievements)
+                    employee_quarters[quarter_name][:activities].add(ud.activity&.activity_name) if ud.activity&.activity_name
+                    employee_quarters[quarter_name][:user_details] << ud
+                  end
+                end
+              %>
+              
+              <!-- ENHANCED: Show only quarters with L1+ approved achievements -->
+              <% employee_quarters.each do |quarter_name, quarter_data| %>
+                <% 
+                  # Create unique key for employee + quarter
+                  record_key = "#{emp.id}_#{quarter_name}"
+                  next if processed_records[record_key]
+                  
+                  # FIXED: Enhanced status calculation logic matching show_l2.html.erb
+                  all_statuses = quarter_data[:achievements].map { |ach| ach.status }
+                  
+                  # Check for L2 data (percentages and remarks) to determine if L2 has acted
+                  has_l2_data = false
+                  quarter_data[:achievements].each do |ach|
+                    if ach.achievement_remark.present?
+                      if ach.achievement_remark.l2_percentage.present? || ach.achievement_remark.l2_remarks.present?
+                        has_l2_data = true
+                        break
+                      end
+                    end
+                  end
+                  
+                  # FIXED: Corrected status logic with L2 data detection
+                  current_status = if has_l2_data
+                                    # L2 has provided data, check if approved or returned
+                                    if all_statuses.any? { |s| s == "l2_approved" }
+                                      "l2_approved"
+                                    elsif all_statuses.any? { |s| s == "l2_returned" }
+                                      "l2_returned"
+                                    else
+                                      "l2_approved" # Default when L2 data exists but status unclear
+                                    end
+                                  elsif all_statuses.any? { |s| s == "l2_returned" }
+                                    "l2_returned"
+                                  elsif all_statuses.all? { |s| s == "l1_approved" }
+                                    "l1_approved" # Ready for L2 review
+                                  else
+                                    "l1_approved" # Default for mixed L1+ statuses
+                                  end
+                  
+                  processed_records[record_key] = true
+                  row_index += 1
+                  
+                  # Get all unique activities for this quarter
+                  quarter_activities = quarter_data[:activities].to_a.compact
+                  quarter_months = quarters[quarter_name]
+                %>
+                
+                <% status_config = case current_status
+                when "l1_approved"
+                  { color: "bg-yellow-100 text-yellow-800 border-yellow-300", text: "L1 Approved - Ready for L2 Review", icon: "fas fa-clock" }
+                when "l2_approved"
+                  { color: "bg-green-600 text-white border-green-700", text: "L2 Approved", icon: "fas fa-check-double" }
+                when "l2_returned"
+                  { color: "bg-orange-100 text-orange-800 border-orange-300", text: "L2 Returned", icon: "fas fa-exclamation-triangle" }
+                else
+                  { color: "bg-gray-100 text-gray-600 border-gray-300", text: "Status: #{current_status}", icon: "fas fa-question-circle" }
+                end %>
+
+                <tr class="<%= row_index.even? ? 'bg-gray-50' : 'bg-white' %> hover:bg-indigo-50 transition-colors duration-200">
+                  <td class="px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-200">
+                    <%= emp.employee_name %>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
+                    <%= emp.employee_code %>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
+                    <%= emp.department %>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
+                    <div class="font-semibold text-blue-700 text-base">
+                      <%= quarter_months.map(&:titleize).join(', ') %>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                      <%= quarter_name %> Quarter
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
+                    <%= emp.l1_employer_name %>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
+                    <%= emp.l2_employer_name %>
+                  </td>
+                  <td class="px-6 py-4 text-sm border-r border-gray-200">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border <%= status_config[:color] %>">
+                      <i class="<%= status_config[:icon] %> mr-1"></i>
+                      <%= status_config[:text] %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm">
+                    <%= link_to "View Details", 
+                        show_l2_employee_detail_path(emp, quarter: quarter_name), 
+                        class: "inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md transform hover:scale-105" %>
+                  </td>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+        
+        <!-- ENHANCED: Show message when no L1+ approved records found -->
+        <% if @employee_details.empty? %>
+          <div class="text-center py-12 text-gray-500">
+            <i class="fas fa-inbox text-4xl mb-4"></i>
+            <h3 class="text-lg font-semibold mb-2">No L1+ Approved Records Found</h3>
+            <p class="text-sm">There are no employee records with L1 approved achievements for your review.</p>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- FIXED: Enhanced statistics calculation matching show_l2.html.erb logic -->
+      <%
+        total_quarters = 0
+        l1_approved_count = 0
+        l2_approved_count = 0
+        l2_returned_count = 0
+        processed_stats = {}
+
+        @employee_details.each do |emp|
+          employee_quarters = {}
+          
+          emp.user_details.each do |ud|
+            # ENHANCED: Only consider achievements that are L1+ approved
+            l1_plus_achievements = ud.achievements.select { |ach| 
+              ['l1_approved', 'l2_approved', 'l2_returned'].include?(ach.status) 
+            }
+            next if l1_plus_achievements.empty?
+            
+            quarters.each do |quarter_name, quarter_months|
+              # Get L1+ approved achievements for this quarter
+              quarter_achievements = l1_plus_achievements.select { |ach| quarter_months.include?(ach.month) }
+              next if quarter_achievements.empty?
+              
+              employee_quarters[quarter_name] ||= []
+              employee_quarters[quarter_name].concat(quarter_achievements)
+            end
+          end
+          
+          employee_quarters.each do |quarter_name, quarter_achievements|
+            stats_key = "#{emp.id}_#{quarter_name}"
+            next if processed_stats[stats_key]
+            
+            # FIXED: Enhanced status calculation with L2 data detection
+            all_statuses = quarter_achievements.map { |ach| ach.status }
+            
+            # Check for L2 data
+            has_l2_data = false
+            quarter_achievements.each do |ach|
+              if ach.achievement_remark.present?
+                if ach.achievement_remark.l2_percentage.present? || ach.achievement_remark.l2_remarks.present?
+                  has_l2_data = true
+                  break
+                end
+              end
+            end
+            
+            # Calculate current status for this quarter
+            current_status = if has_l2_data
+                              if all_statuses.any? { |s| s == "l2_approved" }
+                                "l2_approved"
+                              elsif all_statuses.any? { |s| s == "l2_returned" }
+                                "l2_returned"
+                              else
+                                "l2_approved"
+                              end
+                            elsif all_statuses.any? { |s| s == "l2_returned" }
+                              "l2_returned"
+                            elsif all_statuses.all? { |s| s == "l1_approved" }
+                              "l1_approved"
+                            else
+                              "l1_approved"
+                            end
+            
+            processed_stats[stats_key] = true
+            total_quarters += 1
+            
+            case current_status
+            when "l1_approved"
+              l1_approved_count += 1
+            when "l2_approved"
+              l2_approved_count += 1
+            when "l2_returned"
+              l2_returned_count += 1
+            end
+          end
+        end
+      %>
+
+      <!-- FIXED: Updated statistics cards with correct status descriptions -->
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Total Quarterly Records with L1+ Approval -->
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div class="flex items-center">
+            <i class="fas fa-calendar-check text-blue-600 mr-3"></i>
+            <div>
+              <p class="text-sm font-medium text-blue-800">L1+ Approved Quarters</p>
+              <p class="text-2xl font-bold text-blue-900"><%= total_quarters %></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ready for L2 Review (L1 Approved) -->
+        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+          <div class="flex items-center">
+            <i class="fas fa-clock text-yellow-600 mr-3"></i>
+            <div>
+              <p class="text-sm font-medium text-yellow-800">Ready for L2 Review</p>
+              <p class="text-2xl font-bold text-yellow-900"><%= l1_approved_count %></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- L2 Approved -->
+        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+          <div class="flex items-center">
+            <i class="fas fa-check-double text-green-600 mr-3"></i>
+            <div>
+              <p class="text-sm font-medium text-green-800">L2 Approved</p>
+              <p class="text-2xl font-bold text-green-900"><%= l2_approved_count %></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- L2 Returned -->
+        <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-red-600 mr-3"></i>
+            <div>
+              <p class="text-sm font-medium text-red-800">L2 Returned</p>
+              <p class="text-2xl font-bold text-red-900"><%= l2_returned_count %></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .min-h-screen {
+    padding-left: 16rem; 
+  }
+
+  .sidebar-hidden .min-h-screen {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .sidebar-hidden .max-w-7xl {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .sidebar-hidden .form-control {
+    width: 100% !important;
+  }
+
+  .sidebar-hidden .grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  }
+  
+  .main-content {
+    margin-left: 240px; 
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .table-wrapper {
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  tbody tr:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .inline-flex {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  a:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  }
+
+  .bg-gradient-to-r {
+    background-image: linear-gradient(to right, #374151, #1f2937);
+  }
+
+  .bg-white {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .max-w-7xl {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  @media (max-width: 768px) {
+    .main-content {
+      margin-left: 0;
+      padding: 0.5rem;
+    }
+    
+    .px-6 {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+
+  .fas {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .border-b-2 {
+    border-image: linear-gradient(to right, #e5e7eb, #d1d5db) 1;
+  }
+
+  .bg-emerald-100 {
+    background-color: #d1fae5;
+  }
+
+  .text-emerald-800 {
+    color: #065f46;
+  }
+
+  .border-emerald-300 {
+    border-color: #6ee7b7;
+  }
+</style>
+
+<script>
+// Enhanced search functionality with immediate execution and initial search
+(function() {
+  'use strict';
+  
+  let searchInput, table, tbody, rows;
+  let isInitialized = false;
+  
+  function initializeSearch() {
+    try {
+      searchInput = document.getElementById('searchInput');
+      table = document.getElementById('employeeTable');
+      
+      if (!searchInput || !table) {
+        console.log('Search elements not found, retrying...');
+        return false;
+      }
+      
+      tbody = table.querySelector('tbody');
+      if (!tbody) {
+        console.log('Table body not found, retrying...');
+        return false;
+      }
+      
+      rows = Array.from(tbody.querySelectorAll('tr'));
+      if (rows.length === 0) {
+        console.log('No table rows found, retrying...');
+        return false;
+      }
+      
+      console.log('Search initialized successfully with', rows.length, 'rows');
+      return true;
+    } catch (error) {
+      console.error('Error initializing search:', error);
+      return false;
+    }
+  }
+  
+  function performSearch() {
+    if (!searchInput || !rows) return;
+    
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    console.log('Performing search for:', searchTerm);
+    
+    rows.forEach((row, index) => {
+      try {
+        const cells = row.querySelectorAll('td');
+        let found = false;
+        
+        // Search through all visible text in the row
+        cells.forEach(cell => {
+          const cellText = cell.textContent.toLowerCase();
+          if (cellText.includes(searchTerm)) {
+            found = true;
+          }
+        });
+        
+        // Show/hide row based on search match
+        if (found || searchTerm === '') {
+          row.style.display = '';
+          row.classList.remove('hidden');
+        } else {
+          row.style.display = 'none';
+          row.classList.add('hidden');
+        }
+      } catch (error) {
+        console.error('Error processing row', index, error);
+      }
+    });
+    
+    // Update row striping for visible rows
+    updateRowStriping();
+  }
+  
+  function updateRowStriping() {
+    if (!rows) return;
+    
+    let visibleIndex = 0;
+    rows.forEach(row => {
+      if (row.style.display !== 'none' && !row.classList.contains('hidden')) {
+        // Remove existing background classes
+        row.classList.remove('bg-gray-50', 'bg-white');
+        
+        // Apply new background based on visible index
+        if (visibleIndex % 2 === 0) {
+          row.classList.add('bg-white');
+        } else {
+          row.classList.add('bg-gray-50');
+        }
+        
+        visibleIndex++;
+      }
+    });
+  }
+  
+  function setupSearch() {
+    if (isInitialized) return;
+    
+    if (initializeSearch()) {
+      // Add event listener with immediate response
+      searchInput.addEventListener('input', function() {
+        performSearch();
+      });
+      
+      // Also listen for keyup for immediate response
+      searchInput.addEventListener('keyup', function() {
+        performSearch();
+      });
+      
+      // Perform initial search if there's already text in the search box
+      if (searchInput.value.trim() !== '') {
+        console.log('Performing initial search for existing value:', searchInput.value);
+        performSearch();
+      }
+      
+      isInitialized = true;
+      console.log('Search setup completed');
+    } else {
+      // Retry after a short delay
+      setTimeout(setupSearch, 50);
+    }
+  }
+  
+  // Immediate execution - try right away
+  setupSearch();
+  
+  // Multiple initialization strategies to ensure it works
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupSearch);
+  } else {
+    setupSearch();
+  }
+  
+  // Also try after delays to catch late-loading content
+  setTimeout(setupSearch, 100);
+  setTimeout(setupSearch, 300);
+  setTimeout(setupSearch, 500);
+  setTimeout(setupSearch, 1000);
+  
+  // Re-initialize if elements are added dynamically
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        if (!isInitialized || !searchInput || !table) {
+          isInitialized = false;
+          setupSearch();
+        }
+      }
+    });
+  });
+  
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  // Force re-initialization after page is fully loaded
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      if (!isInitialized) {
+        console.log('Force re-initializing search after page load');
+        isInitialized = false;
+        setupSearch();
+      } else if (searchInput && searchInput.value.trim() !== '') {
+        console.log('Re-running search for existing value after page load');
+        performSearch();
+      }
+    }, 100);
+  });
+})();
+</script>

@@ -1,0 +1,107 @@
+<div class="main-content">
+  <% if @user_details.any? %>
+    <div class="card mt-4">
+      <div class="mb-6">
+        <h2 class="text-3xl font-bold text-gray-800">
+          <i class="fas fa-users me-2 text-indigo-600"></i>
+            Monthly Activity Data
+        </h2>
+      </div>
+
+      <div class="card-body">
+        <div class="table-wrapper">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Department</th>
+                <th>Employee Name</th>
+                <th>Activity</th>
+                <th>Theme</th>
+                <th>Unit</th>
+                <th>April</th>
+                <th>May</th>
+                <th>June</th>
+                <th>July</th>
+                <th>August</th>
+                <th>September</th>
+                <th>October</th>
+                <th>November</th>
+                <th>December</th>
+                <th>January</th>
+                <th>February</th>
+                <th>March</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @user_details.each do |detail| %>
+                <tr>
+                  <td><%= detail.department.department_type %></td>
+                  <td><%= detail.employee_detail&.employee_name || 'N/A' %></td>
+                  <td><%= detail.activity.activity_name %></td>
+                  <td><%= detail.department.theme_name.presence || 'No Theme' %></td>
+                  <td><%= detail.activity.unit %></td>
+                  <td><%= detail.april.presence || '-' %></td>
+                  <td><%= detail.may.presence || '-' %></td>
+                  <td><%= detail.june.presence || '-' %></td>
+                  <td><%= detail.july.presence || '-' %></td>
+                  <td><%= detail.august.presence || '-' %></td>
+                  <td><%= detail.september.presence || '-' %></td>
+                  <td><%= detail.october.presence || '-' %></td>
+                  <td><%= detail.november.presence || '-' %></td>
+                  <td><%= detail.december.presence || '-' %></td>
+                  <td><%= detail.january.presence || '-' %></td>
+                  <td><%= detail.february.presence || '-' %></td>
+                  <td><%= detail.march.presence || '-' %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+
+
+<style>
+.main-content {
+  margin-left: 240px; 
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.table {
+  min-width: 1100px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 20px;
+  text-align: center;
+  border: 1px solid #ccc;
+  white-space: nowrap;
+}
+
+.table th {
+  background-color: #343a40;
+  color: white;
+}
+
+.main-content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937; /* dark gray */
+}
+
+.main-content p {
+  font-size: 1rem;
+  color: #6b7280; /* light gray */
+}
+
+</style>

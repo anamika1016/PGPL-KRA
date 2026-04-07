@@ -1,0 +1,239 @@
+<style>
+  .main-content {
+    margin-left: 300px !important;
+    padding: 1rem;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+    width: calc(100% - 300px);
+  }
+  
+  @media (max-width: 768px) {
+    .main-content {
+      margin-left: 0 !important;
+      padding: 1rem;
+      width: 100%;
+    }
+  }
+
+  .form-container {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 2rem;
+    width: 100%;
+    max-width: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .top-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #d1d5db;
+    padding: 1.5rem;
+    border-radius: 8px;
+    background: #f9fafb;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .form-group select,
+  .form-group input {
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    background: white;
+    width: 100%;
+    color: #374151;
+  }
+
+  .form-group select:focus,
+  .form-group input:focus {
+    outline: none;
+    border-color: #9ca3af;
+    box-shadow: 0 0 0 1px #9ca3af;
+  }
+
+  .original-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    border: 1px solid #d1d5db;
+    padding: 1.5rem;
+    border-radius: 8px;
+    background: #f9fafb;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .field-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+  }
+
+  .field-group input {
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    width: 100%;
+    background: white;
+    color: #374151;
+  }
+
+  .field-group input:focus {
+    outline: none;
+    border-color: #9ca3af;
+    box-shadow: 0 0 0 1px #9ca3af;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .btn-primary {
+    background-color: #6b7280;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #4b5563;
+  }
+
+  .btn-secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+    border: 1px solid #d1d5db;
+  }
+
+  .btn-secondary:hover {
+    background-color: #d1d5db;
+  }
+</style>
+
+<div class="main-content">
+  <div class="form-container">
+    <h2 class="text-2xl font-semibold text-gray-700 border-b border-gray-300 pb-4 mb-6">Edit Employee</h2>
+
+  <%= form_with(model: @employee_detail, local: true, class: "w-full") do |form| %>
+    
+    <!-- Top Section - Using your existing fields mapped to UI -->
+    <div class="top-section">
+      <div class="form-group">
+        <label>Department</label>
+        <%= form.text_field :department, class: "form-group input", placeholder: "Enter Department" %>
+      </div>
+
+      <div class="form-group">
+        <label>Employee</label>
+        <%= form.text_field :employee_name, class: "form-group input", placeholder: "Enter Employee Name" %>
+      </div>
+
+      <div class="form-group">
+        <label>Activity</label>
+        <%= form.text_field :post, class: "form-group input", placeholder: "Enter Post/Activity" %>
+      </div>
+    </div>
+
+    <!-- Your Original Fields in Grid Layout -->
+    <div class="original-fields">
+      
+      <!-- Employee ID -->
+      <div class="field-group">
+        <%= form.label :employee_id, "Employee ID", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :employee_id, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+
+      <!-- Employee Email -->
+      <div class="field-group">
+        <%= form.label :employee_email, "Employee Email", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.email_field :employee_email, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+
+      <!-- Employee Mobile -->
+      <div class="field-group">
+        <%= form.label :mobile_number, "Employee Mobile", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :mobile_number, placeholder: "10-digit mobile number", class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+
+      <!-- Employee Code -->
+      <div class="field-group">
+        <%= form.label :employee_code, "Employee Code", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :employee_code, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+
+      <!-- L1 Code -->
+      <div class="field-group">
+        <%= form.label :l1_code, "L1 Code", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l1_code, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+
+      <!-- L1 Employer Name -->
+      <div class="field-group">
+        <%= form.label :l1_employer_name, "L1 Employer Name", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l1_employer_name, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+
+      <!-- L2 Code -->
+      <div class="field-group">
+        <%= form.label :l2_code, "L2 Code", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l2_code, placeholder: "Enter L2 Code", class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+
+      <!-- L2 Employer Name -->
+      <div class="field-group">
+        <%= form.label :l2_employer_name, "L2 Employer Name", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l2_employer_name, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <%= form.submit "Update Employee", class: "btn btn-primary" %>
+      <%= link_to 'Cancel', employee_details_path, class: "btn btn-secondary" %>
+    </div>
+
+    <!-- Error handling (optional) -->
+    <% if @employee_detail.errors.any? %>
+      <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <h3 class="text-red-800 font-semibold mb-2">Please fix the following errors:</h3>
+        <ul class="text-red-700 list-disc list-inside">
+          <% @employee_detail.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+      <% end %>
+  </div>
+</div>

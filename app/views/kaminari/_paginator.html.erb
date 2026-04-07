@@ -1,0 +1,21 @@
+<nav class="mt-6 flex justify-center">
+  <ul class="inline-flex items-center space-x-1">
+    <% paginator.each_page do |page| %>
+      <% if page %>
+        <% if page == current_page %>
+          <li>
+            <span class="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg shadow">
+              <%= page %>
+            </span>
+          </li>
+        <% else %>
+          <li>
+            <%= link_to page, url_for(page: page, anchor: 'employee-list'), class: "px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100" %>
+          </li>
+        <% end %>
+      <% else %>
+        <li><span class="px-4 py-2 text-sm text-gray-500">...</span></li>
+      <% end %>
+    <% end %>
+  </ul>
+</nav>

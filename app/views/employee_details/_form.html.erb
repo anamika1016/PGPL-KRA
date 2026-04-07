@@ -1,0 +1,74 @@
+<%= form_with(model: employee_detail, local: true) do |form| %>
+  <div class="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-8">
+
+    <h2 class="text-3xl font-bold text-indigo-600 mb-8 border-b pb-2">🧑‍💼 Add Employee Details</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      <div>
+        <%= form.label :employee_id, "Employee ID", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :employee_id, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :employee_name, "Employee Name", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :employee_name, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :employee_email, "Email", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.email_field :employee_email, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :mobile_number, "Mobile Number", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :mobile_number, placeholder: "10-digit mobile number", class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :employee_code, "Employee Code", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :employee_code, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :l1_code, "L1 Code", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l1_code, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :l1_employer_name, "L1 Employer Name", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l1_employer_name, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :l2_code, "L2 Code", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l2_code, placeholder: "Enter L2 Code", class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :l2_employer_name, "L2 Employer Name", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :l2_employer_name, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+
+
+      <div>
+        <%= form.label :post, "Designation/Post", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :post, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :department, "Department", class: "block text-sm font-semibold text-gray-700 mb-1" %>
+        <%= form.text_field :department, class: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" %>
+      </div>
+
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-8 flex justify-end space-x-4">
+      <%= link_to 'Cancel', employee_details_path, class: "px-5 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300" %>
+      <%= form.submit "Save Employee", class: "px-5 py-2 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-800 shadow" %>
+    </div>
+
+  </div>
+<% end %>

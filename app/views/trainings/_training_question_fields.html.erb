@@ -1,0 +1,36 @@
+<div class="p-3 mb-3 border border-gray-200 rounded relative bg-white">
+  <% if f.object.persisted? %>
+    <div class="absolute top-2 right-2 flex items-center gap-2">
+      <%= f.check_box :_destroy, class: "h-4 w-4 text-red-600 rounded" %>
+      <%= f.label :_destroy, "Remove", class: "text-xs font-bold text-red-500" %>
+    </div>
+  <% else %>
+    <button type="button" class="absolute top-2 right-2 text-red-500 text-xs font-bold remove-btn">X</button>
+  <% end %>
+  
+  <label class="block text-xs font-medium">Question</label>
+  <%= f.text_field :question, class: "w-full border rounded p-1 mb-2 text-sm" %>
+  
+  <div class="grid grid-cols-2 gap-2">
+    <div>
+      <label class="block text-xs">Option A</label>
+      <%= f.text_field :option_a, class: "w-full border rounded p-1 text-sm" %>
+    </div>
+    <div>
+      <label class="block text-xs">Option B</label>
+      <%= f.text_field :option_b, class: "w-full border rounded p-1 text-sm" %>
+    </div>
+    <div>
+      <label class="block text-xs">Option C</label>
+      <%= f.text_field :option_c, class: "w-full border rounded p-1 text-sm" %>
+    </div>
+    <div>
+      <label class="block text-xs">Option D</label>
+      <%= f.text_field :option_d, class: "w-full border rounded p-1 text-sm" %>
+    </div>
+    <div class="col-span-2">
+      <label class="block text-xs font-bold">Correct Answer</label>
+      <%= f.text_field :correct_answer, class: "w-full border rounded p-1 text-sm", placeholder: "Exact text of correct option" %>
+    </div>
+  </div>
+</div>

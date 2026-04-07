@@ -1,0 +1,36 @@
+<div style="font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; padding: 40px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden;">
+    
+    <!-- Header -->
+    <div style="background-color: #6c757d; color: #ffffff; padding: 20px; text-align: center;">
+      <h2 style="margin: 0;">✅ Confirm Your Email</h2>
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 30px;">
+      <p style="font-size: 16px; color: #343a40;">
+        Welcome, <strong><%= @email %></strong>!
+      </p>
+
+      <p style="font-size: 15px; color: #495057;">
+        Please confirm your account email by clicking the button below:
+      </p>
+
+      <!-- Button -->
+      <div style="margin: 30px 0; text-align: center;">
+        <a href="<%= confirmation_url(@resource, confirmation_token: @token) %>" 
+           style="display: inline-block; padding: 12px 24px; background-color: #6c757d; color: #ffffff; text-decoration: none; font-size: 16px; border-radius: 5px;">
+          ✅ Confirm My Account
+        </a>
+      </div>
+
+      <p style="font-size: 14px; color: #868e96;">
+        If you did not create an account, no further action is required.
+      </p>
+
+      <p style="font-size: 13px; color: #adb5bd; margin-top: 30px; text-align: center;">
+        – Your Team
+      </p>
+    </div>
+  </div>
+</div>

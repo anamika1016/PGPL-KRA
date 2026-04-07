@@ -1,0 +1,36 @@
+<div style="font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; padding: 40px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden;">
+
+    <!-- Header -->
+    <div style="background-color: #6c757d; color: #ffffff; padding: 20px; text-align: center;">
+      <h2 style="margin: 0;">📧 Email Change Notification</h2>
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 30px;">
+      <p style="font-size: 16px; color: #343a40;">
+        Hello, <strong><%= @email %></strong>!
+      </p>
+
+      <% if @resource.try(:unconfirmed_email?) %>
+        <p style="font-size: 15px; color: #495057;">
+          We're contacting you to let you know that your email is being changed to:
+          <strong><%= @resource.unconfirmed_email %></strong>.
+        </p>
+      <% else %>
+        <p style="font-size: 15px; color: #495057;">
+          We're contacting you to confirm that your email address has been changed to:
+          <strong><%= @resource.email %></strong>.
+        </p>
+      <% end %>
+
+      <p style="font-size: 14px; color: #868e96; margin-top: 30px;">
+        If you didn't request this change, please contact support immediately.
+      </p>
+
+      <p style="font-size: 13px; color: #adb5bd; margin-top: 30px; text-align: center;">
+        – Your Team
+      </p>
+    </div>
+  </div>
+</div>

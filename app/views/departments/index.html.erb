@@ -1,0 +1,1578 @@
+<div class="main-content sidebar-hidden">
+  <body class="bg-gray-50">
+    <div class="ml-64 p-6 bg-gray-50 min-h-screen">
+      <div class="max-w-7xl mx-auto">
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h2 class="text-2xl font-bold text-gray-800 mb-6">Department Management</h2>
+          
+          <div id="success-container" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 hidden">
+            <div id="success-message"></div>
+          </div>
+   
+          <div id="error-container" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden">
+            <h4 id="error-title"></h4>
+            <ul id="error-list"></ul>
+          </div>
+
+          <!-- Hidden form for deleting user activities -->
+          <form id="delete-user-form" method="POST" action="" style="display: none;">
+            <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+            <input type="hidden" name="employee_id" id="delete-user-employee-id">
+          </form>
+
+
+
+          <!-- Bulk Upload Section -->
+          <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <div class="mb-8">
+              <h2 class="text-2xl font-semibold text-gray-800 mb-4">Bulk Upload Departments & Activities</h2>
+
+              <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 w-full">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                  
+                  <form action="/departments/import" method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                    <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="border border-gray-300 p-2 rounded-md w-full sm:w-auto">
+                    <input type="submit" value="Upload" class="bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-6 rounded shadow cursor-pointer">
+                  </form>
+
+                  <a href="/departments/export.xlsx" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded shadow">Export Departments</a>
+                </div>
+
+                <p class="text-sm text-gray-500 mt-4 italic">
+                  * Excel must have columns: <strong>Department</strong>, <strong>Employee Name</strong>, <strong>Theme Name</strong>, <strong>Activity Name</strong>, <strong>Unit</strong>, <strong>Weight</strong>
+                </p>
+              </div>
+            </div>
+            
+            <!-- Form Section -->
+            <form id="department-form" method="POST" action="/departments">
+              <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+              <input type="hidden" name="_method" value="POST" id="form-method">
+              <input type="hidden" name="department[theme_name]" value="" id="department-theme-name">
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Department Dropdown -->
+                <div>
+                  <label for="department_department_type" class="block text-sm font-medium text-gray-700">
+                    Department / Region
+                  </label>
+                  <select id="department_department_type" name="department[department_type]" 
+                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm 
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                    <option value="">Select Department / Region</option>
+                    <% @employee_departments.each do |dept| %>
+                      <option value="<%= dept %>"><%= dept %></option>
+                    <% end %>
+                  </select>
+                </div>
+
+                <!-- Employee Dropdown -->
+                <div>
+                  <label for="department_employee_reference" class="block text-sm font-medium text-gray-700">
+                    Employee Name
+                  </label>
+                  <select id="department_employee_reference" name="department[employee_reference]" 
+                    class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm 
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                    <option value="">Select Employee</option>
+                    <% @employees.each do |employee| %>
+                      <option value="<%= employee.employee_id %>" data-department="<%= employee.department %>">
+                        <%= employee.employee_name %> (<%= employee.employee_id %>)
+                      </option>
+                    <% end %>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Activities Section -->
+              <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold text-gray-800">Activities</h3>
+                                    <div class="flex gap-2">
+                    <button type="button" id="add-activity" onclick="if(window.departmentManagerInstance && window.departmentManagerInstance.isReady && typeof window.departmentManagerInstance.addActivity === 'function') { window.departmentManagerInstance.addActivity(); } else { console.log('DepartmentManager not ready yet, retrying...'); setTimeout(() => { if(window.departmentManagerInstance && window.departmentManagerInstance.isReady && typeof window.departmentManagerInstance.addActivity === 'function') { window.departmentManagerInstance.addActivity(); } else { console.error('DepartmentManager still not available or not ready'); } }, 100); }" class="inline-flex items-center px-4 py-2 bg-gray-700 text-white text-sm font-medium rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                      </svg>
+                      Add Activity
+                    </button>
+
+                  </div>
+                </div>
+                
+                <div id="activities-container">
+                  <!-- Default activity field - will be replaced by JavaScript if needed -->
+                  <div class="activity-fields border border-gray-200 rounded-md p-4 mb-4 bg-gray-50">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700">Theme Name</label>
+                        <input type="text" name="department[activities_attributes][default][theme_name]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter theme name" required>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700">Activity Name</label>
+                        <input type="text" name="department[activities_attributes][default][activity_name]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter activity name" required>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700">Unit</label>
+                        <input type="text" name="department[activities_attributes][default][unit]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter unit">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700">Weight</label>
+                        <input type="number" name="department[activities_attributes][default][weight]" step="0.01" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter weight" required>
+                      </div>
+                    </div>
+                    <div class="mt-3 flex justify-end">
+                      <button type="button" class="remove-activity bg-red-600 text-white text-sm px-3 py-1 rounded-md hover:bg-red-700">
+                        Remove
+                      </button>
+                    </div>
+                    <input type="hidden" name="department[activities_attributes][default][id]" value="">
+                    <input type="hidden" name="department[activities_attributes][default][_destroy]" value="false">
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <button type="button" id="cancel-btn" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                  Cancel
+                </button>
+                
+                <button type="submit" id="submit-button" class="inline-flex items-center px-6 py-2 bg-gray-700 text-white text-sm font-medium rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                  Save Department
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Departments List -->
+          <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-6 border-b border-gray-200">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-gray-600 rounded-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2M7 16h6M7 8h6m-6 4h6m9 2V9a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Department List</h2>
+                    <p class="text-sm text-gray-600 mt-1">Manage employee departments and activities</p>
+                  </div>
+                  <% if @selected_employee %>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                      <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                      </svg>
+                      Filtered by: <%= @selected_employee.employee_name %> (<%= @selected_employee.employee_code || @selected_employee.employee_id %>)
+                    </span>
+                  <% end %>
+                </div>
+                <div class="flex items-center gap-4">
+                  <!-- Employee Filter -->
+                  <div class="flex items-center gap-3">
+                    <label for="employee-filter" class="text-sm font-semibold text-gray-700">Filter by Employee:</label>
+                    <select id="employee-filter" class="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent shadow-sm transition-all duration-200 hover:border-gray-400">
+                      <option value="">All Employees</option>
+                      <% @employees.each do |employee| %>
+                        <option value="<%= employee.employee_id %>" data-code="<%= employee.employee_name || '' %>" 
+                                <%= 'selected' if params[:employee_id] == employee.employee_id.to_s %>>
+                          <%= employee.employee_name %> (<%= employee.employee_name %>)
+                        </option>
+                      <% end %>
+                    </select>
+                    <% if params[:employee_id].present? || params[:employee_code].present? %>
+                      <button type="button" onclick="clearEmployeeFilter()" class="text-sm text-red-600 hover:text-red-800 font-medium underline transition-colors duration-200">
+                        Clear Filter
+                      </button>
+                    <% end %>
+                  </div>
+                  
+                  <!-- Search -->
+                  <div class="relative">
+                    <input type="text" id="search-input" placeholder="Search departments..." class="pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent shadow-sm transition-all duration-200 hover:border-gray-400">
+                    <svg class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
+                  <tr>
+                    <th class="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">Employee Name</th>
+                    <th class="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">Employee Code</th>
+                    <th class="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">Department</th>
+                    <th class="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">Activities</th>
+                    <th class="px-8 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="departments-table">
+                  <% if @employee_activities.any? %>
+                    <% @employee_activities.each do |key, data| %>
+                      <tr class="hover:bg-gray-50 transition-all duration-200 border-b border-gray-100" data-department-id="<%= data[:id] %>">
+                        <td class="px-8 py-5 text-sm font-semibold text-gray-800 border-r border-gray-200">
+                          <div class="flex items-center">
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                              <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                              </svg>
+                            </div>
+                            <%= data[:employee_name] %>
+                          </div>
+                        </td>
+                        <td class="px-8 py-5 text-sm font-medium text-gray-700 border-r border-gray-200">
+                          <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                            <%= data[:employee_code].presence || 'N/A' %>
+                          </span>
+                        </td>
+                        <td class="px-8 py-5 text-sm font-medium text-gray-700 border-r border-gray-200">
+                          <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                            <%= data[:department] || 'N/A' %>
+                          </span>
+                        </td>
+                        <td class="px-8 py-5 text-sm font-medium text-gray-700 border-r border-gray-200">
+                          <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <%= data[:total_activities] %> <%= data[:total_activities] == 1 ? 'activity' : 'activities' %>
+                          </span>
+                        </td>
+                        <td class="px-8 py-5 text-sm font-medium text-gray-700">
+                          <div class="flex items-center space-x-3">
+                            <button type="button" class="edit-btn inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md" data-employee-id="<%= data[:employee_id] %>">
+                              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                              </svg>
+                              Edit
+                            </button>
+                            <button type="button" class="delete-user-btn inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md" 
+                                    data-department-id="<%= data[:id] %>" 
+                                    data-employee-id="<%= data[:employee_id] %>"
+                                    title="Delete only this user's activities">
+                              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                              </svg>
+                              Delete User
+                            </button>
+                            <button type="button" class="delete-dept-btn inline-flex items-center px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md" 
+                                    data-department-id="<%= data[:id] %>"
+                                    title="Delete entire department">
+                              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                              </svg>
+                              Delete Dept
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    <% end %>
+                  <% else %>
+                    <tr>
+                      <td colspan="5" class="px-8 py-12 text-center">
+                        <div class="flex flex-col items-center justify-center">
+                          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                          </div>
+                          <h3 class="text-lg font-semibold text-gray-600 mb-2">
+                            <% if params[:employee_id].present? %>
+                              No activities found for the selected employee
+                            <% else %>
+                              No employee activities found
+                            <% end %>
+                          </h3>
+                          <p class="text-sm text-gray-500">
+                            <% if params[:employee_id].present? %>
+                              Try selecting a different employee or clear the filter.
+                            <% else %>
+                              Get started by creating new activities using the form above.
+                            <% end %>
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+            
+            <div id="empty-state" class="text-center py-16 hidden">
+              <div class="flex flex-col items-center justify-center">
+                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                  <svg class="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-600 mb-3">No departments found</h3>
+                <p class="text-sm text-gray-500 max-w-md">Get started by creating a new department using the form above. Add employees and their activities to begin managing your organization.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</div>
+
+<script>
+// Check if DepartmentManager class already exists to prevent duplicate declaration
+if (typeof DepartmentManager === 'undefined') {
+  // Initialize variables first
+  window.departmentManagerInstance = null;
+  var isInitializing = false;
+
+class DepartmentManager {
+  constructor() {
+    console.log('DepartmentManager constructor called');
+    this.activityIndex = 0;
+    this.isEditing = false;
+    this.editingId = null;
+    this.isSubmitting = false;
+    this.isAddingActivity = false;
+    this.isReady = false;
+    this.departments = [];
+    this.employeeDepartments = [];
+    this.employees = [];
+    console.log('DepartmentManager constructor completed, calling init...');
+    this.init();
+  }
+
+  async init() {
+    console.log('DepartmentManager init started');
+    
+    // Bind events immediately so buttons work right away
+    this.bindEvents();
+    console.log('Events bound, buttons should now be functional');
+    
+    // Set the initial activity index since we now have a default activity in HTML
+    const container = document.getElementById('activities-container');
+    if (container) {
+      this.activityIndex = container.children.length;
+      console.log('Initialized with activity index:', this.activityIndex);
+      
+      // Convert the default activity from "default" to proper index
+      const defaultActivity = container.querySelector('.activity-fields');
+      if (defaultActivity) {
+        const inputs = defaultActivity.querySelectorAll('input[name*="[default]"]');
+        inputs.forEach(input => {
+          const newName = input.name.replace('[default]', `[0]`);
+          input.name = newName;
+        });
+        console.log('Updated default activity input names from default to index 0');
+      }
+    }
+    
+    // Load employee data in background (non-blocking)
+    this.loadEmployeeData().catch(error => {
+      console.error('Error loading employee data:', error);
+    });
+    
+    // Only add default activity if none exist and we're not in editing mode
+    // But first check if we already have a default activity in HTML
+    if (!this.isEditing) {
+      const container = document.getElementById('activities-container');
+      if (container && container.children.length === 1) {
+        // We already have the default activity from HTML, don't add another
+        console.log('Default activity already exists in HTML, not calling ensureDefaultActivity');
+      } else {
+        this.ensureDefaultActivity();
+      }
+    }
+    
+    console.log('DepartmentManager init completed');
+    this.isReady = true;
+    console.log('DepartmentManager is now ready');
+  }
+
+  async loadEmployeeData() {
+    try {
+      // For now, we'll use the data embedded in the page
+      // since the dropdowns should be populated from ERB
+      console.log('Employee departments:', window.employeeDepartments);
+      console.log('Employees:', window.employees);
+      
+      if (window.employeeDepartments) {
+        this.employeeDepartments = window.employeeDepartments;
+      }
+
+      if (window.employees) {
+        this.employees = window.employees;
+      }
+    } catch (error) {
+      console.error('Error loading employee data:', error);
+    }
+  }
+
+  populateDropdownsFromPageData() {
+    // This method is no longer needed since we populate directly in ERB
+    console.log('Using ERB-populated dropdowns');
+  }
+
+  populateDepartmentDropdown() {
+    // Department dropdown is now populated directly in ERB
+    console.log('Department dropdown populated via ERB');
+  }
+
+  populateEmployeeDropdown() {
+    // Employee dropdown is now populated directly in ERB
+    console.log('Employee dropdown populated via ERB');
+  }
+
+  bindEvents() {
+    console.log('bindEvents called');
+    // Remove any existing event listeners to prevent duplicates
+    this.removeEventListeners();
+    
+    // Add event listeners with proper error handling
+    const addActivityBtn = document.getElementById('add-activity');
+    if (addActivityBtn) {
+      console.log('Add activity button found, adding click listener');
+      addActivityBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Check if DepartmentManager is ready
+        if (!this.isReady) {
+          console.log('DepartmentManager not ready yet, waiting...');
+          setTimeout(() => {
+            if (this.isReady) {
+              this.addActivity();
+            } else {
+              console.error('DepartmentManager still not ready');
+            }
+          }, 100);
+          return;
+        }
+        
+        this.addActivity();
+      });
+      
+
+      
+    } else {
+      console.error('Add activity button not found!');
+    }
+    
+
+    
+    // Removed Test CSRF and Add Default buttons - no event listeners needed
+
+    const departmentForm = document.getElementById('department-form');
+    if (departmentForm) {
+      console.log('Department form found, adding submit listener');
+      departmentForm.addEventListener('submit', (e) => {
+        console.log('Form submit event triggered');
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleFormSubmit();
+      });
+    } else {
+      console.error('Department form not found!');
+    }
+
+    const cancelBtn = document.getElementById('cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.resetForm();
+      });
+    }
+
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.handleSearch(e.target.value);
+      });
+    }
+
+    // Employee filter change event
+    const employeeFilter = document.getElementById('employee-filter');
+    if (employeeFilter) {
+      employeeFilter.addEventListener('change', (e) => {
+        this.handleEmployeeFilter(e.target.value);
+      });
+    }
+
+    // Department change event to filter employees
+    const deptSelect = document.getElementById('department_department_type');
+    if (deptSelect) {
+      deptSelect.addEventListener('change', (e) => {
+        this.filterEmployeesByDepartment(e.target.value);
+      });
+    }
+
+    // Use event delegation for dynamic elements
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.remove-activity')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.removeActivity(e.target.closest('.activity-fields'));
+      }
+
+      if (e.target.classList.contains('edit-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.editDepartment(e.target.dataset.employeeId);
+      }
+
+      if (e.target.classList.contains('delete-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.deleteDepartment(e.target.dataset.departmentId);
+      }
+
+      if (e.target.classList.contains('delete-user-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.deleteUserActivities(e.target.dataset.departmentId, e.target.dataset.employeeId);
+      }
+
+      if (e.target.classList.contains('delete-dept-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.deleteDepartment(e.target.dataset.departmentId);
+      }
+    });
+  }
+
+  removeEventListeners() {
+    // This method can be used to clean up event listeners if needed
+    // For now, we'll rely on the single instance approach
+    console.log('Event listeners bound for DepartmentManager instance');
+  }
+
+  filterEmployeesByDepartment(selectedDept) {
+    const employeeSelect = document.getElementById('department_employee_reference');
+    if (!employeeSelect || !selectedDept) {
+      // Show all employees if no department selected
+      const options = employeeSelect.querySelectorAll('option[data-department]');
+      options.forEach(option => option.style.display = '');
+      return;
+    }
+
+    // Hide/show options based on department
+    const options = employeeSelect.querySelectorAll('option[data-department]');
+    options.forEach(option => {
+      if (option.getAttribute('data-department') === selectedDept) {
+        option.style.display = '';
+      } else {
+        option.style.display = 'none';
+      }
+    });
+
+    // Reset employee selection
+    employeeSelect.value = '';
+  }
+
+  addActivity() {
+    console.log('Adding activity, index:', this.activityIndex);
+    
+    // Prevent rapid clicking
+    if (this.isAddingActivity) {
+      console.log('Adding activity already in progress, ignoring...');
+      return;
+    }
+
+    this.isAddingActivity = true;
+    
+    const container = document.getElementById('activities-container');
+    if (!container) {
+      console.error('Activities container not found!');
+      this.isAddingActivity = false;
+      return;
+    }
+    
+    const activityHtml = this.getActivityTemplate(this.activityIndex);
+    container.insertAdjacentHTML('beforeend', activityHtml);
+    
+    this.activityIndex++;
+    console.log('Activity added successfully, new index:', this.activityIndex);
+    
+    // Reset flag after a short delay
+    setTimeout(() => {
+      this.isAddingActivity = false;
+    }, 300);
+  }
+
+  ensureDefaultActivity() {
+    console.log('ensureDefaultActivity called');
+    const container = document.getElementById('activities-container');
+    
+    if (!container) {
+      console.error('Activities container not found!');
+      // Try again after a short delay
+      setTimeout(() => {
+        this.ensureDefaultActivity();
+      }, 100);
+      return;
+    }
+    
+    console.log('Activities container found, children length:', container.children.length);
+    
+    // Check if there are any visible activity fields (not hidden)
+    const visibleActivities = Array.from(container.children).filter(child => 
+      child.style.display !== 'none' && 
+      child.classList.contains('activity-fields')
+    );
+    
+    console.log('Visible activities found:', visibleActivities.length);
+    
+    // Also check if we're in editing mode
+    if (this.isEditing) {
+      console.log('In editing mode, not adding default activity');
+      return;
+    }
+    
+    // Check if there are any activities with actual content
+    const hasContentActivities = visibleActivities.some(activity => {
+      const themeName = activity.querySelector('input[name*="[theme_name]"]')?.value;
+      const activityName = activity.querySelector('input[name*="[activity_name]"]')?.value;
+      const unit = activity.querySelector('input[name*="[unit]"]')?.value;
+      const weight = activity.querySelector('input[name*="[weight]"]')?.value;
+      
+      return themeName || activityName || unit || weight;
+    });
+    
+    if (visibleActivities.length === 0 || (!hasContentActivities && visibleActivities.length === 1)) {
+      console.log('No meaningful activities found, adding default activity...');
+      this.addActivity();
+    } else {
+      console.log('Activities already present with content - container has', visibleActivities.length, 'visible activities');
+    }
+  }
+  
+  testCsrfToken() {
+    console.log('=== Testing CSRF Token ===');
+    
+    // Debug: Show all meta tags
+    console.log('All meta tags:');
+    document.querySelectorAll('meta').forEach((meta, index) => {
+      console.log(`Meta ${index}:`, meta.name, meta.content);
+    });
+    
+    // Try multiple sources for CSRF token
+    console.log('Looking for CSRF token...');
+    
+    // First try the meta tag (most reliable)
+    let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    console.log('From meta[name="csrf-token"]:', !!csrfToken);
+    
+    if (!csrfToken) {
+      // Try the form input
+      csrfToken = document.querySelector('input[name="authenticity_token"]')?.value;
+      console.log('From input[name="authenticity_token"]:', !!csrfToken);
+    }
+    if (!csrfToken) {
+      // Try to get it from the form's hidden input
+      const form = document.getElementById('department-form');
+      if (form) {
+        csrfToken = form.querySelector('input[name="authenticity_token"]')?.value;
+        console.log('From form input[name="authenticity_token"]:', !!csrfToken);
+      } else {
+        console.error('Department form not found!');
+      }
+    }
+    
+    // Also try the meta tag with different name
+    if (!csrfToken) {
+      csrfToken = document.querySelector('meta[name="csrf-param"]')?.content;
+      console.log('From meta[name="csrf-param"]:', !!csrfToken);
+    }
+    
+    // If still no token, try to get it from the current page URL
+    if (!csrfToken) {
+      // Try to extract from current page's form
+      const currentForm = document.querySelector('form');
+      if (currentForm) {
+        csrfToken = currentForm.querySelector('input[name="authenticity_token"]')?.value;
+        console.log('From current page form:', !!csrfToken);
+      }
+    }
+    
+    console.log('Final CSRF Token found:', !!csrfToken);
+    console.log('CSRF Token length:', csrfToken ? csrfToken.length : 0);
+    console.log('CSRF Token first 10 chars:', csrfToken ? csrfToken.substring(0, 10) + '...' : 'none');
+    
+    if (csrfToken) {
+      this.showSuccess(`CSRF Token found! Length: ${csrfToken.length} characters`);
+    } else {
+      this.showError('No CSRF token found!');
+    }
+  }
+
+  getActivityTemplate(index) {
+    return `
+      <div class="activity-fields border border-gray-200 rounded-md p-4 mb-4 bg-gray-50">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Theme Name</label>
+            <input type="text" name="department[activities_attributes][${index}][theme_name]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter theme name" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Activity Name</label>
+            <input type="text" name="department[activities_attributes][${index}][activity_name]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter activity name" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Unit</label>
+            <input type="text" name="department[activities_attributes][${index}][unit]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter unit">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Weight</label>
+            <input type="number" name="department[activities_attributes][${index}][weight]" step="0.01" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter weight" required>
+          </div>
+        </div>
+        <div class="mt-3 flex justify-end">
+          <button type="button" class="remove-activity bg-red-600 text-white text-sm px-3 py-1 rounded-md hover:bg-red-700">
+            Remove
+          </button>
+        </div>
+        <input type="hidden" name="department[activities_attributes][${index}][id]" value="">
+        <input type="hidden" name="department[activities_attributes][${index}][_destroy]" value="false">
+      </div>
+    `;
+  }
+
+  removeActivity(activityElement) {
+    const container = document.getElementById('activities-container');
+
+    if (container.children.length > 1) {
+      const idInput = activityElement.querySelector('input[name*="[id]"]');
+      
+      // Check if we're in employee editing mode
+      if (this.isEditing && this.editingId) {
+        // When editing an employee, we need to remove the UserDetail record, not the activity
+        if (idInput && idInput.value) {
+          // This is an existing activity for this employee, mark it for removal from employee
+          const destroyInput = activityElement.querySelector('input[name*="[_destroy]"]');
+          if (destroyInput) {
+            destroyInput.value = 'true';
+            // Hide the element but don't remove it so it's included in form submission
+            activityElement.style.display = 'none';
+            // Add visual indicator that this activity is marked for removal from employee
+            activityElement.style.opacity = '0.5';
+            activityElement.style.backgroundColor = '#fef3c7'; // Yellow background to indicate employee-specific removal
+            console.log('Marked activity for removal from employee:', idInput.value);
+          }
+        } else {
+          // This is a new activity, just remove it from DOM
+          activityElement.remove();
+          console.log('Removed new activity from DOM');
+        }
+      } else {
+        // When editing a department (not employee), use the original logic
+        if (idInput && idInput.value) {
+          // This is an existing activity, mark it for destruction
+          const destroyInput = activityElement.querySelector('input[name*="[_destroy]"]');
+          if (destroyInput) {
+            destroyInput.value = 'true';
+            // Hide the element but don't remove it so it's included in form submission
+            activityElement.style.display = 'none';
+            // Also add a visual indicator that this activity is marked for deletion
+            activityElement.style.opacity = '0.5';
+            activityElement.style.backgroundColor = '#fee2e2'; // Red background for department activity deletion
+            console.log('Marked activity for destruction:', idInput.value);
+          }
+        } else {
+          // This is a new activity, just remove it from DOM
+          activityElement.remove();
+          console.log('Removed new activity from DOM');
+        }
+      }
+    } else {
+      // At least one activity is required
+      const inputs = activityElement.querySelectorAll('input[type!="hidden"]');
+      inputs.forEach(input => input.value = '');
+      this.showError('At least one activity is required');
+    }
+  }
+
+  async handleFormSubmit() {
+    // Prevent multiple submissions
+    if (this.isSubmitting) {
+      console.log('Form submission already in progress, ignoring...');
+      return;
+    }
+
+    this.isSubmitting = true;
+    this.hideError();
+    this.hideSuccess();
+
+    // Validate form before submission
+    const form = document.getElementById('department-form');
+    const deptType = form.querySelector('#department_department_type').value;
+    const empRef = form.querySelector('#department_employee_reference').value;
+    const activities = form.querySelectorAll('.activity-fields');
+
+    if (!deptType) {
+      this.showError('Please select a department.');
+      this.isSubmitting = false;
+      return;
+    }
+
+    if (!empRef) {
+      this.showError('Please select an employee.');
+      this.isSubmitting = false;
+      return;
+    }
+
+    if (activities.length === 0) {
+      this.showError('Please add at least one activity.');
+      this.isSubmitting = false;
+      return;
+    }
+
+    // Check if at least one activity has all required fields filled
+    let hasValidActivity = false;
+    activities.forEach(activity => {
+      const themeName = activity.querySelector('input[name*="[theme_name]"]')?.value;
+      const activityName = activity.querySelector('input[name*="[activity_name]"]')?.value;
+      const unit = activity.querySelector('input[name*="[unit]"]')?.value;
+      const weight = activity.querySelector('input[name*="[weight]"]')?.value;
+      
+      if (themeName && activityName && weight) {
+        hasValidActivity = true;
+      }
+    });
+
+    if (!hasValidActivity) {
+      this.showError('Please fill in all activity fields.');
+      this.isSubmitting = false;
+      return;
+    }
+
+    // Disable submit button to prevent multiple clicks
+    const submitBtn = document.getElementById('submit-button');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    const formData = new FormData(form);
+
+    // Debug: Log what's being sent
+    console.log('Form data being sent:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+    
+    // Debug: Log form data structure for editing
+    if (this.isEditing) {
+      console.log('=== EDITING MODE DEBUG ===');
+      console.log('Editing ID:', this.editingId);
+      console.log('Form method:', document.getElementById('form-method').value);
+      console.log('Department type:', form.querySelector('#department_department_type').value);
+      console.log('Employee reference:', form.querySelector('#department_employee_reference').value);
+      console.log('Number of activities:', form.querySelectorAll('.activity-fields').length);
+    }
+    
+    // Also log activities marked for destruction
+    const activitiesToDestroy = form.querySelectorAll('input[name*="[_destroy]"][value="true"]');
+    console.log('Activities marked for destruction:', activitiesToDestroy.length);
+    activitiesToDestroy.forEach((input, index) => {
+      const activityContainer = input.closest('.activity-fields');
+      const idInput = activityContainer.querySelector('input[name*="[id]"]');
+      console.log(`Activity ${index} marked for destruction - ID: ${idInput?.value}`);
+    });
+    
+    // Also log all _destroy fields to see their values
+    const allDestroyFields = form.querySelectorAll('input[name*="[_destroy]"]');
+    console.log('All _destroy fields:', allDestroyFields.length);
+    allDestroyFields.forEach((input, index) => {
+      const activityContainer = input.closest('.activity-fields');
+      const idInput = activityContainer.querySelector('input[name*="[id]"]');
+      console.log(`_destroy field ${index}: value="${input.value}", activity ID: ${idInput?.value}`);
+    });
+
+    try {
+      // For PATCH requests, we need to send the method in the form data
+      if (this.isEditing) {
+        formData.append('_method', 'PATCH');
+        
+        // If editing, use the update_employee_activity_data endpoint
+        const editUrl = `/departments/${this.editingId}/update_employee_activity_data`;
+        const response = await fetch(editUrl, {
+          method: 'PATCH', // Use PATCH method directly
+          body: formData,
+          headers: {
+            'X-CSRF-Token': document.querySelector('input[name="authenticity_token"]')?.value || 
+                           document.querySelector('meta[name="csrf-token"]')?.content || '',
+            'Accept': 'application/json' // Request JSON response
+          }
+        });
+        
+        console.log('Edit response status:', response.status);
+        console.log('Edit response headers:', response.headers);
+        
+        // If the custom endpoint fails, try the regular update method
+        if (!response.ok) {
+          console.log('Custom endpoint failed, trying regular update method...');
+          return this.handleRegularUpdate(formData);
+        }
+        
+        return this.handleResponse(response);
+      }
+      
+      const csrfToken = document.querySelector('input[name="authenticity_token"]')?.value || 
+                       document.querySelector('meta[name="csrf-token"]')?.content || '';
+      
+      if (!csrfToken) {
+        this.showError('CSRF token not found. Please refresh the page.');
+        this.isSubmitting = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = this.isEditing ? 'Update Department' : 'Save Department';
+        }
+        return;
+      }
+      
+      const response = await fetch(form.action, {
+        method: 'POST', // Always use POST, let Rails handle the method override
+        body: formData,
+        headers: {
+          'X-CSRF-Token': csrfToken,
+          'Accept': 'application/json' // Request JSON response
+        }
+      });
+      
+            return this.handleResponse(response);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      this.showError('Network error. Please try again.');
+    } finally {
+      // Re-enable submit button
+      this.isSubmitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = this.isEditing ? 'Update Department' : 'Save Department';
+      }
+    }
+  }
+
+  // DISABLED: No longer needed since we use server-side rendering
+  async loadDepartments() {
+    // This function is disabled - table is now rendered server-side
+    console.log('loadDepartments disabled - using server-side rendering');
+    return;
+  }
+
+  async editDepartment(employeeId) {
+    console.log('editDepartment called with Employee ID:', employeeId);
+    try {
+      const csrfToken = document.querySelector('input[name="authenticity_token"]')?.value || 
+                       document.querySelector('meta[name="csrf-token"]')?.content || '';
+      
+      if (!csrfToken) {
+        this.showError('CSRF token not found. Please refresh the page.');
+        return;
+      }
+      
+      // Add cache-busting parameter to ensure fresh data
+      const timestamp = Date.now();
+      const response = await fetch(`/departments/${employeeId}/edit_data?t=${timestamp}`, {
+        headers: {
+          'X-CSRF-Token': csrfToken,
+          'Accept': 'application/json', // Request JSON response
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      console.log('Edit response status:', response.status);
+      console.log('Edit response headers:', response.headers);
+      
+      if (response.ok) {
+        const department = await response.json();
+        console.log('Department data received:', department);
+        console.log('Number of activities received:', department.activities ? department.activities.length : 0);
+        if (department.activities) {
+          department.activities.forEach((activity, index) => {
+            console.log(`Activity ${index}:`, activity);
+          });
+        }
+        this.populateForm(department);
+      } else {
+        console.error('Edit request failed:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        this.showError(`Error loading department data: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Edit error:', error);
+      this.showError('Error loading department data');
+    }
+  }
+
+  populateForm(department) {
+    console.log('=== POPULATING FORM ===');
+    console.log('Department data:', department);
+    
+    document.getElementById('department_department_type').value = department.department_type || '';
+    document.getElementById('department-theme-name').value = department.theme_name || '';
+    
+    // First filter employees by department, then set the employee
+    if (department.department_type) {
+      this.filterEmployeesByDepartment(department.department_type);
+      // Wait a bit for the dropdown to be populated
+      setTimeout(() => {
+        document.getElementById('department_employee_reference').value = department.employee_reference || '';
+        console.log('Set employee reference to:', department.employee_reference);
+      }, 100);
+    }
+
+    const form = document.getElementById('department-form');
+    // Don't change the form action - keep it as /departments
+    // The edit logic will handle the correct endpoint in handleFormSubmit
+    document.getElementById('form-method').value = 'PATCH';
+    
+    // Update the form method to PATCH
+    const methodField = document.getElementById('form-method');
+    if (methodField) {
+      methodField.value = 'PATCH';
+    }
+
+    const container = document.getElementById('activities-container');
+    container.innerHTML = '';
+    
+    this.activityIndex = 0;
+
+    if (department.activities && department.activities.length > 0) {
+      console.log(`Populating form with ${department.activities.length} activities`);
+      department.activities.forEach((activity, index) => {
+        console.log(`Creating activity ${index}:`, activity);
+        const html = this.getActivityTemplate(this.activityIndex);
+        container.insertAdjacentHTML('beforeend', html);
+
+        const currentActivity = container.lastElementChild;
+        
+        currentActivity.querySelector('input[name*="[theme_name]"]').value = activity.theme_name || '';
+        currentActivity.querySelector('input[name*="[activity_name]"]').value = activity.activity_name || '';
+        currentActivity.querySelector('input[name*="[unit]"]').value = activity.unit || '';
+        currentActivity.querySelector('input[name*="[weight]"]').value = activity.weight || '';
+        currentActivity.querySelector('input[name*="[id]"]').value = activity.id || '';
+
+        console.log(`Activity ${index} populated with ID: ${activity.id}, name: ${activity.activity_name}`);
+        console.log(`Activity ${index} input names:`, {
+          theme_name: currentActivity.querySelector('input[name*="[theme_name]"]').name,
+          activity_name: currentActivity.querySelector('input[name*="[activity_name]"]').name,
+          unit: currentActivity.querySelector('input[name*="[unit]"]').name,
+          weight: currentActivity.querySelector('input[name*="[weight]"]').name,
+          id: currentActivity.querySelector('input[name*="[id]"]').name
+        });
+        this.activityIndex++;
+      });
+      console.log(`Form populated with ${this.activityIndex} activities total`);
+    } else {
+      console.log('No activities found, adding default activity');
+      this.addActivity();
+    }
+ 
+    this.isEditing = true;
+    this.editingId = department.id;
+    document.getElementById('submit-button').textContent = 'Update Department';
+    
+    document.getElementById('department-form').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async deleteDepartment(departmentId) {
+    console.log('deleteDepartment called with ID:', departmentId);
+    if (!confirm('Are you sure you want to delete this department?')) return;
+
+    try {
+      // Try multiple sources for CSRF token
+      console.log('Looking for CSRF token...');
+      
+      // First try the meta tag (most reliable)
+      let csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      console.log('From meta[name="csrf-token"]:', !!csrfToken);
+      
+      if (!csrfToken) {
+        // Try the form input
+        csrfToken = document.querySelector('input[name="authenticity_token"]')?.value;
+        console.log('From input[name="authenticity_token"]:', !!csrfToken);
+      }
+      if (!csrfToken) {
+        // Try to get it from the form's hidden input
+        const form = document.getElementById('department-form');
+        if (form) {
+          csrfToken = form.querySelector('input[name="authenticity_token"]')?.value;
+          console.log('From form input[name="authenticity_token"]:', !!csrfToken);
+        } else {
+          console.error('Department form not found!');
+        }
+      }
+      
+      // Also try the meta tag with different name
+      if (!csrfToken) {
+        csrfToken = document.querySelector('meta[name="csrf-param"]')?.content;
+        console.log('From meta[name="csrf-param"]:', !!csrfToken);
+      }
+      
+      // If still no token, try to get it from the current page URL
+      if (!csrfToken) {
+        // Try to extract from current page's form
+        const currentForm = document.querySelector('form');
+        if (currentForm) {
+          csrfToken = currentForm.querySelector('input[name="authenticity_token"]')?.value;
+          console.log('From current page form:', !!csrfToken);
+        }
+      }
+      
+      console.log('Final CSRF Token found:', !!csrfToken);
+      console.log('CSRF Token length:', csrfToken ? csrfToken.length : 0);
+      console.log('CSRF Token first 10 chars:', csrfToken ? csrfToken.substring(0, 10) + '...' : 'none');
+      
+      if (!csrfToken) {
+        console.error('No CSRF token found from any source!');
+        this.showError('CSRF token not found. Please refresh the page.');
+        return;
+      }
+      
+      // Verify the token looks valid (should be a long string)
+      if (csrfToken.length < 20) {
+        console.error('CSRF token seems too short:', csrfToken);
+        this.showError('Invalid CSRF token. Please refresh the page.');
+        return;
+      }
+      
+      // For DELETE requests, use Rails method override with POST
+      console.log('Sending DELETE request to:', `/departments/${departmentId}`);
+      console.log('Request method: POST (with _method override)');
+      console.log('CSRF Token:', csrfToken);
+      
+      // Create form data with method override
+      const formData = new FormData();
+      formData.append('_method', 'DELETE');
+      formData.append('authenticity_token', csrfToken);
+      
+      const response = await fetch(`/departments/${departmentId}`, {
+        method: 'POST', // Use POST, let Rails handle method override
+        body: formData,
+        headers: {
+          'Accept': 'application/json' // Request JSON response
+        }
+      });
+      
+      console.log('Delete response status:', response.status);
+      console.log('Delete response headers:', response.headers);
+
+      let result;
+      try {
+        result = await response.json();
+        console.log('Delete response JSON:', result);
+      } catch (parseError) {
+        console.error('Error parsing delete response:', parseError);
+        const responseText = await response.text();
+        console.log('Delete response text:', responseText);
+        
+        // If it's HTML (likely a redirect), show success and reload
+        if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
+          this.showSuccess('Department deleted successfully! Reloading page...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          this.showError('Error deleting department. Please try again.');
+        }
+        return;
+      }
+
+      if (response.ok && result.success === true) {
+        this.showSuccess(result.message || 'Department deleted successfully!');
+        // Reload the page to show updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        this.showError(result.message || 'Error deleting department');
+      }
+    } catch (error) {
+      this.showError('Network error. Please try again.');
+    }
+  }
+
+  async deleteUserActivities(departmentId, employeeId) {
+    console.log('deleteUserActivities called with departmentId:', departmentId, 'and employeeId:', employeeId);
+    if (!confirm('Are you sure you want to delete all activities for this employee from this department? This will only affect this specific employee.')) return;
+
+    try {
+      // Use the hidden form approach to avoid CSRF issues
+      const form = document.getElementById('delete-user-form');
+      const employeeIdInput = document.getElementById('delete-user-employee-id');
+      
+      if (!form || !employeeIdInput) {
+        this.showError('Delete form not found. Please refresh the page.');
+        return;
+      }
+      
+      // Set the form action and employee ID
+      form.action = `/departments/${departmentId}/delete_user_activities`;
+      employeeIdInput.value = employeeId;
+      
+      // Submit the form
+      form.submit();
+      
+    } catch (error) {
+      console.error('Error in deleteUserActivities:', error);
+      this.showError('Error occurred. Please try again.');
+    }
+  }
+
+  resetForm() {
+    const form = document.getElementById('department-form');
+    form.reset();
+    form.action = '/departments';
+    document.getElementById('form-method').value = 'POST';
+    document.getElementById('department-theme-name').value = '';
+
+    const container = document.getElementById('activities-container');
+    container.innerHTML = '';
+    this.activityIndex = 0;
+    this.addActivity();
+
+    this.isEditing = false;
+    this.editingId = null;
+    document.getElementById('submit-button').textContent = 'Save Department';
+
+    // Reset employee dropdown to show all employees
+    const options = document.querySelectorAll('#department_employee_reference option[data-department]');
+    options.forEach(option => option.style.display = '');
+
+    this.hideError();
+    this.hideSuccess();
+  }
+
+  // Handle regular update method as fallback
+  async handleRegularUpdate(formData) {
+    console.log('Using regular update method as fallback...');
+    
+    const csrfToken = document.querySelector('input[name="authenticity_token"]')?.value || 
+                     document.querySelector('meta[name="csrf-token"]')?.content || '';
+    
+    if (!csrfToken) {
+      this.showError('CSRF token not found. Please refresh the page.');
+      return;
+    }
+    
+    const response = await fetch(`/departments/${this.editingId}`, {
+      method: 'PATCH',
+      body: formData,
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Accept': 'application/json'
+      }
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  // Handle response from form submission
+  async handleResponse(response) {
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    console.log('Response URL:', response.url);
+    
+    // Check if response is a redirect
+    if (response.redirected) {
+      console.log('Response was redirected to:', response.url);
+      this.showSuccess('Operation completed successfully! Redirecting...');
+      setTimeout(() => {
+        window.location.href = response.url;
+      }, 1000);
+      return;
+    }
+    
+    let result;
+    try {
+      result = await response.json();
+      console.log('Response JSON:', result);
+    } catch (parseError) {
+      console.error('Error parsing JSON response:', parseError);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+      
+      // If it's HTML (likely a redirect), show success and reload
+      if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
+        this.showSuccess('Operation completed successfully! Reloading page...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        this.showError('Invalid response from server. Please try again.');
+      }
+      return;
+    }
+
+    if (response.ok && result.success === true) {
+      this.showSuccess(result.message || (this.isEditing ? 'Department updated successfully!' : 'Department created successfully!'));
+      this.resetForm();
+      // Reload the page to show updated data
+      setTimeout(() => {
+        console.log('Reloading page to show updated data...');
+        window.location.reload();
+      }, 1500);
+    } else {
+      const errors = result.errors || [result.message] || ['Error saving department. Please check your input.'];
+      this.showError(Array.isArray(errors) ? errors.join(', ') : errors);
+    }
+  }
+
+  updateDepartmentList() {
+    const tbody = document.getElementById('departments-table');
+    const emptyState = document.getElementById('empty-state');
+    tbody.innerHTML = '';
+
+    if (this.departments.length === 0) {
+      emptyState?.classList.remove('hidden');
+    } else {
+      emptyState?.classList.add('hidden');
+      this.departments.forEach(dept => {
+        // Use the employee_display_name from backend if available, otherwise fallback to manual lookup
+        let employeeDisplay = dept.employee_display_name || 'N/A';
+        
+        // Fallback: if backend doesn't provide employee_display_name, construct it manually
+        if (employeeDisplay === 'N/A' && dept.employee_reference) {
+          const employee = this.employees.find(emp => emp.employee_id === dept.employee_reference);
+          if (employee) {
+            employeeDisplay = `${employee.employee_name} (${employee.employee_code || dept.employee_reference})`;
+          } else {
+            employeeDisplay = `N/A (${dept.employee_reference})`;
+          }
+        }
+
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.dataset.departmentId = dept.id;
+
+        row.innerHTML = `
+          <td class="px-6 py-4 text-sm font-medium text-gray-900">DEPT${dept.id}</td>
+          <td class="px-6 py-4 text-sm text-gray-900">${dept.department_type || 'N/A'}</td>
+          <td class="px-6 py-4 text-sm text-gray-900">${employeeDisplay}</td>
+          <td class="px-6 py-4 text-sm text-gray-900">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              ${dept.activities ? dept.activities.length : 0} ${dept.activities && dept.activities.length === 1 ? 'activity' : 'activities'}
+            </span>
+          </td>
+          <td class="px-6 py-4 text-sm font-medium">
+            <button type="button" class="edit-btn text-gray-700 hover:text-gray-900 mr-4" data-employee-id="${dept.employee_reference}">Edit</button>
+            <div class="flex space-x-2">
+              <button type="button" class="delete-user-btn bg-orange-100 hover:bg-orange-200 text-orange-700 hover:text-orange-800 px-2 py-1 rounded text-xs font-medium border border-orange-300" 
+                      data-department-id="${dept.id}" 
+                      data-employee-id="${dept.employee_reference || ''}"
+                      title="Delete only this user's activities">Delete User</button>
+              <button type="button" class="delete-dept-btn bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 px-2 py-1 rounded text-xs font-medium border border-red-300" 
+                      data-department-id="${dept.id}"
+                      title="Delete entire department">Delete Dept</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+  }
+
+  handleSearch(term) {
+    const rows = document.querySelectorAll('#departments-table tr');
+    term = term.toLowerCase();
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      const match = Array.from(cells).some(cell => cell.textContent.toLowerCase().includes(term));
+      row.style.display = match ? '' : 'none';
+    });
+  }
+
+  handleEmployeeFilter(employeeId) {
+    if (employeeId) {
+      // Redirect to filtered view
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.set('employee_id', employeeId);
+      window.location.href = currentUrl.toString();
+    } else {
+      // Remove filter and show all
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.delete('employee_id');
+      currentUrl.searchParams.delete('employee_code');
+      window.location.href = currentUrl.toString();
+    }
+  }
+
+  showSuccess(message) {
+    const container = document.getElementById('success-container');
+    const messageSpan = document.getElementById('success-message');
+    messageSpan.textContent = message;
+    container.classList.remove('hidden');
+    setTimeout(() => this.hideSuccess(), 5000);
+  }
+
+  hideSuccess() {
+    document.getElementById('success-container')?.classList.add('hidden');
+  }
+
+  showError(message) {
+    const container = document.getElementById('error-container');
+    document.getElementById('error-title').textContent = 'Error occurred:';
+    document.getElementById('error-list').innerHTML = `<li>${message}</li>`;
+    container.classList.remove('hidden');
+  }
+
+  hideError() {
+    document.getElementById('error-container')?.classList.add('hidden');
+  }
+
+  // Cleanup method to prevent memory leaks
+  destroy() {
+    // Remove event listeners if needed
+    console.log('DepartmentManager instance destroyed');
+    window.departmentManagerInstance = null;
+  }
+} // End of DepartmentManager class
+
+  // Immediate check for activity box
+  (function ensureActivityBoxImmediate() {
+    console.log('Immediate check for activity box...');
+    const container = document.getElementById('activities-container');
+    if (container) {
+      console.log('Activities container found with', container.children.length, 'children');
+      if (container.children.length === 0) {
+        console.log('No activities found immediately, will add after initialization...');
+        window.needsDefaultActivity = true;
+      } else {
+        console.log('Default activity already present in HTML, no need to add more');
+        window.needsDefaultActivity = false;
+      }
+    }
+  })();
+
+  function initializeDepartmentManager() {
+  console.log('initializeDepartmentManager called');
+
+  // Prevent multiple initializations
+  if (window.departmentManagerInstance || isInitializing) {
+    console.log('DepartmentManager already initialized or initializing, skipping...');
+    return;
+  }
+  
+  isInitializing = true;
+
+  // Debug: Check if data is available
+  console.log('Initializing DepartmentManager...');
+  
+  // Check if required elements exist
+  const form = document.getElementById('department-form');
+  const activitiesContainer = document.getElementById('activities-container');
+  const addActivityBtn = document.getElementById('add-activity');
+  
+  console.log('Form found:', !!form);
+  console.log('Activities container found:', !!activitiesContainer);
+  console.log('Add activity button found:', !!addActivityBtn);
+  
+  // Embed employee data in page for JavaScript access
+  <% if @employee_departments %>
+    window.employeeDepartments = <%= raw @employee_departments.to_json %>;
+    console.log('Employee departments loaded:', window.employeeDepartments);
+  <% else %>
+    window.employeeDepartments = [];
+    console.log('No employee departments found');
+  <% end %>
+  
+  <% if @employees %>
+    window.employees = <%= raw @employees.map { |emp| { employee_name: emp.employee_name, employee_id: emp.employee_id, department: emp.department } }.to_json %>;
+    console.log('Employees loaded:', window.employees);
+  <% else %>
+    window.employees = [];
+    console.log('No employees found');
+  <% end %>
+  
+  // Check if dropdowns are populated
+  const deptSelect = document.getElementById('department_department_type');
+  const empSelect = document.getElementById('department_employee_reference');
+  
+  console.log('Department dropdown options:', deptSelect ? deptSelect.options.length : 'not found');
+  console.log('Employee dropdown options:', empSelect ? empSelect.options.length : 'not found');
+  
+      // Initialize DepartmentManager for form handling
+    try {
+      console.log('Creating DepartmentManager instance...');
+      window.departmentManagerInstance = new DepartmentManager();
+      console.log('DepartmentManager initialized successfully');
+
+      // Check if we need to add a default activity immediately
+      if (window.needsDefaultActivity) {
+        console.log('Adding default activity immediately after initialization...');
+        const addActivityBtn = document.getElementById('add-activity');
+        if (addActivityBtn) {
+          addActivityBtn.click();
+        }
+        window.needsDefaultActivity = false;
+      } else {
+        console.log('No need to add default activity, already present in HTML');
+      }
+      
+      // Make DepartmentManager globally accessible for debugging
+      // window.departmentManagerInstance is already set above
+      console.log('DepartmentManager ready and accessible');
+      
+    } catch (error) {
+      console.error('Error initializing DepartmentManager:', error);
+    } finally {
+      isInitializing = false;
+    }
+  }
+
+  // Use only one event listener to prevent duplicates
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded event fired');
+    initializeDepartmentManager();
+  });
+
+  // Global function to clear employee filter
+  function clearEmployeeFilter() {
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.delete('employee_id');
+    currentUrl.searchParams.delete('employee_code');
+    window.location.href = currentUrl.toString();
+  }
+
+  // For Turbo compatibility, but only if not already initialized
+  document.addEventListener('turbo:load', () => {
+    if (!window.departmentManagerInstance) {
+      initializeDepartmentManager();
+    }
+  });
+} // End of if (typeof DepartmentManager === 'undefined')
+
+// Remove turbo:render listener as it's not needed and causes duplicates
+</script>
+
+<style>
+.min-h-screen {
+  padding-left: 16rem; 
+}
+
+.sidebar-hidden .min-h-screen {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+.sidebar-hidden .max-w-7xl {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.sidebar-hidden .form-control {
+  width: 100% !important;
+}
+
+.sidebar-hidden .grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+}
+
+.main-content {
+  padding: 1rem;
+  overflow-x: auto;
+}
+</style>

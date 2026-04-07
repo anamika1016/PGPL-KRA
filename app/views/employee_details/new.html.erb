@@ -1,0 +1,6 @@
+<div class="container" style="margin-left: 260px;">
+  <div class="card shadow p-4 mt-4">
+    <h2 class="mb-4"><%= action_name == 'new' ? 'New Employee' : 'Edit Employee' %></h2>
+    <%= render 'form', employee_detail: @employee_detail %>
+  </div>
+</div>

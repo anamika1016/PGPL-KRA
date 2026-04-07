@@ -1,0 +1,40 @@
+<div class="container mt-5 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-lg rounded-4">
+        <div class="card-header bg-secondary text-white text-center">
+          <h4 class="mb-0">📨 Resend Confirmation</h4>
+        </div>
+
+        <div class="card-body p-4">
+          <% if resource.errors.any? %>
+            <div class="alert alert-danger">
+              <ul class="mb-0">
+                <% resource.errors.full_messages.each do |msg| %>
+                  <li><%= msg %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <%= form_for(resource, as: resource_name, url: confirmation_path(resource_name), html: { method: :post }) do |f| %>
+            <div class="mb-3">
+              <%= f.label :email, class: "form-label" %>
+              <%= f.email_field :email, autofocus: true, autocomplete: "email",
+                                value: (resource.pending_reconfirmation? ? resource.unconfirmed_email : resource.email),
+                                class: "form-control form-control-lg", required: true %>
+            </div>
+
+            <div class="d-grid mb-3">
+              <%= f.submit "Resend Confirmation Instructions", class: "btn btn-secondary btn-lg text-white" %>
+            </div>
+          <% end %>
+
+          <div class="text-center mt-3">
+            <%= render "devise/shared/links" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

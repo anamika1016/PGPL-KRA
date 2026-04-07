@@ -1,0 +1,905 @@
+<div class="main-content l1-pulse-page min-h-screen">
+  <div class="l1-pulse-shell">
+    <div class="l1-pulse-header-card">
+      <div class="l1-pulse-hero-copy">
+        <span class="l1-pulse-kicker">L1 Dashboard</span>
+        <h1>L1 Assessment (Pulse + Manager Feedback)</h1>
+        <p>
+          Combined assessment including PULSE-360 (15%) and LINE MANAGER FEEDBACK (10%). Total overall contribution: 25%.
+        </p>
+        <div class="l1-pulse-chip-row">
+          <span class="l1-pulse-chip chip-kra">KRA 75%</span>
+          <span class="l1-pulse-chip chip-pulse">Pulse 15%</span>
+          <span class="l1-pulse-chip chip-manager">Manager 10%</span>
+          <span class="l1-pulse-chip chip-total">Composite 100%</span>
+        </div>
+      </div>
+
+      <div class="l1-pulse-header-stats">
+        <div class="l1-pulse-mini-stat stat-employees">
+          <span>Total Employees</span>
+          <strong><%= @pulse_rows.size %></strong>
+          <small>Active review list</small>
+        </div>
+        <div class="l1-pulse-mini-stat stat-pulse">
+          <span>Pulse Weight</span>
+          <strong>15%</strong>
+          <small>Section B contribution</small>
+        </div>
+        <div class="l1-pulse-mini-stat stat-manager">
+          <span>Manager Weight</span>
+          <strong>10%</strong>
+          <small>Section C contribution</small>
+        </div>
+        <div class="l1-pulse-mini-stat stat-total">
+          <span>Review Block</span>
+          <strong>25%</strong>
+          <small>Combined L1 score</small>
+        </div>
+      </div>
+    </div>
+
+    <% if @pulse_rows.any? %>
+      <%= form_with url: save_l1_pulse_360_path, method: :patch, local: true do %>
+        <% if @pulse_error_message.present? %>
+          <div class="l1-pulse-alert error"><%= @pulse_error_message %></div>
+        <% end %>
+
+        <%# SCORE GUIDE %>
+        <div class="l1-pulse-card score-guide-card">
+          <div class="l1-pulse-card-header">
+            <h2>PULSE-360 ASSESSMENT SCORE GUIDE</h2>
+          </div>
+          <div class="guide-table-wrap">
+            <table class="guide-table">
+              <thead>
+                <tr>
+                  <th>Score Range</th>
+                  <th>Band</th>
+                  <th>Rating</th>
+                  <th>Recommended Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="guide-row guide-row-5"><td>≥ 90% (45-50)</td><td><strong>Outstanding</strong></td><td>5 (★★★★★)</td><td>Accelerated growth track / highest increment</td></tr>
+                <tr class="guide-row guide-row-4"><td>75 - 89% (38-44)</td><td><strong>Exceeds Expectations</strong></td><td>4 (★★★★)</td><td>Merit increment + recognition award</td></tr>
+                <tr class="guide-row guide-row-3"><td>60 - 74% (30-37)</td><td><strong>Meets Expectations</strong></td><td>3 (★★★)</td><td>Standard increment as per policy</td></tr>
+                <tr class="guide-row guide-row-2"><td>45 - 59% (23-29)</td><td><strong>Needs Improvement</strong></td><td>2 (★★)</td><td>PIP + structured coaching plan</td></tr>
+                <tr class="guide-row guide-row-1"><td>&lt; 45% (&lt; 23)</td><td><strong>Unsatisfactory</strong></td><td>1 (★)</td><td>Formal PIP / disciplinary review</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <%# SECTION B: PULSE-360 %>
+        <div class="l1-pulse-card glass-panel">
+          <div class="l1-pulse-card-header">
+            <span class="section-tag pulse-tag">Section B</span>
+            <h2>PULSE-360 SURVEY SCORE (Weightage : 15%)</h2>
+            <p>Please provide scores (1-5) for the employee pulse survey metrics. Category will update dynamically.</p>
+          </div>
+
+          <div class="l1-pulse-table-wrap">
+            <table class="l1-pulse-table pulse-theme-table">
+              <thead>
+                <tr>
+                  <th class="sticky-col">Employee Name</th>
+                  <th class="metric-th">Sense of Purpose &amp; Mission Alignment</th>
+                  <th class="metric-th">Workload &amp; Well-being Balance</th>
+                  <th class="metric-th">Manager Effectiveness &amp; Support</th>
+                  <th class="metric-th">Team Collaboration &amp; Relationships</th>
+                  <th class="metric-th">Recognition &amp; Growth Opportunities</th>
+                  <th class="metric-th">Org. Communication &amp; Transparency</th>
+                  <th class="metric-th">Learning &amp; Development Access</th>
+                  <th class="metric-th">Role Clarity &amp; Goal Setting</th>
+                  <th class="metric-th">Work Environment &amp; Safety</th>
+                  <th class="metric-th">Commitment &amp; Retention Intent</th>
+                  <th class="total-col">Wt % / 15%</th>
+                  <th class="category-col">Category & Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @pulse_rows.each do |row| %>
+                  <% assessment = row[:assessment] %>
+                  <% cat = row[:pulse_category] %>
+                  <tr class="pulse-input-row" data-employee-id="<%= row[:employee_detail_id] %>">
+                    <td class="staff-name sticky-col">
+                      <strong><%= row[:employee_name] %></strong>
+                      <small><%= row[:employee_code] %></small>
+                    </td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][sense_of_purpose]", assessment.sense_of_purpose, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][workload_balance]", assessment.workload_balance, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][manager_effectiveness]", assessment.manager_effectiveness, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][team_collaboration]", assessment.team_collaboration, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][recognition_growth]", assessment.recognition_growth, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][org_communication]", assessment.org_communication, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][learning_development]", assessment.learning_development, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][role_clarity]", assessment.role_clarity, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][work_environment]", assessment.work_environment, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][commitment_retention]", assessment.commitment_retention, min: 1, max: 5, step: 1, class: "pulse-input pulse-bg-light", data: { pulse_score: true } %></td>
+                    <td class="total-cell" data-pulse-total><%= row[:pulse_weighted] %></td>
+                    <td class="category-cell-mini">
+                      <div class="cat-action-box" data-cat-box>
+                        <span class="stars <%= cat[:className] %>" data-pulse-stars><%= cat[:stars] %></span>
+                        <strong data-pulse-category-name><%= cat[:category] %></strong>
+                        <small data-pulse-action><%= cat[:action] %></small>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <%# SECTION C: LINE MANAGER FEEDBACK %>
+        <div class="l1-pulse-card glass-panel mgr-section">
+          <div class="l1-pulse-card-header">
+            <span class="section-tag mgr-tag">Section C</span>
+            <h2>LINE MANAGER FEEDBACK (Weightage : 10%)</h2>
+            <p>Please provide scores (1-5) for managerial criteria and final remarks.</p>
+          </div>
+
+          <div class="l1-pulse-table-wrap">
+            <table class="l1-pulse-table mgr-theme-table">
+              <thead>
+                <tr>
+                  <th class="sticky-col">Employee Name</th>
+                  <th>Professionalism & Conduct (15%)</th>
+                  <th>Quality & Accuracy of Work Output (15%)</th>
+                  <th>Initiative & Problem-Solving (15%)</th>
+                  <th>Adherence to PAPL Values & Culture (15%)</th>
+                  <th>Cross-functional Collaboration (15%)</th>
+                  <th>Time Management & Reliability (15%)</th>
+                  <th>Growth Mindset & Development (10%)</th>
+                  <th class="total-col">Wt % / 10%</th>
+                  <th class="remarks-th">L1 Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @pulse_rows.each do |row| %>
+                  <% assessment = row[:assessment] %>
+                  <tr class="mgr-input-row" data-employee-id="<%= row[:employee_detail_id] %>">
+                    <td class="staff-name sticky-col">
+                      <strong><%= row[:employee_name] %></strong>
+                    </td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][professionalism_conduct]", assessment.professionalism_conduct, min: 1, max: 5, step: 1, class: "pulse-input mgr-bg-light", data: { manager_score: true, weight: 15 } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][work_quality_accuracy]", assessment.work_quality_accuracy, min: 1, max: 5, step: 1, class: "pulse-input mgr-bg-light", data: { manager_score: true, weight: 15 } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][initiative_problem_solving]", assessment.initiative_problem_solving, min: 1, max: 5, step: 1, class: "pulse-input mgr-bg-light", data: { manager_score: true, weight: 15 } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][papl_values_culture]", assessment.papl_values_culture, min: 1, max: 5, step: 1, class: "pulse-input mgr-bg-light", data: { manager_score: true, weight: 15 } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][collaboration]", assessment.collaboration, min: 1, max: 5, step: 1, class: "pulse-input mgr-bg-light", data: { manager_score: true, weight: 15 } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][time_management_reliability]", assessment.time_management_reliability, min: 1, max: 5, step: 1, class: "pulse-input mgr-bg-light", data: { manager_score: true, weight: 15 } %></td>
+                    <td><%= number_field_tag "pulse_assessments[#{row[:employee_detail_id]}][growth_mindset_development]", assessment.growth_mindset_development, min: 1, max: 5, step: 1, class: "pulse-input mgr-bg-light", data: { manager_score: true, weight: 10 } %></td>
+                    <td class="mgr-raw-cell" data-mgr-raw><%= row[:manager_feedback_raw] %>%</td>
+                    <td>
+                      <%= text_area_tag "pulse_assessments[#{row[:employee_detail_id]}][remarks]", assessment.remarks, rows: 1, class: "pulse-remarks-input", placeholder: "Final remarks..." %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          <div class="mgr-legend">
+            Scale: 1=Needs Improvement 3=Meets Expectations 5=Exceptional
+          </div>
+        </div>
+
+        <div class="l1-pulse-save-bar">
+          <%= submit_tag "Save All Assessments", class: "l1-pulse-submit-btn" %>
+        </div>
+      <% end %>
+
+    <% else %>
+      <div class="l1-pulse-empty">
+        <h2>No assessment records found</h2>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  :root {
+    --l1-sky: #0f5f8c;
+    --l1-navy: #12384d;
+    --l1-ink: #172534;
+    --l1-muted: #617282;
+    --l1-border: #d8e6ef;
+    --l1-card: rgba(255, 255, 255, 0.96);
+    --l1-soft-blue: #e8f5ff;
+    --l1-soft-gold: #fff3de;
+    --l1-soft-emerald: #e8f8ef;
+    --l1-soft-rose: #fff0ee;
+  }
+
+  .l1-pulse-page {
+    margin-left: 240px;
+    padding: 2rem 2rem 2.5rem;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 22%),
+      radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 20%),
+      linear-gradient(180deg, #f7fbff 0%, #eef5fa 52%, #e8f1f7 100%);
+    font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  }
+
+  .l1-pulse-shell {
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .l1-pulse-header-card {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+    gap: 1.4rem;
+    align-items: start;
+    padding: 2.25rem;
+    margin-bottom: 1.65rem;
+    border-radius: 30px;
+    border: 1px solid var(--l1-border);
+    background:
+      radial-gradient(circle at top right, rgba(14, 165, 233, 0.13), transparent 25%),
+      linear-gradient(135deg, #ffffff 0%, #f9fcff 56%, #eef7ff 100%);
+    box-shadow: 0 22px 42px rgba(15, 23, 42, 0.08);
+  }
+
+  .l1-pulse-header-card::before {
+    content: "";
+    position: absolute;
+    inset: auto -90px -110px auto;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 68%);
+    pointer-events: none;
+  }
+
+  .l1-pulse-hero-copy,
+  .l1-pulse-header-stats {
+    position: relative;
+    z-index: 1;
+  }
+
+  .l1-pulse-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #5a7388;
+    font-weight: 800;
+    font-size: 0.76rem;
+  }
+
+  .l1-pulse-header-card h1 {
+    margin: 0.4rem 0 0;
+    font-size: 2.45rem;
+    line-height: 1.08;
+    color: var(--l1-navy);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .l1-pulse-header-card p {
+    margin: 0.95rem 0 0;
+    max-width: 760px;
+    color: #4e6274;
+    line-height: 1.72;
+    font-size: 1rem;
+  }
+
+  .l1-pulse-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.2rem;
+  }
+
+  .l1-pulse-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .chip-kra {
+    background: #edf7ef;
+    border-color: #cce7d3;
+    color: #166534;
+  }
+
+  .chip-pulse {
+    background: #edf5ff;
+    border-color: #c6dcff;
+    color: #1d4ed8;
+  }
+
+  .chip-manager {
+    background: #fff3e3;
+    border-color: #f3d4b1;
+    color: #b45309;
+  }
+
+  .chip-total {
+    background: #eff6fb;
+    border-color: #d1e0eb;
+    color: var(--l1-navy);
+  }
+
+  .l1-pulse-header-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .l1-pulse-mini-stat {
+    padding: 1rem 1.05rem;
+    border-radius: 22px;
+    border: 1px solid var(--l1-border);
+    background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .l1-pulse-mini-stat span {
+    display: block;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .l1-pulse-mini-stat strong {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 1.85rem;
+    line-height: 1;
+    color: var(--l1-navy);
+  }
+
+  .l1-pulse-mini-stat small {
+    display: block;
+    margin-top: 0.4rem;
+    color: var(--l1-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .stat-employees {
+    background: linear-gradient(180deg, #ffffff 0%, #f3fbff 100%);
+  }
+
+  .stat-pulse {
+    background: linear-gradient(180deg, #f3f8ff 0%, #e8f1ff 100%);
+  }
+
+  .stat-manager {
+    background: linear-gradient(180deg, #fffaf2 0%, #fff2dd 100%);
+  }
+
+  .stat-total {
+    background: linear-gradient(180deg, #f7fff8 0%, #ebf9ef 100%);
+  }
+
+  .l1-pulse-alert.error,
+  .l1-pulse-empty {
+    padding: 1.25rem 1.4rem;
+    border-radius: 22px;
+    margin-bottom: 1.35rem;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid var(--l1-border);
+    box-shadow: 0 18px 28px rgba(15, 23, 42, 0.05);
+  }
+
+  .l1-pulse-alert.error {
+    border-color: #fecaca;
+    background: linear-gradient(180deg, #fff5f5 0%, #fff0f0 100%);
+    color: #b91c1c;
+    font-weight: 700;
+  }
+
+  .l1-pulse-empty {
+    text-align: center;
+  }
+
+  .l1-pulse-empty h2 {
+    margin: 0;
+    color: var(--l1-navy);
+    font-size: 1.6rem;
+  }
+
+  .l1-pulse-card {
+    width: 100%;
+    margin-bottom: 1.75rem;
+    padding: 1.9rem;
+    border-radius: 28px;
+    border: 1px solid var(--l1-border);
+    background: var(--l1-card);
+    box-shadow: 0 20px 36px rgba(15, 23, 42, 0.06);
+  }
+
+  .score-guide-card {
+    background: linear-gradient(180deg, #fbfdff 0%, #f4f9fe 100%);
+  }
+
+  .glass-panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 250, 253, 0.96) 100%);
+  }
+
+  .mgr-section {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 249, 242, 0.97) 100%);
+  }
+
+  .l1-pulse-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1.15rem;
+  }
+
+  .l1-pulse-card-header h2 {
+    margin: 0;
+    font-size: 1.7rem;
+    color: var(--l1-navy);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .l1-pulse-card-header p {
+    margin: 0;
+    color: var(--l1-muted);
+    line-height: 1.65;
+  }
+
+  .section-tag {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.55rem 1.1rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.55rem;
+  }
+
+  .pulse-tag {
+    background: #dff2ff;
+    color: #1d4ed8;
+  }
+
+  .mgr-tag {
+    background: #fff0df;
+    color: #b45309;
+  }
+
+  .guide-table-wrap,
+  .l1-pulse-table-wrap {
+    overflow: auto;
+    width: 100%;
+    border-radius: 20px;
+    border: 1px solid #dce8f2;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .guide-table {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+  }
+
+  .guide-table th {
+    padding: 1rem 1.1rem;
+    text-align: left;
+    color: var(--l1-sky);
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: linear-gradient(180deg, #edf7ff 0%, #e0f1ff 100%);
+    border-bottom: 1px solid #cfe1ee;
+  }
+
+  .guide-table td {
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid #e7eef4;
+    font-size: 0.95rem;
+    color: var(--l1-ink);
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .guide-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .guide-row td:first-child {
+    font-weight: 700;
+  }
+
+  .guide-row-5 td:first-child {
+    box-shadow: inset 4px 0 0 #f59e0b;
+  }
+
+  .guide-row-4 td:first-child {
+    box-shadow: inset 4px 0 0 #fb923c;
+  }
+
+  .guide-row-3 td:first-child {
+    box-shadow: inset 4px 0 0 #3b82f6;
+  }
+
+  .guide-row-2 td:first-child {
+    box-shadow: inset 4px 0 0 #8b5cf6;
+  }
+
+  .guide-row-1 td:first-child {
+    box-shadow: inset 4px 0 0 #ef4444;
+  }
+
+  .guide-row-5 td {
+    background: linear-gradient(90deg, rgba(251, 191, 36, 0.07), rgba(255, 255, 255, 0.95));
+  }
+
+  .guide-row-4 td {
+    background: linear-gradient(90deg, rgba(251, 146, 60, 0.06), rgba(255, 255, 255, 0.95));
+  }
+
+  .guide-row-3 td {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05), rgba(255, 255, 255, 0.95));
+  }
+
+  .guide-row-2 td {
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.05), rgba(255, 255, 255, 0.95));
+  }
+
+  .guide-row-1 td {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 0.95));
+  }
+
+  .l1-pulse-table {
+    width: 100%;
+    min-width: 2140px;
+    border-collapse: collapse;
+  }
+
+  .l1-pulse-table th {
+    padding: 1.05rem 0.85rem;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #436174;
+    background: #f8fbfd;
+    border-bottom: 1px solid #dbe7ef;
+  }
+
+  .pulse-theme-table th {
+    background: linear-gradient(180deg, #ecf6ff 0%, #deefff 100%);
+    color: #1d4ed8;
+    border-bottom-color: #bfdcff;
+  }
+
+  .pulse-theme-table .metric-th {
+    min-width: 170px;
+    white-space: normal;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    line-height: 1.45;
+  }
+
+  .mgr-theme-table th {
+    background: linear-gradient(180deg, #fff5e7 0%, #ffe8cb 100%) !important;
+    color: #b45309 !important;
+    border-bottom-color: #f6d8b7 !important;
+  }
+
+  .l1-pulse-table td {
+    padding: 1rem 0.85rem;
+    text-align: center;
+    vertical-align: middle;
+    color: var(--l1-ink);
+    background: rgba(255, 255, 255, 0.94);
+    border-bottom: 1px solid #e8eef3;
+  }
+
+  .l1-pulse-table tbody tr:nth-child(even) td {
+    background: rgba(247, 250, 252, 0.98);
+  }
+
+  .l1-pulse-table tbody tr:hover td {
+    background: rgba(238, 246, 251, 0.98);
+  }
+
+  .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 250px;
+    text-align: left !important;
+    border-right: 1px solid #dce8f2 !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%) !important;
+    box-shadow: 10px 0 18px rgba(15, 23, 42, 0.05);
+  }
+
+  .staff-name strong {
+    display: block;
+    font-size: 1rem;
+    color: #142f42;
+    white-space: nowrap;
+  }
+
+  .staff-name small {
+    display: block;
+    margin-top: 0.3rem;
+    color: #728396;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .pulse-input {
+    width: 72px;
+    padding: 0.8rem 0.65rem;
+    border-radius: 14px;
+    border: 1px solid #cad8e3;
+    text-align: center;
+    font-weight: 800;
+    font-size: 1.05rem;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+
+  .pulse-input:hover {
+    border-color: #95b9d4;
+    transform: translateY(-1px);
+  }
+
+  .pulse-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+  }
+
+  .pulse-bg-light {
+    background: linear-gradient(180deg, #f4fbff 0%, #e7f4ff 100%);
+    color: #0f5f8c;
+  }
+
+  .mgr-bg-light {
+    background: linear-gradient(180deg, #fffaf1 0%, #fff0dc 100%);
+    color: #9a4f0f;
+  }
+
+  .total-col {
+    min-width: 130px;
+  }
+
+  .total-cell,
+  .mgr-raw-cell {
+    font-weight: 900;
+    font-size: 1.2rem;
+  }
+
+  .total-cell {
+    color: #0f5f8c;
+    background: linear-gradient(180deg, #edf8ff 0%, #dff1ff 100%) !important;
+  }
+
+  .mgr-raw-cell {
+    color: #9a3412;
+    background: linear-gradient(180deg, #fff7ed 0%, #ffe9d4 100%) !important;
+  }
+
+  .category-col,
+  .category-cell-mini {
+    min-width: 330px;
+  }
+
+  .cat-action-box {
+    padding: 0.95rem 1rem;
+    border-radius: 18px;
+    border: 1px solid #dbe7ef;
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbfe 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    text-align: left;
+  }
+
+  .cat-action-box strong {
+    display: block;
+    margin: 0.35rem 0 0.2rem;
+    font-size: 1rem;
+    color: var(--l1-navy);
+  }
+
+  .cat-action-box small {
+    display: block;
+    color: var(--l1-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .stars {
+    display: inline-flex;
+    align-items: center;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+
+  .stars-5 { color: #f59e0b; }
+  .stars-4 { color: #fb923c; }
+  .stars-3 { color: #3b82f6; }
+  .stars-2 { color: #8b5cf6; }
+  .stars-1 { color: #ef4444; }
+
+  .remarks-th {
+    min-width: 320px;
+  }
+
+  .pulse-remarks-input {
+    width: 100%;
+    min-width: 320px;
+    min-height: 82px;
+    padding: 0.9rem 1rem;
+    border-radius: 16px;
+    border: 1px solid #d1dbe5;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    color: var(--l1-ink);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    resize: vertical;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .pulse-remarks-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  }
+
+  .mgr-legend {
+    margin-top: 1rem;
+    padding: 1rem 1.15rem;
+    border-radius: 20px;
+    border: 1px solid #f3d7b9;
+    background: linear-gradient(180deg, #fffaf4 0%, #fff3e5 100%);
+    text-align: center;
+    color: #9a3412;
+    font-weight: 700;
+    font-style: italic;
+  }
+
+  .l1-pulse-save-bar {
+    position: sticky;
+    bottom: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 1.2rem;
+    margin-top: 0.4rem;
+    border-radius: 24px;
+    border: 1px solid var(--l1-border);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+  }
+
+  .l1-pulse-submit-btn {
+    border: 0;
+    padding: 1rem 2.25rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #0f5f8c 0%, #1b7ea8 100%);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    box-shadow: 0 16px 24px rgba(15, 95, 140, 0.22);
+  }
+
+  .l1-pulse-submit-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.03);
+    box-shadow: 0 20px 30px rgba(15, 95, 140, 0.26);
+  }
+
+  .l1-pulse-submit-btn:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 900px) {
+    .l1-pulse-page {
+      margin-left: 0;
+      padding: 1rem;
+    }
+
+    .l1-pulse-header-card {
+      grid-template-columns: 1fr;
+      padding: 1.5rem;
+    }
+
+    .l1-pulse-header-card h1 {
+      font-size: 1.9rem;
+    }
+
+    .l1-pulse-header-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .l1-pulse-card {
+      padding: 1.25rem;
+    }
+
+    .l1-pulse-card-header h2 {
+      font-size: 1.35rem;
+    }
+
+    .l1-pulse-save-bar {
+      position: static;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+
+    .l1-pulse-submit-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+
+<script>
+  (function() {
+    function getCategory(total) {
+      if (total >= 45) return { stars: "★★★★★", category: "Outstanding", action: "Accelerated growth track / highest increment", className: "stars-5" };
+      if (total >= 38) return { stars: "★★★★", category: "Exceeds Expectations", action: "Merit increment + recognition award", className: "stars-4" };
+      if (total >= 30) return { stars: "★★★", category: "Meets Expectations", action: "Standard increment as per policy", className: "stars-3" };
+      if (total >= 23) return { stars: "★★", category: "Needs Improvement", action: "PIP + structured coaching plan", className: "stars-2" };
+      return { stars: "★", category: "Unsatisfactory", action: "Formal PIP / disciplinary review", className: "stars-1" };
+    }
+
+    function updateRow(rowId) {
+      const rowB = document.querySelector(`.pulse-input-row[data-employee-id="${rowId}"]`);
+      const rowC = document.querySelector(`.mgr-input-row[data-employee-id="${rowId}"]`);
+      
+      if (rowB) {
+        let pTotal = 0;
+        rowB.querySelectorAll("[data-pulse-score]").forEach(i => { if(i.value) pTotal += parseInt(i.value); });
+        rowB.querySelector("[data-pulse-total]").textContent = (pTotal > 0 ? ((pTotal/50.0)*15.0).toFixed(2) : "0.00");
+        
+        const cat = getCategory(pTotal);
+        rowB.querySelector("[data-pulse-stars]").textContent = cat.stars;
+        rowB.querySelector("[data-pulse-stars]").className = "stars " + cat.className;
+        rowB.querySelector("[data-pulse-category-name]").textContent = cat.category;
+        rowB.querySelector("[data-pulse-action]").textContent = cat.action;
+      }
+
+      if (rowC) {
+        let mgrWeighted = 0;
+        let hasMgr = false;
+        rowC.querySelectorAll("[data-manager-score]").forEach(i => {
+          if(i.value) {
+            hasMgr = true;
+            mgrWeighted += (parseInt(i.value)/5.0) * parseFloat(i.dataset.weight);
+          }
+        });
+        rowC.querySelector("[data-mgr-raw]").textContent = (hasMgr ? (mgrWeighted * 0.10).toFixed(2) : "0.00") + "%";
+      }
+    }
+
+    document.querySelectorAll(".pulse-input").forEach(input => {
+      input.addEventListener("input", function() {
+        const rowId = this.closest("tr").dataset.employeeId;
+        updateRow(rowId);
+      });
+    });
+  })();
+</script>

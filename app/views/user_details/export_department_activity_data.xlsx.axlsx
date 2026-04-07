@@ -1,0 +1,75 @@
+wb = xlsx_package.workbook
+
+# Add a title
+wb.add_worksheet(name: "Department Activity Data") do |sheet|
+  # Add header row
+  headers = [
+    "Department", "Employee Name", "Employee Email", "Employee Mobile Number", "Employee Code", "Activity Name", "Theme Name", "Unit",
+    "L1 Employer Name", "L1 Employer Code", "L1 Mobile Number",
+    "L2 Employer Name", "L2 Employer Code", "L2 Mobile Number",
+    "April", "May", "June", "July", "August", "September",
+    "October", "November", "December", "January", "February", "March"
+  ]
+
+  sheet.add_row headers, style: sheet.styles.add_style(
+    bg_color: "6c757d",
+    fg_color: "FFFFFF",
+    b: true,
+    alignment: { horizontal: :center, vertical: :center }
+  )
+
+  # Add data rows
+  @user_details.each do |user_detail|
+    # Get L1 and L2 employer details
+    employee_detail = user_detail.employee_detail
+
+    # Find L1 employer
+    l1_employer = nil
+    if employee_detail&.l1_code.present?
+      l1_employer = EmployeeDetail.find_by("employee_code LIKE ?", employee_detail.l1_code.strip + "%")
+    end
+
+    # Find L2 employer
+    l2_employer = nil
+    if employee_detail&.l2_code.present?
+      l2_employer = EmployeeDetail.find_by("employee_code LIKE ?", employee_detail.l2_code.strip + "%")
+    end
+
+    row_data = [
+      user_detail.department&.department_type || "-",
+      user_detail.employee_detail&.employee_name || "-",
+      user_detail.employee_detail&.employee_email || "-",
+      user_detail.employee_detail&.mobile_number || "-",
+      user_detail.employee_detail&.employee_code || "-",
+      user_detail.activity&.activity_name || "-",
+      user_detail.activity&.theme_name || "-",
+      user_detail.activity&.unit || "-",
+      # L1 Employer Information
+      l1_employer&.employee_name || employee_detail&.l1_employer_name || "-",
+      l1_employer&.employee_code || employee_detail&.l1_code || "-",
+      l1_employer&.mobile_number || "-",
+      # L2 Employer Information
+      l2_employer&.employee_name || employee_detail&.l2_employer_name || "-",
+      l2_employer&.employee_code || employee_detail&.l2_code || "-",
+      l2_employer&.mobile_number || "-",
+      # Monthly Data
+      user_detail.april || "-",
+      user_detail.may || "-",
+      user_detail.june || "-",
+      user_detail.july || "-",
+      user_detail.august || "-",
+      user_detail.september || "-",
+      user_detail.october || "-",
+      user_detail.november || "-",
+      user_detail.december || "-",
+      user_detail.january || "-",
+      user_detail.february || "-",
+      user_detail.march || "-"
+    ]
+
+    sheet.add_row row_data
+  end
+
+  # Auto-fit columns
+  sheet.column_widths 15, 20, 28, 20, 15, 25, 15, 10, 20, 15, 15, 20, 15, 15, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+end

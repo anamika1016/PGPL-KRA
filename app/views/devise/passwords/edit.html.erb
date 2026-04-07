@@ -1,0 +1,208 @@
+
+
+
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: none;
+        }
+
+        .auth-header h2, .auth-header h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .auth-body {
+            padding: 2rem;
+        }
+
+        .form-label {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #6c757d;
+            box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.15);
+            background-color: white;
+        }
+
+        .form-control-lg {
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+        }
+
+        .form-select-lg {
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+        }
+
+        .btn-auth {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-auth:hover {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+
+        .alert {
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .form-check-input {
+            margin-top: 0.25rem;
+        }
+
+        .form-check-label {
+            color: #6c757d;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .auth-links a {
+            color: #6c757d;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-links a:hover {
+            color: #495057;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        .field {
+            margin-bottom: 1.5rem;
+        }
+
+        .actions {
+            margin-top: 1.5rem;
+        }
+
+        .cancel-account {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+    </style>
+
+    <!-- Reset Password Form -->
+<div class="container mt-5 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card auth-card shadow">
+        <div class="card-header auth-header text-white bg-dark">
+          <h4 class="mb-0 text-center">Change Your Password</h4>
+        </div>
+
+        <div class="card-body auth-body">
+          <% if resource.errors.any? %>
+            <div class="alert alert-danger">
+              <ul class="mb-0">
+                <% resource.errors.full_messages.each do |msg| %>
+                  <li><%= msg %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put, data: { turbo: false } }) do |f| %>
+            <%= f.hidden_field :reset_password_token %>
+
+            <div class="mb-3">
+              <%= f.label :password, "New Password", class: "form-label" %>
+              <% if @minimum_password_length %>
+                <small class="text-muted">(<%= @minimum_password_length %> characters minimum)</small>
+              <% end %>
+              <%= f.password_field :password, autofocus: true, autocomplete: "new-password", class: "form-control form-control-lg", placeholder: "Enter new password" %>
+            </div>
+
+            <div class="mb-3">
+              <%= f.label :password_confirmation, "Confirm New Password", class: "form-label" %>
+              <%= f.password_field :password_confirmation, autocomplete: "new-password", class: "form-control form-control-lg", placeholder: "Confirm new password" %>
+            </div>
+
+            <div class="d-grid mb-3">
+              <%= f.submit "Change My Password", class: "btn btn-dark btn-lg text-white" %>
+            </div>
+          <% end %>
+
+          <div class="text-center mt-3">
+            <%= render "devise/shared/links" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

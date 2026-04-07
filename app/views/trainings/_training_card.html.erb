@@ -1,0 +1,126 @@
+<div class="train-card <%= !training.status ? 'inactive' : '' %>">
+
+  <!-- Badge Row -->
+  <div style="display:flex; align-items:center; justify-content:space-between;">
+    <% if training.status %>
+      <span class="badge-active">
+        <span class="dot" style="background:#10b981;"></span>Active
+      </span>
+    <% else %>
+      <span class="badge-inactive">
+        <span class="dot" style="background:#94a3b8;"></span>Inactive
+      </span>
+    <% end %>
+    <span class="duration-chip">
+      <svg xmlns="http://www.w3.org/2000/svg" style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <%= training.duration >= 60 ? "#{training.duration / 60} min" : "#{training.duration} sec" %>
+    </span>
+  </div>
+
+  <!-- Title -->
+  <h3 class="card-title" style="font-size: 18px;"><%= training.title %></h3>
+
+  <!-- Meta -->
+  <div class="card-meta" style="flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 12px; color: #000;">
+    <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px;">
+      <svg xmlns="http://www.w3.org/2000/svg" style="width:13px;height:13px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <%= training.month.present? ? training.month_name : "No Month" %> <%= training.year %>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px; color: #000; font-size: 12px;">
+      <svg xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      Uploaded: <%= training.created_at.strftime("%d %b %Y at %I:%M %p") %>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px; color: #000; font-size: 12px;">
+      <svg xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      Required Duration: <%= training.duration >= 60 ? "#{training.duration / 60} mins" : "#{training.duration} secs" %>
+    </div>
+  </div>
+
+  <hr class="divider" style="margin-top:auto;">
+
+  <!-- Actions -->
+  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+    <% if current_user.role == "hod" %>
+      <%= link_to "View", training_path(training), class: "btn-view" %>
+      <%= link_to "Edit", edit_training_path(training), class: "btn-edit" %>
+
+      <%= button_to toggle_status_training_path(training), method: :patch,
+            class: training.status ? "btn-deactivate" : "btn-activate" do %>
+        <%= training.status ? "Deactivate" : "Activate" %>
+      <% end %>
+
+      <%= button_to training_path(training), method: :delete,
+            data: { confirm: "Are you sure?" }, class: "btn-delete" do %>
+        Delete
+      <% end %>
+
+    <% else %>
+      <% progress ||= training.user_training_progresses.find { |p| p.user_id == current_user.id } %>
+      <% if progress&.status == "completed" %>
+        <div style="width: 100%;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="completed-badge">✅ Completed</span>
+            <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+              <%= link_to "View Again", training_path(training), class: "btn-view-again" %>
+              <%# NOTE: Individual certificate button REMOVED for employees as requested. 
+                  Monthly certificate button is shown at the header of the month group. %>
+              <% if current_user.role == "hod" %>
+                <%= link_to certificate_training_path(training, format: :pdf), target: "_blank", class: "btn-view-again", style: "color: #16a34a; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 4px;" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Certificate
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+
+          <!-- Progress Stats -->
+          <div class="progress-info">
+            <div class="progress-row-item">
+              <span class="progress-label">Completed On:</span>
+              <span class="progress-val"><%= progress.ended_at&.strftime("%d %b %Y") %></span>
+            </div>
+            <div class="progress-row-item">
+              <span class="progress-label">Completion Year:</span>
+              <span class="progress-val"><%= progress.ended_at&.year %></span>
+            </div>
+            <div class="progress-row-item">
+              <span class="progress-label">Time Spent:</span>
+              <span class="progress-val">
+                <% mins = (progress.time_spent.to_i / 60) %>
+                <% secs = (progress.time_spent.to_i % 60) %>
+                <%= mins %>m <%= secs %>s
+              </span>
+            </div>
+            <% if training.has_assessment %>
+            <div class="progress-row-item">
+              <span class="progress-label">Assessment Score:</span>
+              <span class="progress-val font-semibold text-green-700">
+                <%= progress.score.present? ? progress.score : '0' %> / <%= training.training_questions.count %>
+              </span>
+            </div>
+            <% end %>
+            <div class="progress-row-item">
+              <span class="progress-label">Financial Year:</span>
+              <span class="progress-val"><%= progress.financial_year %></span>
+            </div>
+          </div>
+        </div>
+      <% else %>
+        <%= link_to training_path(training), class: "btn-start" do %>
+          Start Training →
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+
+</div>

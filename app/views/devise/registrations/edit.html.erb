@@ -1,0 +1,261 @@
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: none;
+        }
+
+        .auth-header h2, .auth-header h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .auth-body {
+            padding: 2rem;
+        }
+
+        .form-label {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #6c757d;
+            box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.15);
+            background-color: white;
+        }
+
+        .form-control-lg {
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+        }
+
+        .form-select-lg {
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+        }
+
+        .btn-auth {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-auth:hover {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+
+        .alert {
+            border: none;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .form-check-input {
+            margin-top: 0.25rem;
+        }
+
+        .form-check-label {
+            color: #6c757d;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .auth-links a {
+            color: #6c757d;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-links a:hover {
+            color: #495057;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        .field {
+            margin-bottom: 1.5rem;
+        }
+
+        .actions {
+            margin-top: 1.5rem;
+        }
+
+        .cancel-account {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+    </style>
+
+
+<!-- Edit Account Form -->
+<div class="container mt-5 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-lg rounded-4">
+        <div class="card-header bg-warning text-white text-center">
+          <h4 class="mb-0">Edit Account</h4>
+        </div>
+
+        <div class="card-body p-4">
+          <% if resource.errors.any? %>
+            <div class="alert alert-danger">
+              <ul class="mb-0">
+                <% resource.errors.full_messages.each do |msg| %>
+                  <li><%= msg %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put }) do |f| %>
+            
+            <!-- Email -->
+            <div class="mb-3">
+              <%= f.label :email, class: "form-label" %>
+              <%= f.email_field :email, class: "form-control form-control-lg", autofocus: true %>
+            </div>
+
+            <!-- Show if Devise confirmable -->
+            <% if devise_mapping.confirmable? && resource.pending_reconfirmation? %>
+              <div class="alert alert-info">
+                Waiting confirmation for: <strong><%= resource.unconfirmed_email %></strong>
+              </div>
+            <% end %>
+
+            <!-- Role Field with Condition -->
+            <% if resource.role.blank? %>
+              <div class="mb-3">
+                <%= f.label :role, "Select Role", class: "form-label" %>
+                <%= f.select :role, options_for_select([
+                    ["Employee", "employee"],
+                    ["HOD", "hod"],
+                    ["Admin", "admin"],
+                    ["L1 Employer", "l1_employer"],
+                    ["L2 Employer", "l2_employer"]
+                  ]),
+                  { prompt: "Choose your role" },
+                  class: "form-select form-select-lg", required: true %>
+              </div>
+            <% else %>
+              <div class="mb-3">
+                <%= f.label :role, "Your Role", class: "form-label" %>
+                <input type="text" class="form-control form-control-lg" value="<%= resource.role.humanize %>" readonly disabled>
+                <%= f.hidden_field :role, value: resource.role %>
+              </div>
+            <% end %>
+
+            <!-- New Password -->
+            <div class="mb-3">
+              <%= f.label :password, "New Password", class: "form-label" %>
+              <%= f.password_field :password, autocomplete: "new-password", class: "form-control form-control-lg" %>
+              <% if @minimum_password_length %>
+                <small class="text-muted">(<%= @minimum_password_length %> characters minimum)</small>
+              <% end %>
+            </div>
+
+            <!-- Password Confirmation -->
+            <div class="mb-3">
+              <%= f.label :password_confirmation, "Confirm New Password", class: "form-label" %>
+              <%= f.password_field :password_confirmation, autocomplete: "new-password", class: "form-control form-control-lg" %>
+            </div>
+
+            <!-- Current Password -->
+            <div class="mb-3">
+              <%= f.label :current_password, "Current Password", class: "form-label" %>
+              <%= f.password_field :current_password, autocomplete: "current-password", required: true, class: "form-control form-control-lg" %>
+              <small class="text-muted">We need your current password to confirm your changes.</small>
+            </div>
+
+            <!-- Submit -->
+            <div class="d-grid mb-3">
+              <%= f.submit "Update", class: "btn btn-warning btn-lg text-white" %>
+            </div>
+          <% end %>
+
+          <hr>
+
+          <!-- Cancel Account -->
+          <div class="text-center text-danger fw-bold mb-3">Cancel My Account</div>
+          <div class="d-grid mb-3">
+            <%= button_to "Cancel my account", registration_path(resource_name),
+                method: :delete, data: { confirm: "Are you sure?" },
+                class: "btn btn-danger btn-lg" %>
+          </div>
+
+          <div class="text-center mt-2">
+            <%= link_to "Back", root_path, class: "text-decoration-none text-warning fw-bold" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

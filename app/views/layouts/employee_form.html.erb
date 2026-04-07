@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Kra - Employee Management" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="bg-gray-50 dark:bg-neutral-900">
+    <div class="min-h-screen flex flex-col">
+      <!-- Header -->
+      <header class="bg-white dark:bg-neutral-800 shadow-sm border-b border-gray-200 dark:border-neutral-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center py-4">
+            <div class="flex items-center">
+              <h1 class="text-xl font-semibold text-gray-900 dark:text-white">KRA Employee Management</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+              <%= link_to "Dashboard", root_path, class: "text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white" %>
+              <%= link_to "Employee List", employee_details_path, class: "text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white" %>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="flex-1 py-8">
+        <%= yield %>
+      </main>
+    </div>
+  </body>
+</html>

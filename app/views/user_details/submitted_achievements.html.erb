@@ -1,0 +1,1207 @@
+<!-- Main Content Area -->
+<div class="main-content bg-gray-50 min-h-screen">
+  <div class="bg-gray-50 min-h-screen">
+    <% if @user_details.any? && @user_details.any? { |detail| detail.achievements.any?(&:achievement?) } %>
+   <!-- Update this section in your existing index.html.erb file -->
+<div class="bg-gray-100 px-6 py-4 border-b border-gray-200 rounded-t-xl">
+  <div class="flex justify-between items-center">
+    <h2 class="text-4xl font-bold text-gray-800 flex items-center">
+      <i class="fas fa-check-circle me-3 text-green-600 text-2xl"></i>
+      Submitted  Viwe Achievements
+    </h2>
+    
+    <!-- Add this Quarterly Edit Button -->
+   <div class="flex items-center gap-3">
+  <%= link_to quarterly_edit_all_user_details_path, 
+              class: "bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center shadow-md hover:shadow-lg transform hover:scale-105" do %>
+    <i class="fas fa-edit me-2"></i>
+    <span class="font-semibold">Quarterly Edit</span>
+  <% end %>
+</div>
+
+  </div>
+</div>
+      <div class="p-6">
+        <div class="table-wrapper overflow-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+          <table class="table table-hover w-full min-w-full">
+            <thead class="bg-gray-800">
+              <tr>
+                <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Activity</th>
+                <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Theme</th>
+                <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Unit</th>
+                <th colspan="11" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600 bg-orange-700">Q1 (APR-JUN)</th>
+                <th colspan="11" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600 bg-purple-700">Q2 (JUL-SEP)</th>
+                <th colspan="11" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600 bg-blue-700">Q3 (OCT-DEC)</th>
+                <th colspan="11" class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600 bg-green-700">Q4 (JAN-MAR)</th>
+              </tr>
+              <tr class="bg-gray-700">
+                <!-- Q1 Months -->
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">April</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">May</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">June</th>
+                <th colspan="2" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Quarter</th>
+                
+                <!-- Q2 Months -->
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">July</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">August</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">September</th>
+                <th colspan="2" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Quarter</th>
+                
+                <!-- Q3 Months -->
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">October</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">November</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">December</th>
+                <th colspan="2" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Quarter</th>
+                
+                <!-- Q4 Months -->
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">January</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">February</th>
+                <th colspan="3" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">March</th>
+                <th colspan="2" class="px-2 py-2 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Quarter</th>
+              </tr>
+              <tr class="bg-gray-600">
+                <% 4.times do %>
+                  <!-- Monthly Columns -->
+                  <% 3.times do %>
+                    <th class="px-2 py-1 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Target</th>
+                    <th class="px-2 py-1 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Achievement</th>
+                    <th class="px-2 py-1 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Remarks</th>
+                  <% end %>
+                  <!-- Quarter Columns -->
+                  <th class="px-2 py-1 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Details</th>
+                  <th class="px-2 py-1 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Status</th>
+                <% end %>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <% 
+                # Calculate quarter statuses based on ALL activities across ALL rows
+                all_q1_statuses = []
+                all_q2_statuses = []
+                all_q3_statuses = []
+                all_q4_statuses = []
+                
+                @user_details.each do |detail|
+                  achievements = detail.achievements.index_by(&:month)
+                  # Q1 (APR-JUN)
+                  ['april', 'may', 'june'].each do |month|
+                    all_q1_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                  end
+                  # Q2 (JUL-SEP)
+                  ['july', 'august', 'september'].each do |month|
+                    all_q2_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                  end
+                  # Q3 (OCT-DEC)
+                  ['october', 'november', 'december'].each do |month|
+                    all_q3_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                  end
+                  # Q4 (JAN-MAR)
+                  ['january', 'february', 'march'].each do |month|
+                    all_q4_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                  end
+                end
+                
+                # Determine overall quarter statuses based on highest priority
+                def calculate_overall_quarter_status(statuses)
+                  return "pending" if statuses.empty?
+                  # Priority: L2 Returned > L1 Returned > L2 Approved > L1 Approved > Submitted > Pending
+                  if statuses.include?("l2_returned")
+                    "l2_returned"
+                  elsif statuses.include?("l1_returned")
+                    "l1_returned"
+                  elsif statuses.include?("l2_approved")
+                    "l2_approved"
+                  elsif statuses.include?("l1_approved")
+                    "l1_approved"
+                  elsif statuses.include?("submitted")
+                    "submitted"
+                  else
+                    "pending"
+                  end
+                end
+                
+                overall_q1_status = calculate_overall_quarter_status(all_q1_statuses)
+                overall_q2_status = calculate_overall_quarter_status(all_q2_statuses)
+                overall_q3_status = calculate_overall_quarter_status(all_q3_statuses)
+                overall_q4_status = calculate_overall_quarter_status(all_q4_statuses)
+              %>
+              
+              <% @user_details.each_with_index do |detail, index| %>
+                <% existing_achievements = detail.achievements.index_by(&:month) %>
+                <% if existing_achievements.values.any? { |a| a.achievement.present? } %>
+                  <tr class="<%= index.even? ? 'bg-gray-50' : 'bg-white' %> hover:bg-gray-100 transition-colors duration-200" data-detail-id="<%= detail.id %>">
+                    <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200"><%= detail.activity.activity_name %></td>
+                    <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200"><%= detail.activity.theme_name.presence || 'No Theme' %></td>
+                    <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 text-center"><%= detail.activity.unit %></td>
+
+                    <!-- Q1 (APR-JUN) -->
+                    <%
+                      q1_months = ['april', 'may', 'june']
+                      # Use overall quarter status instead of calculating per row
+                      q1_status = overall_q1_status
+                      
+                      q1_targets = []
+                      q1_achievements = []
+                      q1_remarks = []
+                    %>
+                    
+                    <% q1_months.each do |month| %>
+                      <% target_value = detail.send(month.to_sym) %>
+                      <% achievement_record = existing_achievements[month] %>
+                      <% achievement = achievement_record&.achievement %>
+                      <% remarks = achievement_record&.employee_remarks %>
+                      <% l1_remarks = achievement_record&.achievement_remark&.l1_remarks %>
+                      <% l2_remarks = achievement_record&.achievement_remark&.l2_remarks %>
+                      <% l1_percentage = achievement_record&.achievement_remark&.l1_percentage %>
+                      <% l2_percentage = achievement_record&.achievement_remark&.l2_percentage %>
+                      <% month_status = achievement_record&.status || 'pending' %>
+                      
+                      <% q1_targets << target_value.to_f %>
+                      <% q1_achievements << achievement.to_f %>
+                      <% q1_remarks << {month: month, target: target_value, achievement: achievement, remarks: remarks, l1_remarks: l1_remarks, l2_remarks: l2_remarks, l1_percentage: l1_percentage, l2_percentage: l2_percentage, status: month_status} %>
+                      
+                      <td class="px-2 py-3 text-sm text-gray-800 text-center border-r border-gray-200 bg-orange-50">
+                        <span class="<%= target_value.presence ? 'text-gray-800 font-medium' : 'text-gray-400' %>">
+                          <%= target_value.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-orange-50">
+                        <span class="<%= achievement.presence ? 'text-green-700 font-semibold bg-green-50 px-2 py-1 rounded' : 'text-gray-400' %>">
+                          <%= achievement.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-orange-50">
+                        <span class="<%= remarks.presence ? 'text-orange-700 font-medium bg-orange-50 px-2 py-1 rounded text-xs' : 'text-gray-400' %>">
+                          <%= remarks.presence || '-' %>
+                        </span>
+                      </td>
+                    <% end %>
+                    
+                    <!-- Q1 Details -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-orange-50">
+                      <button
+                        type="button"
+                        class="inline-flex items-center justify-center w-8 h-8 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-full transition-all duration-200 hover:scale-105 details-btn"
+                        title="View Q1 Details"
+                        data-quarter="Q1 (APR-JUN)"
+                        data-months="<%= q1_months.join(',') %>"
+                        data-activity-name="<%= detail.activity.activity_name %>"
+                        data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
+                        data-department="<%= detail.department.department_type %>"
+                        data-detail-id="<%= detail.id %>"
+                        data-q1-data="<%= q1_remarks.to_json.gsub('"', '&quot;') %>">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                      </button>
+                    </td>
+                    
+                    <!-- Q1 Status -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-orange-50">
+                      <%
+                        q1_status_config = case q1_status
+                        when "pending"
+                          { color: "bg-yellow-100 text-yellow-800", text: "Pending", icon: "fas fa-clock" }
+                        when "l1_approved"
+                          { color: "bg-green-100 text-green-800", text: "L1 Approved", icon: "fas fa-check-circle" }
+                        when "l1_returned"
+                          { color: "bg-red-100 text-red-800", text: "L1 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "l2_approved"
+                          { color: "bg-emerald-100 text-emerald-800", text: "L2 Approved", icon: "fas fa-check-double" }
+                        when "l2_returned"
+                          { color: "bg-orange-100 text-orange-800", text: "L2 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "submitted"
+                          { color: "bg-blue-100 text-blue-800", text: "Submitted", icon: "fas fa-paper-plane" }
+                        else
+                          { color: "bg-gray-100 text-gray-600", text: "No Status", icon: "fas fa-question-circle" }
+                        end
+                      %>
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= q1_status_config[:color] %>">
+                        <i class="<%= q1_status_config[:icon] %> mr-1 text-xs"></i>
+                        <%= q1_status_config[:text] %>
+                      </span>
+                    </td>
+
+                    <!-- Q2 (JUL-SEP) -->
+                    <%
+                      q2_months = ['july', 'august', 'september']
+                      # Use overall quarter status instead of calculating per row
+                      q2_status = overall_q2_status
+                      
+                      q2_targets = []
+                      q2_achievements = []
+                      q2_remarks = []
+                    %>
+                    
+                    <% q2_months.each do |month| %>
+                      <% target_value = detail.send(month.to_sym) %>
+                      <% achievement_record = existing_achievements[month] %>
+                      <% achievement = achievement_record&.achievement %>
+                      <% remarks = achievement_record&.employee_remarks %>
+                      <% l1_remarks = achievement_record&.achievement_remark&.l1_remarks %>
+                      <% l2_remarks = achievement_record&.achievement_remark&.l2_remarks %>
+                      <% l1_percentage = achievement_record&.achievement_remark&.l1_percentage %>
+                      <% l2_percentage = achievement_record&.achievement_remark&.l2_percentage %>
+                      <% month_status = achievement_record&.status || 'pending' %>
+                      
+                      <% q2_targets << target_value.to_f %>
+                      <% q2_achievements << achievement.to_f %>
+                      <% q2_remarks << {month: month, target: target_value, achievement: achievement, remarks: remarks, l1_remarks: l1_remarks, l2_remarks: l2_remarks, l1_percentage: l1_percentage, l2_percentage: l2_percentage, status: month_status} %>
+                      
+                      <td class="px-2 py-3 text-sm text-gray-800 text-center border-r border-gray-200 bg-purple-50">
+                        <span class="<%= target_value.presence ? 'text-gray-800 font-medium' : 'text-gray-400' %>">
+                          <%= target_value.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-purple-50">
+                        <span class="<%= achievement.presence ? 'text-green-700 font-semibold bg-green-50 px-2 py-1 rounded' : 'text-gray-400' %>">
+                          <%= achievement.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-purple-50">
+                        <span class="<%= remarks.presence ? 'text-purple-700 font-medium bg-purple-50 px-2 py-1 rounded text-xs' : 'text-gray-400' %>">
+                          <%= remarks.presence || '-' %>
+                        </span>
+                      </td>
+                    <% end %>
+                    
+                    <!-- Q2 Details -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-purple-50">
+                      <button
+                        type="button"
+                        class="inline-flex items-center justify-center w-8 h-8 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-full transition-all duration-200 hover:scale-105 details-btn"
+                        title="View Q2 Details"
+                        data-quarter="Q2 (JUL-SEP)"
+                        data-months="<%= q2_months.join(',') %>"
+                        data-activity-name="<%= detail.activity.activity_name %>"
+                        data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
+                        data-department="<%= detail.department.department_type %>"
+                        data-detail-id="<%= detail.id %>"
+                        data-q2-data="<%= q2_remarks.to_json.gsub('"', '&quot;') %>">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                      </button>
+                    </td>
+                    
+                    <!-- Q2 Status -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-purple-50">
+                      <%
+                        q2_status_config = case q2_status
+                        when "pending"
+                          { color: "bg-yellow-100 text-yellow-800", text: "Pending", icon: "fas fa-clock" }
+                        when "l1_approved"
+                          { color: "bg-green-100 text-green-800", text: "L1 Approved", icon: "fas fa-check-circle" }
+                        when "l1_returned"
+                          { color: "bg-red-100 text-red-800", text: "L1 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "l2_approved"
+                          { color: "bg-emerald-100 text-emerald-800", text: "L2 Approved", icon: "fas fa-check-double" }
+                        when "l2_returned"
+                          { color: "bg-orange-100 text-orange-800", text: "L2 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "submitted"
+                          { color: "bg-blue-100 text-blue-800", text: "Submitted", icon: "fas fa-paper-plane" }
+                        else
+                          { color: "bg-gray-100 text-gray-600", text: "No Status", icon: "fas fa-question-circle" }
+                        end
+                      %>
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= q2_status_config[:color] %>">
+                        <i class="<%= q2_status_config[:icon] %> mr-1 text-xs"></i>
+                        <%= q2_status_config[:text] %>
+                      </span>
+                    </td>
+                    
+                    <!-- Q3 (OCT-DEC) -->
+                    <%
+                      q3_months = ['october', 'november', 'december']
+                      # Use overall quarter status instead of calculating per row
+                      q3_status = overall_q3_status
+                      
+                      q3_targets = []
+                      q3_achievements = []
+                      q3_remarks = []
+                    %>
+                    
+                    <% q3_months.each do |month| %>
+                      <% target_value = detail.send(month.to_sym) %>
+                      <% achievement_record = existing_achievements[month] %>
+                      <% achievement = achievement_record&.achievement %>
+                      <% remarks = achievement_record&.employee_remarks %>
+                      <% l1_remarks = achievement_record&.achievement_remark&.l1_remarks %>
+                      <% l2_remarks = achievement_record&.achievement_remark&.l2_remarks %>
+                      <% l1_percentage = achievement_record&.achievement_remark&.l1_percentage %>
+                      <% l2_percentage = achievement_record&.achievement_remark&.l2_percentage %>
+                      <% month_status = achievement_record&.status || 'pending' %>
+                      
+                      <% q3_targets << target_value.to_f %>
+                      <% q3_achievements << achievement.to_f %>
+                      <% q3_remarks << {month: month, target: target_value, achievement: achievement, remarks: remarks, l1_remarks: l1_remarks, l2_remarks: l2_remarks, l1_percentage: l1_percentage, l2_percentage: l2_percentage, status: month_status} %>
+                      
+                      <td class="px-2 py-3 text-sm text-gray-800 text-center border-r border-gray-200 bg-blue-50">
+                        <span class="<%= target_value.presence ? 'text-gray-800 font-medium' : 'text-gray-400' %>">
+                          <%= target_value.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-blue-50">
+                        <span class="<%= achievement.presence ? 'text-green-700 font-semibold bg-green-50 px-2 py-1 rounded' : 'text-gray-400' %>">
+                          <%= achievement.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-blue-50">
+                        <span class="<%= remarks.presence ? 'text-blue-700 font-medium bg-blue-50 px-2 py-1 rounded text-xs' : 'text-gray-400' %>">
+                          <%= remarks.presence || '-' %>
+                        </span>
+                      </td>
+                    <% end %>
+                    
+                    <!-- Q3 Details -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-blue-50">
+                      <button
+                        type="button"
+                        class="inline-flex items-center justify-center w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-full transition-all duration-200 hover:scale-105 details-btn"
+                        title="View Q3 Details"
+                        data-quarter="Q3 (OCT-DEC)"
+                        data-months="<%= q3_months.join(',') %>"
+                        data-activity-name="<%= detail.activity.activity_name %>"
+                        data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
+                        data-department="<%= detail.department.department_type %>"
+                        data-detail-id="<%= detail.id %>"
+                        data-q3-data="<%= q3_remarks.to_json.gsub('"', '&quot;') %>">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                      </button>
+                    </td>
+                    
+                    <!-- Q3 Status -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-blue-50">
+                      <%
+                        q3_status_config = case q3_status
+                        when "pending"
+                          { color: "bg-yellow-100 text-yellow-800", text: "Pending", icon: "fas fa-clock" }
+                        when "l1_approved"
+                          { color: "bg-green-100 text-green-800", text: "L1 Approved", icon: "fas fa-check-circle" }
+                        when "l1_returned"
+                          { color: "bg-red-100 text-red-800", text: "L1 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "l2_approved"
+                          { color: "bg-emerald-100 text-emerald-800", text: "L2 Approved", icon: "fas fa-check-double" }
+                        when "l2_returned"
+                          { color: "bg-orange-100 text-orange-800", text: "L2 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "submitted"
+                          { color: "bg-blue-100 text-blue-800", text: "Submitted", icon: "fas fa-paper-plane" }
+                        else
+                          { color: "bg-gray-100 text-gray-600", text: "No Status", icon: "fas fa-question-circle" }
+                        end
+                      %>
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= q3_status_config[:color] %>">
+                        <i class="<%= q3_status_config[:icon] %> mr-1 text-xs"></i>
+                        <%= q3_status_config[:text] %>
+                      </span>
+                    </td>
+
+                    <!-- Q4 (JAN-MAR) -->
+                    <%
+                      q4_months = ['january', 'february', 'march']
+                      # Use overall quarter status instead of calculating per row
+                      q4_status = overall_q4_status
+                      
+                      q4_targets = []
+                      q4_achievements = []
+                      q4_remarks = []
+                    %>
+                    
+                    <% q4_months.each do |month| %>
+                      <% target_value = detail.send(month.to_sym) %>
+                      <% achievement_record = existing_achievements[month] %>
+                      <% achievement = achievement_record&.achievement %>
+                      <% remarks = achievement_record&.employee_remarks %>
+                      <% l1_remarks = achievement_record&.achievement_remark&.l1_remarks %>
+                      <% l2_remarks = achievement_record&.achievement_remark&.l2_remarks %>
+                      <% l1_percentage = achievement_record&.achievement_remark&.l1_percentage %>
+                      <% l2_percentage = achievement_record&.achievement_remark&.l2_percentage %>
+                      <% month_status = achievement_record&.status || 'pending' %>
+                      
+                      <% q4_targets << target_value.to_f %>
+                      <% q4_achievements << achievement.to_f %>
+                      <% q4_remarks << {month: month, target: target_value, achievement: achievement, remarks: remarks, l1_remarks: l1_remarks, l2_remarks: l2_remarks, l1_percentage: l1_percentage, l2_percentage: l2_percentage, status: month_status} %>
+                      
+                      <td class="px-2 py-3 text-sm text-gray-800 text-center border-r border-gray-200 bg-green-50">
+                        <span class="<%= target_value.presence ? 'text-gray-800 font-medium' : 'text-gray-400' %>">
+                          <%= target_value.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-green-50">
+                        <span class="<%= achievement.presence ? 'text-green-700 font-semibold bg-green-50 px-2 py-1 rounded' : 'text-gray-400' %>">
+                          <%= achievement.presence || '-' %>
+                        </span>
+                      </td>
+                      <td class="px-2 py-3 text-sm text-center border-r border-gray-200 bg-green-50">
+                        <span class="<%= remarks.presence ? 'text-green-700 font-medium bg-green-50 px-2 py-1 rounded text-xs' : 'text-gray-400' %>">
+                          <%= remarks.presence || '-' %>
+                        </span>
+                      </td>
+                    <% end %>
+                    
+                    <!-- Q4 Details -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-green-50">
+                      <button
+                        type="button"
+                        class="inline-flex items-center justify-center w-8 h-8 bg-green-100 hover:bg-green-200 text-green-600 rounded-full transition-all duration-200 hover:scale-105 details-btn"
+                        title="View Q4 Details"
+                        data-quarter="Q4 (JAN-MAR)"
+                        data-months="<%= q4_months.join(',') %>"
+                        data-activity-name="<%= detail.activity.activity_name %>"
+                        data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
+                        data-department="<%= detail.department.department_type %>"
+                        data-detail-id="<%= detail.id %>"
+                        data-q4-data="<%= q4_remarks.to_json.gsub('"', '&quot;') %>">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                      </button>
+                    </td>
+                    
+                    <!-- Q4 Status -->
+                    <td class="px-2 py-3 text-center border-r border-gray-200 bg-green-50">
+                      <%
+                        q4_status_config = case q4_status
+                        when "pending"
+                          { color: "bg-yellow-100 text-yellow-800", text: "Pending", icon: "fas fa-clock" }
+                        when "l1_approved"
+                          { color: "bg-green-100 text-green-800", text: "L1 Approved", icon: "fas fa-check-circle" }
+                        when "l1_returned"
+                          { color: "bg-red-100 text-red-800", text: "L1 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "l2_approved"
+                          { color: "bg-emerald-100 text-emerald-800", text: "L2 Approved", icon: "fas fa-check-double" }
+                        when "l2_returned"
+                          { color: "bg-orange-100 text-orange-800", text: "L2 Returned", icon: "fas fa-exclamation-triangle" }
+                        when "submitted"
+                          { color: "bg-blue-100 text-blue-800", text: "Submitted", icon: "fas fa-paper-plane" }
+                        else
+                          { color: "bg-gray-100 text-gray-600", text: "No Status", icon: "fas fa-question-circle" }
+                        end
+                      %>
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= q4_status_config[:color] %>">
+                        <i class="<%= q4_status_config[:icon] %> mr-1 text-xs"></i>
+                        <%= q4_status_config[:text] %>
+                      </span>
+                    </td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="fixed inset-0 hidden z-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="bg-gray-800 text-white px-6 py-4 rounded-t-lg">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xl font-semibold">Quarterly Achievement Details</h3>
+            <div class="flex items-center space-x-3">
+              <span id="modalQuarter" class="bg-gray-600 text-gray-200 px-3 py-1 rounded-full text-sm font-medium"></span>
+              <button id="closeModal" class="text-white hover:text-gray-200 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Modal Content -->
+        <div class="p-6 bg-gray-50">
+          <!-- L1 and L2 Summary Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- L1 Summary Card -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <h4 class="text-red-600 font-semibold text-lg mb-4 flex items-center">
+                <i class="fas fa-user-tie mr-2"></i>L1 Summary
+              </h4>
+              <div class="space-y-3">
+                <div>
+                  <span class="text-sm text-gray-600">Percentage:</span>
+                  <span id="l1Percentage" class="ml-2 font-bold text-gray-800">N/A</span>
+                </div>
+                <div>
+                  <span class="text-sm text-gray-600">Remarks:</span>
+                  <div id="l1Remarks" class="mt-1 font-bold text-gray-800">No remarks</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- L2 Summary Card -->
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+              <h4 class="text-purple-600 font-semibold text-lg mb-4 flex items-center">
+                <i class="fas fa-user-shield mr-2"></i>L2 Summary
+              </h4>
+              <div class="space-y-3">
+                <div>
+                  <span class="text-sm text-gray-600">Percentage:</span>
+                  <span id="l2Percentage" class="ml-2 font-bold text-gray-800">N/A</span>
+                </div>
+                <div>
+                  <span class="text-sm text-gray-600">Remarks:</span>
+                  <div id="l2Remarks" class="mt-1 font-bold text-gray-800">No remarks</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="bg-gray-50 px-6 py-4 rounded-b-lg">
+          <button id="closeModalBtn" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center justify-center">
+            Close Details
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Enhanced modal functionality that works without page refresh
+      function initializeQuarterlyModal() {
+        const modal = document.getElementById('detailsModal');
+        const closeModal = document.getElementById('closeModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const detailButtons = document.querySelectorAll('.details-btn');
+
+        console.log('Initializing modal...');
+        console.log('Modal found:', !!modal);
+        console.log('Close modal found:', !!closeModal);
+        console.log('Close modal btn found:', !!closeModalBtn);
+        console.log('Detail buttons found:', detailButtons.length);
+
+        if (!modal) {
+          console.log('Modal not found, retrying...');
+          setTimeout(initializeQuarterlyModal, 100);
+          return;
+        }
+
+        function getStatusConfig(status) {
+          switch(status) {
+            case 'l2_approved':
+              return { color: 'bg-emerald-100 text-emerald-800', text: 'L2 Approved', icon: 'fas fa-check-double' };
+            case 'l1_approved':
+              return { color: 'bg-green-100 text-green-800', text: 'L1 Approved', icon: 'fas fa-check-circle' };
+            case 'l2_returned':
+              return { color: 'bg-orange-100 text-orange-800', text: 'L2 Returned', icon: 'fas fa-exclamation-triangle' };
+            case 'l1_returned':
+              return { color: 'bg-red-100 text-red-800', text: 'L1 Returned', icon: 'fas fa-exclamation-triangle' };
+            case 'submitted':
+              return { color: 'bg-blue-100 text-blue-800', text: 'Submitted', icon: 'fas fa-paper-plane' };
+            default:
+              return { color: 'bg-yellow-100 text-yellow-800', text: 'Pending', icon: 'fas fa-clock' };
+          }
+        }
+
+        function openModal(button) {
+          const data = button.dataset;
+
+          function hasDisplayValue(value) {
+            return value !== null &&
+              value !== undefined &&
+              value.toString().trim() !== '' &&
+              value.toString().trim().toLowerCase() !== 'null' &&
+              value.toString().trim().toLowerCase() !== 'undefined' &&
+              value.toString().trim().toLowerCase() !== 'nil';
+          }
+          
+          // Populate quarter info
+          document.getElementById('modalQuarter').textContent = data.quarter || 'N/A';
+          
+          // Get quarterly data based on which quarter was clicked
+          let quarterData = [];
+          console.log('Button dataset:', data);
+          
+          if (data.q3Data) {
+            quarterData = JSON.parse(data.q3Data.replace(/&quot;/g, '"'));
+            console.log('Using Q3 data, length:', quarterData.length);
+          } else if (data.q4Data) {
+            quarterData = JSON.parse(data.q4Data.replace(/&quot;/g, '"'));
+            console.log('Using Q4 data, length:', quarterData.length);
+          } else if (data.q1Data) {
+            quarterData = JSON.parse(data.q1Data.replace(/&quot;/g, '"'));
+            console.log('Using Q1 data, length:', quarterData.length);
+          } else if (data.q2Data) {
+            quarterData = JSON.parse(data.q2Data.replace(/&quot;/g, '"'));
+            console.log('Using Q2 data, length:', quarterData.length);
+          }
+          
+          console.log('Quarter data:', quarterData);
+          
+          let totalTarget = 0;
+          let totalAchievement = 0;
+          let quarterStatuses = [];
+          
+          // Collect all L1 and L2 data for overall summary
+          let allL1Remarks = [];
+          let allL1Percentages = [];
+          let allL2Remarks = [];
+          let allL2Percentages = [];
+          
+          console.log('Processing quarter data:', quarterData);
+          
+          quarterData.forEach((monthData, index) => {
+            console.log(`Month ${index}:`, monthData);
+            
+            const target = parseFloat(monthData.target) || 0;
+            const achievement = parseFloat(monthData.achievement) || 0;
+            const percentage = target > 0 ? ((achievement / target) * 100).toFixed(1) : '0';
+            
+            totalTarget += target;
+            totalAchievement += achievement;
+            quarterStatuses.push(monthData.status);
+            
+            // Collect L1 and L2 data - be more inclusive and handle different data sources
+            console.log(`Month ${monthData.month} - L1 Remarks: "${monthData.l1_remarks}", L1 Percentage: "${monthData.l1_percentage}"`);
+            console.log(`Month ${monthData.month} - L2 Remarks: "${monthData.l2_remarks}", L2 Percentage: "${monthData.l2_percentage}"`);
+            console.log(`Month ${monthData.month} - Status: "${monthData.status}"`);
+            
+            // Collect L1 data - include any non-empty remarks from achievement_remark or achievement table
+            const l1Remarks = monthData.l1_remarks;
+            const l1Percentage = monthData.l1_percentage;
+            
+            if (hasDisplayValue(l1Remarks)) {
+              allL1Remarks.push(l1Remarks.toString().trim());
+            }
+            
+            if (hasDisplayValue(l1Percentage) && !isNaN(parseFloat(l1Percentage))) {
+              allL1Percentages.push(parseFloat(l1Percentage));
+            }
+            
+            // Collect L2 data - include any non-empty remarks from achievement_remark or achievement table
+            const l2Remarks = monthData.l2_remarks;
+            const l2Percentage = monthData.l2_percentage;
+            
+            if (hasDisplayValue(l2Remarks)) {
+              allL2Remarks.push(l2Remarks.toString().trim());
+            }
+            
+            if (hasDisplayValue(l2Percentage) && !isNaN(parseFloat(l2Percentage))) {
+              allL2Percentages.push(parseFloat(l2Percentage));
+            }
+          });
+          
+          console.log('Collected L1 Remarks:', allL1Remarks);
+          console.log('Collected L1 Percentages:', allL1Percentages);
+          console.log('Collected L2 Remarks:', allL2Remarks);
+          console.log('Collected L2 Percentages:', allL2Percentages);
+          
+          // Calculate overall L1 and L2 averages
+          const derivedQuarterPercentage = totalTarget > 0 ? ((totalAchievement / totalTarget) * 100).toFixed(1) : null;
+          let overallL1Percentage = allL1Percentages.length > 0 ?
+            (allL1Percentages.reduce((a, b) => a + b, 0) / allL1Percentages.length).toFixed(1) : derivedQuarterPercentage;
+          let overallL2Percentage = allL2Percentages.length > 0 ?
+            (allL2Percentages.reduce((a, b) => a + b, 0) / allL2Percentages.length).toFixed(1) : derivedQuarterPercentage;
+          
+          // Combine all L1 and L2 remarks - show unique remarks only once
+          let uniqueL1Remarks = [...new Set(allL1Remarks)];
+          let uniqueL2Remarks = [...new Set(allL2Remarks)];
+          
+          let overallL1Remarks = uniqueL1Remarks.length > 0 ? uniqueL1Remarks.join('; ') : 'No remarks';
+          let overallL2Remarks = uniqueL2Remarks.length > 0 ? uniqueL2Remarks.join('; ') : 'No remarks';
+          
+          // Only show data if it exists, otherwise show appropriate message
+          if (overallL1Remarks === 'No remarks' && overallL2Remarks === 'No remarks' &&
+              overallL1Percentage === null &&
+              overallL2Percentage === null) {
+            // Check if any achievements have been submitted for this quarter
+            const hasAnyAchievements = quarterData.some(monthData => hasDisplayValue(monthData.achievement));
+            
+            if (hasAnyAchievements) {
+              // Check the status of achievements to determine appropriate message
+              const hasSubmitted = quarterStatuses.includes('submitted');
+              const hasL1Approved = quarterStatuses.includes('l1_approved');
+              const hasL1Returned = quarterStatuses.includes('l1_returned');
+              const hasL2Approved = quarterStatuses.includes('l2_approved');
+              const hasL2Returned = quarterStatuses.includes('l2_returned');
+              
+              if (hasL2Approved) {
+                overallL1Remarks = 'L1 Review Completed';
+                overallL2Remarks = 'L2 Review Completed';
+              } else if (hasL2Returned) {
+                overallL1Remarks = 'L1 Review Completed';
+                overallL2Remarks = 'L2 Review Completed - Returned for Revision';
+              } else if (hasL1Approved) {
+                overallL1Remarks = 'L1 Review Completed';
+                overallL2Remarks = 'Pending L2 Review';
+              } else if (hasL1Returned) {
+                overallL1Remarks = 'L1 Review Completed - Returned for Revision';
+                overallL2Remarks = 'Pending L2 Review';
+              } else if (hasSubmitted) {
+                overallL1Remarks = 'Pending L1 Review';
+                overallL2Remarks = 'Pending L2 Review';
+              } else {
+                overallL1Remarks = 'Pending L1 Review';
+                overallL2Remarks = 'Pending L2 Review';
+              }
+            } else {
+              // No achievements submitted yet
+              overallL1Remarks = 'No achievements submitted';
+              overallL2Remarks = 'No achievements submitted';
+            }
+            console.log('No L1/L2 data found, showing appropriate status');
+          }
+          
+          console.log('Final L1 Remarks:', overallL1Remarks);
+          console.log('Final L2 Remarks:', overallL2Remarks);
+          
+          // Update L1 Summary
+          document.getElementById('l1Percentage').textContent = overallL1Percentage !== null ? overallL1Percentage + '%' : 'N/A';
+          document.getElementById('l1Remarks').textContent = overallL1Remarks;
+          
+          // Update L2 Summary
+          document.getElementById('l2Percentage').textContent = overallL2Percentage !== null ? overallL2Percentage + '%' : 'N/A';
+          document.getElementById('l2Remarks').textContent = overallL2Remarks;
+          
+          
+          modal.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        }
+
+        function closeModalFunction() {
+          modal.classList.add('hidden');
+          document.body.style.overflow = 'auto';
+        }
+
+        // Add click event listeners to all detail buttons
+        console.log('Found detail buttons:', detailButtons.length);
+        detailButtons.forEach((button, index) => {
+          console.log(`Setting up button ${index}:`, button);
+          
+          // Simple click handler
+          button.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Button clicked, opening modal');
+            openModal(this);
+          };
+        });
+
+        // Close modal event listeners
+        if (closeModal) {
+          closeModal.onclick = closeModalFunction;
+        }
+        
+        if (closeModalBtn) {
+          closeModalBtn.onclick = closeModalFunction;
+        }
+
+        // Close on outside click
+        modal.onclick = function(e) {
+          if (e.target === modal) {
+            closeModalFunction();
+          }
+        };
+
+        // Close on escape key
+        document.onkeydown = function(e) {
+          if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeModalFunction();
+          }
+        };
+
+        console.log('Quarterly modal initialized successfully');
+        
+
+      }
+
+      // Initialize modal on multiple events to ensure it works
+      document.addEventListener('DOMContentLoaded', initializeQuarterlyModal);
+      document.addEventListener('turbo:load', initializeQuarterlyModal);
+      document.addEventListener('turbo:render', initializeQuarterlyModal);
+      
+      // Also initialize when the page is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeQuarterlyModal);
+      } else {
+        initializeQuarterlyModal();
+      }
+    </script>
+    <% else %>
+      <!-- No Submitted Data Message -->
+      <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 rounded-t-xl">
+        <div class="flex justify-between items-center">
+          <h2 class="text-4xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-check-circle me-3 text-green-600 text-2xl"></i>
+            Submitted View Achievements
+          </h2>
+        </div>
+      </div>
+      
+      <div class="p-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center no-data-container">
+          <!-- No Data Icon -->
+          <div class="mb-6">
+            <div class="inline-flex items-center justify-center mb-4 no-data-icon">
+              <i class="fas fa-file-alt text-6xl text-gray-400"></i>
+            </div>
+          </div>
+          
+          <!-- No Data Message -->
+          <h3 class="text-2xl font-bold text-gray-800 mb-4 no-data-title">No Submitted Data Available</h3>
+          <p class="text-gray-600 text-lg mb-8 max-w-md mx-auto no-data-description">
+            You haven't submitted any quarterly achievements yet. Please submit your achievements first to view them here.
+          </p>
+          
+          <!-- Submit Button -->
+          <div class="flex justify-center">
+            <%= link_to get_user_detail_user_details_path, 
+                        class: "bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg transition-all duration-300 flex items-center shadow-md hover:shadow-lg transform hover:scale-105 no-data-button" do %>
+              <i class="fas fa-plus mr-2"></i>
+              <span class="font-semibold">Submit Your Achievements</span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+</div>
+<style>
+.main-content {
+  margin-left: 240px;
+  padding: 2rem;
+  overflow-x: auto;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.table {
+  min-width: 1800px; /* Increased width for status column */
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th, .table td {
+  padding: 12px 16px;
+  text-align: center;
+  border-right: 1px solid #e5e7eb;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.table th {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr:hover {
+  background-color: #f9fafb !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.achievement-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  background-color: #f9fafb;
+}
+
+.remarks-textarea {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  background-color: #f9fafb;
+  resize: vertical;
+  min-height: 24px;
+}
+
+.achievement-input:focus, .remarks-textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  transform: scale(1.02);
+}
+
+.achievement-input:hover, .remarks-textarea:hover {
+  border-color: #9ca3af;
+  background-color: white;
+}
+
+.main-content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced card styling */
+.bg-white {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+/* Button enhancements */
+input[type="submit"]:hover, button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Achievement badges */
+.bg-green-50 {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.bg-blue-50 {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+/* Status badge styling */
+.inline-flex {
+  white-space: nowrap;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+}
+
+/* Subtle animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bg-white {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Form input focus animations */
+.achievement-input::placeholder, .remarks-textarea::placeholder {
+  color: #9ca3af;
+  transition: color 0.3s ease;
+}
+
+.achievement-input:focus::placeholder, .remarks-textarea:focus::placeholder {
+  color: #6b7280;
+}
+
+/* Enhanced hover effects for table rows */
+tbody tr {
+  transition: all 0.2s ease;
+}
+
+tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+}
+
+/* Submit button additional styling */
+input[type="submit"] {
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+/* Message display styling */
+#successMessage, #errorMessage, #warningMessage {
+  animation: slideDown 0.3s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced button states */
+#submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+#submitBtn:disabled:hover {
+  transform: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Loading spinner animation */
+.fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* No Data State Animations and Styling */
+.no-data-container {
+  animation: fadeInUp 0.8s ease-out;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.no-data-icon {
+  animation: pulse 2s infinite;
+  transition: all 0.3s ease;
+}
+
+.no-data-icon:hover {
+  transform: scale(1.1);
+}
+
+.no-data-title {
+  animation: slideInDown 0.6s ease-out 0.2s both;
+  color: #374151;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.no-data-description {
+  animation: slideInUp 0.6s ease-out 0.4s both;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.no-data-button {
+  animation: slideInUp 0.6s ease-out 0.6s both;
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+  border: 1px solid #374151;
+  position: relative;
+  overflow: hidden;
+}
+
+.no-data-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.no-data-button:hover::before {
+  left: 100%;
+}
+
+.no-data-button:hover {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.no-data-button:active {
+  transform: translateY(0) scale(1.02);
+}
+
+/* Animation Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Enhanced gray color scheme for the entire page */
+.main-content {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* Gray-themed header */
+.bg-gray-100 {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-color: #cbd5e1;
+}
+
+/* Enhanced table styling with gray accents */
+.table th {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+}
+
+.table tbody tr {
+  background: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.table tbody tr:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Gray-themed status badges */
+.bg-yellow-100 { background-color: #fef3c7; }
+.bg-green-100 { background-color: #d1fae5; }
+.bg-red-100 { background-color: #fee2e2; }
+.bg-blue-100 { background-color: #dbeafe; }
+.bg-orange-100 { background-color: #fed7aa; }
+.bg-emerald-100 { background-color: #a7f3d0; }
+.bg-purple-100 { background-color: #e9d5ff; }
+</style>

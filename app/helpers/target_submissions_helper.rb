@@ -1,0 +1,2 @@
+module TargetSubmissionsHelper
+end

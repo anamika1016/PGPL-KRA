@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  training: one
+  user: one
+  status: MyString
+  started_at: 2026-02-25 12:33:40
+  ended_at: 2026-02-25 12:33:40
+  time_spent: 1
+  financial_year: MyString
+
+two:
+  training: two
+  user: two
+  status: MyString
+  started_at: 2026-02-25 12:33:40
+  ended_at: 2026-02-25 12:33:40
+  time_spent: 1
+  financial_year: MyString

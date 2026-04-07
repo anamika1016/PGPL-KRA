@@ -1,0 +1,10 @@
+wb = xlsx_package.workbook
+wb.add_worksheet(name: "Assessment Template") do |sheet|
+  # Header row
+  header_style = wb.styles.add_style(bg_color: "4CAF50", fg_color: "FFFFFF", b: true, alignment: { horizontal: :center })
+  sheet.add_row ["Question", "Option A", "Option B", "Option C", "Option D", "Answer"], style: header_style
+  
+  # Sample rows
+  sheet.add_row ["What is the capital of India?", "Mumbai", "New Delhi", "Kolkata", "Chennai", "New Delhi"]
+  sheet.add_row ["Which planet is known as the Red Planet?", "Earth", "Mars", "Jupiter", "Venus", "Mars"]
+end

@@ -1,0 +1,31 @@
+wb = xlsx_package.workbook
+
+wb.add_worksheet(name: "User Details") do |sheet|
+  sheet.add_row [
+    "Employee Name", "Employee Email", "Department", "Activity",
+    "April", "May", "June", "July",
+    "August", "September", "October", "November",
+    "December", "January", "February", "March"
+  ]
+
+  @user_details.each do |ud|
+    sheet.add_row [
+      ud.employee_detail&.employee_name,
+      ud.employee_detail&.employee_email,
+      ud.department&.department_type,
+      ud.activity&.activity_name,
+      ud.try(:april),
+      ud.try(:may),
+      ud.try(:june),
+      ud.try(:july),
+      ud.try(:august),
+      ud.try(:september),
+      ud.try(:october),
+      ud.try(:november),
+      ud.try(:december),
+      ud.try(:january),
+      ud.try(:february),
+      ud.try(:march)
+    ]
+  end
+end

@@ -1,0 +1,192 @@
+<div class="main-content sidebar-hidden">
+  <div class="min-h-screen pl-64 pr-4 pt-4 pb-12 overflow-x-auto bg-gray-100">
+    <!-- Flash Messages -->
+    <% if flash[:notice] %>
+      <div class="bg-green-100 text-green-800 px-4 py-2 rounded mb-4 mt-4 w-full max-w-7xl mx-auto">
+        <%= flash[:notice] %>
+      </div>
+    <% elsif flash[:alert] %>
+      <div class="bg-red-100 text-red-800 px-4 py-2 rounded mb-4 mt-4 w-full max-w-7xl mx-auto">
+        <%= flash[:alert] %>
+      </div>
+    <% end %>
+
+    <!-- Bulk Upload and Export Buttons -->
+    <div class="w-full max-w-7xl mx-auto mt-4 flex justify-between items-center bg-white p-6 rounded-xl shadow">
+      <%= form_with url: import_employee_details_path, local: true, html: { multipart: true }, class: "flex space-x-4 items-center" do |f| %>
+        <%= f.file_field :file, class: "block w-full border border-gray-300 rounded-lg px-4 py-2" %>
+        <%= f.submit "Upload Excel", class: "bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800" %>
+      <% end %>
+
+      <div class="flex space-x-4">
+        <%= link_to export_quarterly_xlsx_employee_details_path, 
+                    class: "inline-flex items-center px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg shadow-md transition duration-200 transform hover:scale-105" do %>
+          <i class="fas fa-file-excel mr-2"></i>
+          Export Quarterly L1 L2 Data
+        <% end %>
+        
+        <%= link_to "Export to Excel", export_xlsx_employee_details_path(format: :xlsx), class: "bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800" %>
+      </div>
+    </div>
+
+    <!-- Form to Add Employee -->
+    <div class="w-full max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-8">
+      <h2 class="text-3xl font-bold text-gray-800 mb-8 border-b pb-2">Add Employee Details</h2>
+
+      <%= form_with(model: @employee_detail, url: employee_details_path, local: true, data: { turbo: false }) do |form| %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <% [:employee_name, :employee_email, :mobile_number, :employee_code,
+              :l1_code, :l1_employer_name, :l2_code, :l2_employer_name,:department].each do |field| %>
+            <div>
+              <%= form.label field, field.to_s.titleize, class: "block text-sm font-semibold text-gray-700 mb-1" %>
+              <%= form.text_field field, class: "form-control w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500" %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="mt-8 flex justify-end space-x-4">
+          <%= link_to 'Cancel', employee_details_path, class: "btn btn-secondary px-5 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300" %>
+          <%= form.submit "Save Employee", class: "btn btn-primary px-5 py-2 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-800 shadow" %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Employee List -->
+    <a name="employee-list"></a>
+    <div id="employee-list" class="w-full max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg mt-12">
+      <!-- Heading and Search Box -->
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Employee List</h2>
+      <%= search_form_for @q, url: employee_details_path, method: :get, html: { class: "flex items-center space-x-2", id: "search-form" } do |f| %>
+        <%= f.search_field :employee_name_or_employee_email_or_post_or_department_cont,
+          placeholder: "Search anything...",
+          class: "px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500",
+          id: "global-search" %>
+      <% end %>
+
+
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="table table-striped table-bordered min-w-full divide-y divide-gray-200 border text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Mobile</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Emp Code</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">L1 Code </th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">L1 Name</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">L2 Code</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">L2 Name</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Department</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @employee_details.each do |emp| %>
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.employee_name %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.employee_email %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.mobile_number %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.employee_code %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.l1_code %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.l1_employer_name %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.l2_code %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.l2_employer_name %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.department %></td>
+                <td class="px-4 py-4 whitespace-nowrap space-x-2">
+                  <%= link_to 'Edit', edit_employee_detail_path(emp), class: "text-gray-700 hover:text-gray-900 font-medium" %>
+                  <%= link_to 'Delete', '#', 
+                      onclick: "confirmDelete('#{emp.employee_name}', '#{employee_detail_path(emp)}')", 
+                      class: "text-red-600 hover:text-red-900 font-medium cursor-pointer" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-6 flex justify-center">
+        <%= paginate @employee_details, params: request.query_parameters.merge(anchor: 'employee-list') %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("global-search");
+    const searchForm = document.getElementById("search-form");
+
+    if (searchInput && searchForm) {
+      let timeout = null;
+
+      searchInput.addEventListener("input", function () {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          searchForm.submit();
+        }, 300); // delay (in ms) after typing stops
+      });
+    }
+  });
+
+  function confirmDelete(employeeName, deleteUrl) {
+    if (confirm(`Are you sure you want to delete ${employeeName}?`)) {
+      // Create a form to submit the DELETE request
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = deleteUrl;
+      
+      // Add the method override for DELETE
+      const methodInput = document.createElement('input');
+      methodInput.type = 'hidden';
+      methodInput.name = '_method';
+      methodInput.value = 'DELETE';
+      form.appendChild(methodInput);
+      
+      // Add CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'authenticity_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+      }
+      
+      // Submit the form
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }
+</script>
+<style>
+  .min-h-screen {
+    padding-left: 16rem; 
+  }
+
+  .sidebar-hidden .min-h-screen {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .sidebar-hidden .max-w-7xl {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .sidebar-hidden .form-control {
+    width: 100% !important;
+  }
+
+  .sidebar-hidden .grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  }
+  .main-content {
+  margin-left: 240px; 
+  padding: 1rem;
+  overflow-x: auto;
+}
+</style>

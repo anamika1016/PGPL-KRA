@@ -1,0 +1,30 @@
+<table class="table-auto w-full border mt-4">
+  <thead class="bg-gray-100">
+    <tr>
+      <th class="border px-4 py-2">Theme</th>
+      <th class="border px-4 py-2">Activity</th>
+      <th class="border px-4 py-2">Unit</th>
+      <% [:april, :may, :june, :july, :august, :september, :october, :november, :december, :january, :february, :march].each do |month| %>
+        <th class="border px-4 py-2"><%= month.capitalize %></th>
+      <% end %>
+    </tr>
+  </thead>
+  <tbody>
+    <% activities.each_with_index do |activity, index| %>
+      <tr>
+        <td class="border px-2 py-1">
+          <%= activity.department.theme_name %>
+          <%= hidden_field_tag "user_details[#{index}][activity_id]", activity.id %>
+          <%= hidden_field_tag "user_details[#{index}][department_id]", activity.department_id %>
+        </td>
+        <td class="border px-2 py-1"><%= activity.activity_name %></td>
+        <td class="border px-2 py-1"><%= activity.unit %></td>
+        <% [:april, :may, :june, :july, :august, :september, :october, :november, :december, :january, :february, :march].each do |month| %>
+          <td class="border px-2 py-1">
+            <%= text_field_tag "user_details[#{index}][#{month}]", "", class: "form-control" %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

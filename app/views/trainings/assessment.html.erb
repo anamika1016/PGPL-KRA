@@ -1,0 +1,89 @@
+<div class="main-content ml-64 w-auto px-6 py-8">
+  <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+    <!-- Header -->
+    <div class="bg-gray-50 border-b border-gray-200 px-8 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <nav class="breadcrumb flex items-center gap-2 text-sm text-gray-500 mb-2">
+            <%= link_to "Trainings", trainings_path, class: "hover:text-gray-800" %>
+            <span>/</span>
+            <%= link_to "View Training", training_path(@training), class: "hover:text-gray-800" %>
+            <span>/</span>
+            <span class="text-gray-400">Assessment</span>
+          </nav>
+          <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Assessment for <%= @training.title %></h1>
+          <p class="text-gray-500 mt-1 text-sm">Please answer all the following questions to complete your training and receive your certificate.</p>
+        </div>
+        <div class="bg-blue-50 text-blue-700 px-5 py-3 rounded-lg font-bold border border-blue-100 shadow-sm flex items-center gap-2">
+           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+           Total Questions: <%= @questions.count %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="p-8">
+      <%= form_tag submit_assessment_training_path(@training), method: :post, data: { turbo: false }, class: "space-y-8" do %>
+        <% if @questions.any? %>
+          <div class="space-y-8">
+            <% @questions.each_with_index do |question, index| %>
+              <div class="border border-gray-200 rounded-lg overflow-hidden shadow-sm transition-shadow hover:shadow-md">
+                <!-- Question Title -->
+                <div class="bg-white px-6 py-5 border-b border-gray-100">
+                  <h3 class="text-lg font-semibold text-gray-800 flex items-start leading-relaxed">
+                    <span class="bg-blue-600 text-white border border-blue-600 rounded-md w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0 text-sm font-bold shadow-sm"><%= index + 1 %></span> 
+                    <span class="mt-0.5"><%= question.question %></span>
+                  </h3>
+                </div>
+                
+                <!-- Options -->
+                <div class="p-6 bg-gray-50">
+                  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <% if question.option_a.present? %>
+                    <label class="flex items-start gap-4 p-5 bg-white rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 hover:shadow-sm cursor-pointer transition">
+                      <%= radio_button_tag "answers[#{question.id}]", question.option_a, false, class: "mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300", required: true %>
+                      <span class="text-base text-gray-700 font-medium leading-relaxed"><%= question.option_a %></span>
+                    </label>
+                    <% end %>
+                    
+                    <% if question.option_b.present? %>
+                    <label class="flex items-start gap-4 p-5 bg-white rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 hover:shadow-sm cursor-pointer transition">
+                      <%= radio_button_tag "answers[#{question.id}]", question.option_b, false, class: "mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300", required: true %>
+                      <span class="text-base text-gray-700 font-medium leading-relaxed"><%= question.option_b %></span>
+                    </label>
+                    <% end %>
+                    
+                    <% if question.option_c.present? %>
+                    <label class="flex items-start gap-4 p-5 bg-white rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 hover:shadow-sm cursor-pointer transition">
+                      <%= radio_button_tag "answers[#{question.id}]", question.option_c, false, class: "mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300", required: true %>
+                      <span class="text-base text-gray-700 font-medium leading-relaxed"><%= question.option_c %></span>
+                    </label>
+                    <% end %>
+
+                    <% if question.option_d.present? %>
+                    <label class="flex items-start gap-4 p-5 bg-white rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 hover:shadow-sm cursor-pointer transition">
+                      <%= radio_button_tag "answers[#{question.id}]", question.option_d, false, class: "mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300", required: true %>
+                      <span class="text-base text-gray-700 font-medium leading-relaxed"><%= question.option_d %></span>
+                    </label>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+          
+          <div class="mt-10 flex justify-end pb-4 border-t border-gray-100 pt-8">
+            <%= submit_tag "Submit Assessment", class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-10 rounded-lg shadow-lg transition-transform transform hover:-translate-y-0.5 cursor-pointer text-lg tracking-wide" %>
+          </div>
+        <% else %>
+          <div class="text-center p-16 bg-gray-50 rounded-xl border border-gray-200">
+             <div class="text-6xl mb-6">📝</div>
+             <h3 class="text-2xl font-bold text-gray-800 mb-3">No Questions Available</h3>
+             <p class="text-gray-500 mb-8 max-w-md mx-auto">It looks like the HOD hasn't added any specific questions for this training yet. You can complete the assessment to get your certificate.</p>
+             <%= submit_tag "Complete Assessment Anyway", class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform hover:-translate-y-0.5" %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

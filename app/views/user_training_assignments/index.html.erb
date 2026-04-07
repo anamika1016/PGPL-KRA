@@ -1,0 +1,344 @@
+<div class="main-content ml-64 w-auto px-8 py-10" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); min-height: 100vh; font-family: 'Georgia', serif;">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+    .uta-wrap { font-family: 'DM Sans', sans-serif; }
+    .uta-wrap h2 { font-family: 'Playfair Display', serif; }
+
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #333; margin-bottom: 4px; }
+    .section-heading { font-size: 30px; font-weight: 700; color: #000; letter-spacing: -0.02em; }
+
+    .user-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 28px;
+    }
+    @media (max-width: 1100px) { .user-cards-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 700px)  { .user-cards-grid { grid-template-columns: 1fr; } }
+
+    .user-card {
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid #e8edf3;
+      padding: 22px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      transition: box-shadow 0.22s, transform 0.22s;
+      position: relative;
+      overflow: hidden;
+    }
+    .user-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #16a34a, #22c55e, #4ade80);
+      opacity: 0;
+      transition: opacity 0.22s;
+    }
+    .user-card:hover { box-shadow: 0 10px 36px rgba(22,163,74,0.13); transform: translateY(-2px); }
+    .user-card:hover::before { opacity: 1; }
+
+    .user-avatar {
+      width: 46px; height: 46px; border-radius: 12px;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .user-avatar svg { width: 22px; height: 22px; color: #fff; stroke: #fff; }
+
+    .user-info { flex: 1; min-width: 0; }
+    .user-name  { font-size: 14px; font-weight: 700; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .user-email { font-size: 11.5px; font-weight: 500; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; margin-top: 1px; }
+    .user-role  { font-size: 11px; color: #94a3b8; text-transform: capitalize; margin-top: 2px; }
+
+    .assign-count {
+      font-size: 11px; font-weight: 700; color: #16a34a;
+      background: #f0fdf4; border: 1px solid #bbf7d0;
+      padding: 3px 9px; border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .btn-assign {
+      font-size: 12px; font-weight: 700;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: #fff; padding: 8px 16px; border-radius: 10px;
+      text-decoration: none;
+      box-shadow: 0 3px 10px rgba(22,163,74,0.22);
+      transition: box-shadow 0.15s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .btn-assign:hover { box-shadow: 0 5px 18px rgba(22,163,74,0.35); transform: translateY(-1px); color: #fff; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid #e8edf3;
+    }
+    .empty-state p { color: #6b7280; font-size: 15px; margin-top: 12px; }
+
+    .search-bar {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      margin-top: 20px;
+      max-width: 380px;
+    }
+    .search-bar input {
+      border: none; outline: none;
+      font-size: 13px; color: #111;
+      font-family: 'DM Sans', sans-serif;
+      width: 100%; background: transparent;
+    }
+    .search-bar svg { color: #94a3b8; flex-shrink: 0; }
+  </style>
+
+  <div class="uta-wrap">
+
+    <!-- Header -->
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:28px;">
+      <div>
+        <p class="section-label">Learning &amp; Development</p>
+        <h2 class="section-heading">Employee Training Assignment</h2>
+        <p style="font-size:13.5px; color:#64748b; margin-top:6px;">
+          Click on an employee to assign specific monthly PPTs they can view. Total Employees: <%= @employees.count %>
+        </p>
+      </div>
+      <div>
+        <%= link_to export_xlsx_user_training_assignments_path(format: :xlsx), 
+                    class: "btn-assign", 
+                    style: "display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; padding: 10px 18px;" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Export All Excel
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <% 
+      selected_month = params[:stat_month].present? ? params[:stat_month].to_i : nil
+      selected_year  = params[:stat_year].present? ? params[:stat_year].to_i : nil
+      selected_training_id = params[:stat_training_id].present? ? params[:stat_training_id].to_i : nil
+
+      # Fetch metadata for quick filtering in memory
+      trainings_meta = Training.pluck(:id, :month, :year).map { |id, m, y| { id: id, month: m, year: y } }
+      
+      # Filter the trainings base on selections
+      if selected_month
+        trainings_meta.select! { |t| t[:month] == selected_month }
+      end
+      if selected_year
+        trainings_meta.select! { |t| t[:year] == selected_year }
+      end
+      if selected_training_id
+        trainings_meta.select! { |t| t[:id] == selected_training_id }
+      end
+
+      matching_training_ids = trainings_meta.map { |t| t[:id] }
+      total_trainings_count = matching_training_ids.size
+
+      total_users_count = @employees.size
+      total_completed_count = 0
+      total_assigned_count = 0
+      
+      @employees.each do |emp|
+        # Filter assigned trainings by the matching set
+        assigned = emp.user_training_assignments.select { |a| matching_training_ids.include?(a.training_id) }
+        total_assigned_count += assigned.size
+        
+        if emp.user
+          # Filter completed progresses by the matching set
+          completed = emp.user.user_training_progresses.select do |p| 
+            p.status == "completed" && matching_training_ids.include?(p.training_id)
+          end
+          total_completed_count += completed.size
+        end
+      end
+      
+      total_pending_count = total_assigned_count - total_completed_count
+      total_pending_count = 0 if total_pending_count < 0
+    %>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px;">
+      <!-- Total Training Count -->
+      <div style="background: #fff; border-radius: 16px; padding: 20px; border: 1px solid #e8edf3; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 16px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+          <svg xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Total Training</div>
+          <div style="font-size: 24px; font-weight: 700; color: #000; font-family: 'Playfair Display', serif;"><%= total_trainings_count %></div>
+        </div>
+      </div>
+
+      <!-- Total Users -->
+      <div style="background: #fff; border-radius: 16px; padding: 20px; border: 1px solid #e8edf3; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 16px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: #fef3c7; display: flex; align-items: center; justify-content: center; color: #d97706;">
+          <svg xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Total Users</div>
+          <div style="font-size: 24px; font-weight: 700; color: #000; font-family: 'Playfair Display', serif;"><%= total_users_count %></div>
+        </div>
+      </div>
+
+      <!-- Total Completed -->
+      <div style="background: #fff; border-radius: 16px; padding: 20px; border: 1px solid #e8edf3; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 16px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; color: #16a34a;">
+          <svg xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Total Completed</div>
+          <div style="font-size: 24px; font-weight: 700; color: #000; font-family: 'Playfair Display', serif;"><%= total_completed_count %></div>
+        </div>
+      </div>
+
+      <!-- Total Pending -->
+      <div style="background: #fff; border-radius: 16px; padding: 20px; border: 1px solid #e8edf3; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 16px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: #fef2f2; display: flex; align-items: center; justify-content: center; color: #ef4444;">
+          <svg xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Total Pending</div>
+          <div style="font-size: 24px; font-weight: 700; color: #000; font-family: 'Playfair Display', serif;"><%= total_pending_count %></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls (Filter & Search) -->
+    <div style="display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+      <!-- Search bar -->
+      <div class="search-bar" style="margin-top: 0; min-width: 320px;">
+        <svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+        </svg>
+        <input type="text" id="userSearch" placeholder="Search by name, email or code..." onkeyup="filterUsers()" />
+      </div>
+
+      <!-- Filters -->
+      <%= form_with url: user_training_assignments_path, method: :get, local: true, style: "display: flex; align-items: center; gap: 10px; flex-wrap: wrap;" do |f| %>
+        <%= select_tag :stat_month,
+              options_for_select(Date::MONTHNAMES.compact.each_with_index.map { |m,i| [m,i+1] }, params[:stat_month]),
+              include_blank: "All Months",
+              onchange: "this.form.submit();",
+              style: "border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 14px; font-size: 13px; font-weight: 600; outline: none; background: #fff; min-width: 140px; font-family: 'DM Sans', sans-serif; cursor: pointer; color: #111;" %>
+
+        <%= select_tag :stat_year,
+              options_for_select((2025..2030).to_a, params[:stat_year]),
+              include_blank: "All Years",
+              onchange: "this.form.submit();",
+              style: "border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 14px; font-size: 13px; font-weight: 600; outline: none; background: #fff; min-width: 120px; font-family: 'DM Sans', sans-serif; cursor: pointer; color: #111;" %>
+
+        <%= select_tag :stat_training_id,
+              options_from_collection_for_select(Training.order(:title), :id, :title, params[:stat_training_id]),
+              include_blank: "All Training Titles",
+              onchange: "this.form.submit();",
+              style: "border: 1px solid #e2e8f0; padding: 10px 16px; border-radius: 14px; font-size: 13px; font-weight: 600; outline: none; background: #fff; min-width: 180px; font-family: 'DM Sans', sans-serif; cursor: pointer; color: #111;" %>
+      <% end %>
+    </div>
+
+    <!-- Employee Cards -->
+    <% if @employees.any? %>
+      <div class="user-cards-grid" id="userGrid">
+        <% @employees.each do |employee| %>
+          <div class="user-card" data-search="<%= "#{employee.employee_name} #{employee.employee_email} #{employee.employee_code}".downcase %>">
+            <!-- Avatar -->
+            <div class="user-avatar">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+
+            <!-- Info -->
+            <div class="user-info">
+              <div class="user-name" title="<%= employee.employee_name %>"><%= employee.employee_name %></div>
+              <div class="user-email" title="<%= employee.employee_email %>"><%= employee.employee_email %></div>
+              <div class="user-role">
+                Code: <%= employee.employee_code %>
+                <% assigned_count = employee.user_training_assignments.size %>
+                <% 
+                   completed_count = 0
+                   if employee.user
+                     completed_count = employee.user.user_training_progresses.select { |p| p.status == "completed" }.size
+                   end
+                %>
+                <% if assigned_count > 0 %>
+                  &nbsp;·&nbsp; <span class="assign-count"><%= completed_count %> / <%= assigned_count %> Completed</span>
+                <% end %>
+              </div>
+            </div>
+
+            <!-- Action -->
+            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
+              <%= link_to edit_user_training_assignment_path(employee_detail_id: employee.id),
+                          class: "btn-assign" do %>
+                Assign PPTs
+              <% end %>
+              
+              <% if assigned_count > 0 %>
+                <%= link_to user_training_assignment_path(employee.id), style: "font-size: 11px; font-weight: 600; color: #166534; text-decoration: underline;" do %>
+                  View Progress
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div id="noResults" style="display:none;" class="empty-state" style="margin-top:20px;">
+        <svg xmlns="http://www.w3.org/2000/svg" style="width:40px;height:40px;color:#d1d5db;margin:0 auto;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+        </svg>
+        <p>No employees match your search.</p>
+      </div>
+
+    <% else %>
+      <div class="empty-state" style="margin-top:28px;">
+        <svg xmlns="http://www.w3.org/2000/svg" style="width:44px;height:44px;color:#d1d5db;margin:0 auto;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <p>No employees found in the system.</p>
+      </div>
+    <% end %>
+
+  </div>
+
+  <script>
+    function filterUsers() {
+      const query = document.getElementById('userSearch').value.toLowerCase();
+      const cards = document.querySelectorAll('#userGrid .user-card');
+      let visible = 0;
+      cards.forEach(card => {
+        const text = card.getAttribute('data-search') || '';
+        if (text.includes(query)) {
+          card.style.display = '';
+          visible++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      const noRes = document.getElementById('noResults');
+      if (noRes) noRes.style.display = visible === 0 ? '' : 'none';
+    }
+  </script>
+</div>

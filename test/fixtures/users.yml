@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  email: "user1@example.com"
+  encrypted_password: "password123"
+  role: "employee"
+  employee_code: "EMP001"
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+two:
+  email: "user2@example.com"
+  encrypted_password: "password123"
+  role: "l1_employer"
+  employee_code: "EMP002"
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

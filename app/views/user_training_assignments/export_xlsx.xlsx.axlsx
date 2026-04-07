@@ -1,0 +1,93 @@
+wb = xlsx_package.workbook
+
+wb.styles do |s|
+  header_style    = s.add_style(b: true, bg_color: "16A34A", fg_color: "FFFFFF", alignment: { horizontal: :center, vertical: :center }, border: { style: :thin, color: "000000" })
+  cell_style      = s.add_style(alignment: { horizontal: :left, vertical: :center }, border: { style: :thin, color: "D1D5DB" })
+  completed_style = s.add_style(b: true, fg_color: "166534", bg_color: "DCFCE7", alignment: { horizontal: :center, vertical: :center }, border: { style: :thin, color: "D1D5DB" })
+  pending_style   = s.add_style(b: true, fg_color: "991B1B", bg_color: "FEE2E2", alignment: { horizontal: :center, vertical: :center }, border: { style: :thin, color: "D1D5DB" })
+
+  wb.add_worksheet(name: "Employee Trainings") do |sheet|
+    # Headers
+    sheet.add_row [
+      "Employee Code",
+      "Employee Name",
+      "Email Address",
+      "Training Topic",
+      "Training Month",
+      "Training Year",
+      "Required Duration",
+      "Status",
+      "Time Spent",
+      "Completed On",
+      "Financial Year"
+    ], style: header_style, height: 30
+
+    @employees.each do |emp|
+      progress_map = {}
+      if emp.user
+        emp.user.user_training_progresses.each do |p|
+          progress_map[p.training_id] = p
+        end
+      end
+
+      if emp.user_training_assignments.any?
+        emp.user_training_assignments.each do |assignment|
+          t = assignment.training
+          next unless t
+
+          prog = progress_map[t.id]
+          is_completed = (prog&.status == "completed")
+
+          # Convert time to exact minutes or seconds string, e.g. 1.5 mins or 30s
+          time_spent_str = if prog
+            if prog.time_spent.to_i >= 60
+              "#{(prog.time_spent.to_f / 60.0).round(2)} mins"
+            else
+              "#{prog.time_spent.to_i} secs"
+            end
+          else
+            "0"
+          end
+
+          duration_str = if t.duration >= 60
+            "#{t.duration / 60} mins"
+          else
+            "#{t.duration} secs"
+          end
+
+          row = [
+            emp.employee_code,
+            emp.employee_name,
+            emp.employee_email,
+            t.title,
+            t.month_name, # uses the method defined on Training model
+            t.year,
+            duration_str,
+            is_completed ? "Completed" : "Pending",
+            time_spent_str != "0" ? time_spent_str : "-",
+            is_completed ? prog.ended_at&.strftime("%d %b %Y %H:%M") : "-",
+            prog&.financial_year.presence || "-"
+          ]
+
+          row_styles = [
+            cell_style, cell_style, cell_style, cell_style, cell_style, cell_style, cell_style,
+            (is_completed ? completed_style : pending_style),
+            cell_style, cell_style, cell_style
+          ]
+
+          sheet.add_row row, style: row_styles
+        end
+      else
+        sheet.add_row [
+          emp.employee_code,
+          emp.employee_name,
+          emp.employee_email,
+          "No Assigned Trainings",
+          "-", "-", "-", "Pending", "-", "-", "-"
+        ], style: cell_style
+      end
+    end
+
+    sheet.column_widths 15, 25, 30, 35, 15, 15, 15, 15, 18, 20, 15
+  end
+end

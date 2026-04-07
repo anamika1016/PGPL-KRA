@@ -1,0 +1,79 @@
+<div class="min-h-screen pl-64 pr-4 pt-4 pb-12 overflow-x-auto bg-gray-100">
+  <div class="w-full max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Employee Data View</h2>
+
+    <!-- Employee Basic Info -->
+    <div class="grid grid-cols-2 gap-6 text-sm mb-6">
+      <div><strong>Employee ID:</strong> <%= @employee_detail.employee_id %></div>
+      <div><strong>Name:</strong> <%= @employee_detail.employee_name %></div>
+      <div><strong>Post:</strong> <%= @employee_detail.post %></div>
+      <div><strong>Department:</strong> <%= @employee_detail.department %></div>
+      <div><strong>L1:</strong> <%= @employee_detail.l1_employer_name %></div>
+      <div><strong>L2:</strong> <%= @employee_detail.l2_employer_name %></div>
+    </div>
+
+    <!-- Existing Data Display -->
+    <% if @user_details.any? %>
+      <div class="card mt-4">
+        <div class="card-header bg-dark text-white">
+          <h5 class="mb-0"><i class="fas fa-database me-2"></i>Existing Data</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm">
+              <thead class="table-dark">
+                <tr>
+                  <th>Department</th>
+                  <th>Activity</th>
+                  <th>Theme</th>
+                  <th>Unit</th>
+                  <th>April</th>
+                  <th>May</th>
+                  <th>June</th>
+                  <th>July</th>
+                  <th>August</th>
+                  <th>September</th>
+                  <th>October</th>
+                  <th>November</th>
+                  <th>December</th>
+                  <th>January</th>
+                  <th>February</th>
+                  <th>March</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @user_details.each do |detail| %>
+                  <tr>
+                    <td><%= detail.department&.department_type %></td>
+                    <td><%= detail.activity&.activity_name %></td>
+                    <td><%= detail.activity&.theme_name.presence || 'No Theme' %></td>
+                    <td><%= detail.activity&.unit %></td>
+                    <td><%= detail.april.presence || '-' %></td>
+                    <td><%= detail.may.presence || '-' %></td>
+                    <td><%= detail.june.presence || '-' %></td>
+                    <td><%= detail.july.presence || '-' %></td>
+                    <td><%= detail.august.presence || '-' %></td>
+                    <td><%= detail.september.presence || '-' %></td>
+                    <td><%= detail.october.presence || '-' %></td>
+                    <td><%= detail.november.presence || '-' %></td>
+                    <td><%= detail.december.presence || '-' %></td>
+                    <td><%= detail.january.presence || '-' %></td>
+                    <td><%= detail.february.presence || '-' %></td>
+                    <td><%= detail.march.presence || '-' %></td>
+                    <td>
+                      <%= link_to "Edit", edit_user_detail_path(detail), class: "btn btn-sm btn-outline-secondary me-1" %>
+                      <%= link_to "Delete", user_detail_path(detail), method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-sm btn-outline-danger" %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <div class="alert alert-warning mt-4">No existing data found for this employee.</div>
+    <% end %>
+  </div>
+</div>

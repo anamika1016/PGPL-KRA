@@ -1,0 +1,520 @@
+<div class="main-content ml-64 w-auto px-6 py-8"
+     data-training-id="<%= @training.id %>"
+     data-duration-seconds="<%= @training.duration %>"
+     data-time-spent-seconds="<%= @progress&.time_spent.to_i %>"
+     data-status="<%= @progress&.status %>">
+
+  <div class="page-card">
+
+    <!-- Header — compact, white/light, chips on RIGHT -->
+    <div class="training-header">
+      <div class="header-inner">
+
+        <!-- LEFT: breadcrumb + title -->
+        <div class="header-left">
+          <nav class="breadcrumb">
+            <%= link_to "Trainings", trainings_path, class: "breadcrumb-link" %>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current">View Training</span>
+          </nav>
+          <h1 class="training-title"><%= @training.title %></h1>
+        </div>
+
+        <!-- RIGHT: all chips -->
+        <div class="header-chips">
+          <span class="chip chip-gray">
+            ⏱ Required: <%= @training.duration >= 60 ? "#{@training.duration / 60} min" : "#{@training.duration} sec" %>
+          </span>
+          <span class="chip chip-gray" id="timer-display">
+            ⏳ 00:00
+          </span>
+          <span class="chip chip-gray">
+            📅 <%= @training.month_name %> <%= @training.year %>
+          </span>
+          <% if @progress&.status == 'completed' %>
+            <span class="chip chip-green">
+              ✅ Completed
+            </span>
+          <% end %>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Files -->
+    <div class="files-area">
+      <% @training.files.each do |file| %>
+        <div class="file-card">
+
+          <!-- File Header -->
+          <div class="file-header">
+            <div class="file-meta">
+              <div class="file-icon">
+                <% if file.content_type.include?('presentation') || file.filename.to_s.end_with?('.pptx', '.ppt') %>
+                  📊
+                <% elsif file.content_type.include?('pdf') %>
+                  📄
+                <% elsif file.content_type.include?('word') || file.filename.to_s.end_with?('.docx', '.doc') %>
+                  📝
+                <% else %>
+                  📁
+                <% end %>
+              </div>
+              <div>
+                <h4 class="file-name"><%= file.filename %></h4>
+                <p class="file-size"><%= number_to_human_size(file.byte_size) %> · <%= file.content_type.split('/').last.upcase %></p>
+              </div>
+            </div>
+            <%= link_to rails_blob_path(file, disposition: "attachment"), class: "btn-download" do %>
+              ⬇ Download
+            <% end %>
+          </div>
+
+          <!-- Preview -->
+          <div class="preview-area">
+            <% if file.image? %>
+              <div class="preview-image-wrap">
+                <%= image_tag rails_blob_path(file), class: "preview-image" %>
+              </div>
+            <% elsif file.content_type.include?('pdf') %>
+              <iframe src="<%= rails_blob_path(file, disposition: 'inline') %>" height="700" class="preview-iframe"></iframe>
+            <% else %>
+              <iframe src="<%= preview_training_path(@training, file_id: file.id) %>" height="1000" class="preview-iframe" id="preview-frame-<%= file.id %>"></iframe>
+              <p class="preview-note">Converting and loading preview... If it takes too long, click ⬇ Download above.</p>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Action Bar -->
+      <div id="action-bar" class="action-bar action-bar--hidden">
+        <span class="action-bar__label">
+          <% if @progress&.status == 'completed' %>
+            ✅ Training already completed
+          <% else %>
+            Scroll through all content to unlock completion
+          <% end %>
+        </span>
+        <div class="action-bar__btns">
+          <%= link_to trainings_path, class: "btn-close" do %>
+            ✕ Close
+          <% end %>
+          <% if current_user.role == "employee" && @progress&.status != 'completed' %>
+            <% if @training.has_assessment %>
+              <button id="complete-btn" disabled class="btn-complete btn-complete--disabled" data-assessment-url="<%= assessment_training_path(@training) %>">
+                Take Assessment
+              </button>
+            <% else %>
+              <button id="complete-btn" disabled class="btn-complete btn-complete--disabled">
+                Complete Training
+              </button>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    let timerInterval   = null;
+    let handleUnloadFn  = null;
+    let toggleTimerFn   = null;
+
+    function initTimer() {
+      // Cleanup previous listeners (Turbo re-runs this on every page visit)
+      if (timerInterval)  { clearInterval(timerInterval); timerInterval = null; }
+      if (handleUnloadFn) {
+        window.removeEventListener('beforeunload', handleUnloadFn);
+        document.removeEventListener('turbo:before-visit', handleUnloadFn);
+        handleUnloadFn = null;
+      }
+      if (toggleTimerFn) {
+        document.removeEventListener('visibilitychange', toggleTimerFn);
+        toggleTimerFn = null;
+      }
+
+      const container = document.querySelector('.main-content[data-training-id]');
+      if (!container) return;
+
+      const trainingId      = container.dataset.trainingId;
+      const requiredSeconds = parseInt(container.dataset.durationSeconds || 0);
+      const savedSeconds    = parseInt(container.dataset.timeSpentSeconds || 0);
+      const status          = container.dataset.status;
+      const timerDisplay    = document.getElementById('timer-display');
+      const completeBtn     = document.getElementById('complete-btn');
+      const actionBar       = document.getElementById('action-bar');
+      const csrfToken       = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+      if (!timerDisplay) return;
+
+      let secondsSpent  = 0;   // overwritten from server before interval starts
+      let lastSaveTime  = 0;
+      let timerRunning  = false;
+
+      // Action bar: reveal when last file card scrolls into view
+      if (actionBar) {
+        const fileCards = document.querySelectorAll('.file-card');
+        const sentinel  = fileCards[fileCards.length - 1];
+        if (sentinel) {
+          new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+              actionBar.classList.remove('action-bar--hidden');
+              actionBar.classList.add('action-bar--visible');
+            }
+          }, { threshold: 0.8 }).observe(sentinel);
+        } else {
+          actionBar.classList.remove('action-bar--hidden');
+          actionBar.classList.add('action-bar--visible');
+        }
+      }
+
+      function updateDisplay() {
+        const m = Math.floor(secondsSpent / 60).toString().padStart(2, '0');
+        const s = (secondsSpent % 60).toString().padStart(2, '0');
+        timerDisplay.innerHTML = `⏳ ${m}:${s}`;
+        if (secondsSpent >= requiredSeconds) enableCompleteButton();
+      }
+
+      function saveProgress(force) {
+        if (status === 'completed') return;
+        if (!force && secondsSpent === lastSaveTime) return;
+        fetch(`/trainings/${trainingId}/update_progress`, {
+          method:    'POST',
+          headers:   { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+          body:      JSON.stringify({ time_spent: secondsSpent }),
+          keepalive: true   // works during beforeunload
+        }).catch(() => {});
+        lastSaveTime = secondsSpent;
+      }
+
+      function startInterval() {
+        if (timerRunning) return;
+        timerRunning = true;
+
+        // Pause when tab hidden, resume when visible again
+        toggleTimerFn = function () {
+          if (document.hidden) {
+            // Tab hidden → save immediately and STOP counting
+            saveProgress(true);
+            clearInterval(timerInterval);
+            timerInterval = null;
+          } else {
+            // Tab visible again → RESUME from where we left off
+            if (!timerInterval && status !== 'completed') {
+              timerInterval = setInterval(tick, 1000);
+            }
+          }
+        };
+        document.addEventListener('visibilitychange', toggleTimerFn);
+
+        // Save on page close / Turbo navigation
+        handleUnloadFn = function () { saveProgress(true); };
+        window.addEventListener('beforeunload', handleUnloadFn);
+        document.addEventListener('turbo:before-visit', handleUnloadFn);
+
+        // Only run interval if tab is currently visible
+        if (!document.hidden) {
+          timerInterval = setInterval(tick, 1000);
+        }
+      }
+
+      function tick() {
+        secondsSpent++;
+        updateDisplay();
+        if (secondsSpent - lastSaveTime >= 15) saveProgress(false);
+      }
+
+      function enableCompleteButton() {
+        if (!completeBtn || completeBtn.classList.contains('btn-complete--ready')) return;
+        completeBtn.disabled = false;
+        completeBtn.classList.remove('btn-complete--disabled');
+        completeBtn.classList.add('btn-complete--ready');
+        completeBtn.innerHTML = completeBtn.dataset.assessmentUrl
+          ? '📝 Take Assessment'
+          : '✅ Complete Training';
+      }
+
+      // Already completed — just show the time, no interval needed
+      if (status === 'completed') {
+        secondsSpent = savedSeconds;
+        lastSaveTime = secondsSpent;
+        updateDisplay();
+        return;
+      }
+
+      // ── KEY FIX: fetch saved time FIRST, then start interval ──
+      fetch(`/trainings/${trainingId}/start_training`, {
+        method:  'POST',
+        headers: { 'X-CSRF-Token': csrfToken, 'Accept': 'application/json' }
+      })
+      .then(r => r.json())
+      .then(data => {
+        // Resume from saved seconds (0 on first visit)
+        secondsSpent = parseInt(data.time_spent || 0, 10);
+        lastSaveTime = secondsSpent;
+        updateDisplay();    // show correct time right away
+        startInterval();    // NOW start counting
+      })
+      .catch(() => startInterval());  // fallback if request fails
+
+      // Complete / Assessment button
+      if (completeBtn) {
+        completeBtn.addEventListener('click', function () {
+          clearInterval(timerInterval); timerInterval = null;
+          if (handleUnloadFn) {
+            window.removeEventListener('beforeunload', handleUnloadFn);
+            document.removeEventListener('turbo:before-visit', handleUnloadFn);
+          }
+          if (toggleTimerFn) document.removeEventListener('visibilitychange', toggleTimerFn);
+
+          if (completeBtn.dataset.assessmentUrl) {
+            fetch(`/trainings/${trainingId}/update_progress`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+              body:    JSON.stringify({ time_spent: secondsSpent })
+            }).then(() => { window.location.href = completeBtn.dataset.assessmentUrl; });
+          } else {
+            fetch(`/trainings/${trainingId}/complete_training`, {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+              body:    JSON.stringify({ time_spent: secondsSpent })
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status === 'completed') {
+                alert('Training completed successfully!');
+                window.location.reload();
+              }
+            });
+          }
+        });
+      }
+    }
+
+    document.addEventListener('turbo:load', initTimer);
+    if (!window.Turbo && !window.Turbolinks) document.addEventListener('DOMContentLoaded', initTimer);
+  })();
+</script>
+
+<style>
+/* Layout */
+.main-content {
+  margin-left: 240px;
+  padding: 2rem;
+  overflow-x: auto;
+  background: #f5f6fa;
+  min-height: 100vh;
+}
+
+/* Page card */
+.page-card {
+  background: #fff;
+  border-radius: 1.25rem;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  border: 1px solid #ebebeb;
+  overflow: hidden;
+}
+
+/* ── Header ── light white/gray, compact */
+.training-header {
+  background: #ffffff;
+  border-bottom: 1.5px solid #f0f0f0;
+  padding: 1rem 1.75rem;
+}
+.header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.header-left {}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  margin-bottom: 0.2rem;
+}
+.breadcrumb-link { color: #6b7280; text-decoration: none; }
+.breadcrumb-link:hover { color: #374151; }
+.breadcrumb-sep { color: #d1d5db; }
+.breadcrumb-current { color: #9ca3af; }
+.training-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+/* ── Chips — right side ── */
+.header-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.chip-gray {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+.chip-green {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+/* ── Files area ── */
+.files-area {
+  padding: 1.5rem;
+  background: #f8f9fb;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── File card ── */
+.file-card {
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid #ebebeb;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+.file-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+.file-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.file-icon {
+  font-size: 1.6rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 0.6rem;
+}
+.file-name { font-weight: 700; color: #111827; font-size: 1rem; }
+.file-size { font-size: 0.78rem; color: #9ca3af; margin-top: 0.1rem; }
+
+/* Download button — gray/neutral */
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 700;
+  padding: 0.45rem 1.1rem;
+  border-radius: 0.55rem;
+  font-size: 0.83rem;
+  text-decoration: none;
+  border: 1.5px solid #e5e7eb;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-download:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+/* Preview */
+.preview-area { background: #f3f4f6; min-height: 680px; }
+.preview-image-wrap { display: flex; justify-content: center; padding: 1.5rem; }
+.preview-image { max-width: 100%; height: auto; border-radius: 0.75rem; box-shadow: 0 2px 12px rgba(0,0,0,0.10); }
+.preview-iframe { width: 100%; border: none; display: block; }
+.preview-note { text-align: center; font-size: 0.75rem; color: #9ca3af; padding: 0.5rem; background: #fff; }
+
+/* ── Action bar ── */
+.action-bar {
+  background: #ffffff;
+  border: 1.5px solid #e9ecef;
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: opacity 0.4s cubic-bezier(.4,0,.2,1), transform 0.4s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.4rem;
+}
+.action-bar--hidden { opacity: 0; transform: translateY(16px); pointer-events: none; }
+.action-bar--visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.action-bar__label { font-size: 0.88rem; color: #6b7280; font-weight: 500; }
+.action-bar__btns { display: flex; align-items: center; gap: 0.65rem; }
+
+/* Close button */
+.btn-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 700;
+  padding: 0.5rem 1.2rem;
+  border-radius: 0.6rem;
+  font-size: 0.875rem;
+  text-decoration: none;
+  border: 1.5px solid #e5e7eb;
+  transition: background 0.15s;
+}
+.btn-close:hover { background: #e5e7eb; }
+
+/* Complete button */
+.btn-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  padding: 0.5rem 1.4rem;
+  border-radius: 0.6rem;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
+}
+.btn-complete--disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border: 1.5px solid #e5e7eb;
+  cursor: not-allowed;
+}
+.btn-complete--ready {
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(34,197,94,0.30);
+}
+.btn-complete--ready:hover {
+  background: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(34,197,94,0.36);
+}
+</style>

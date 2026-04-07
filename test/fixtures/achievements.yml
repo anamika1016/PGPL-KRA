@@ -1,0 +1,13 @@
+one:
+  user_detail: one
+  month: MyString
+  achievement: MyString
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+two:
+  user_detail: two
+  month: MyString
+  achievement: MyString
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

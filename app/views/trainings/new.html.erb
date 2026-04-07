@@ -1,0 +1,19 @@
+<% content_for :button_text, "Upload Training" %>
+
+<div class="main-content ml-64 w-auto px-8 py-10" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); min-height: 100vh; font-family: 'Georgia', serif;">
+  <div class="w-full">
+    <div class="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 flex flex-col" style="min-height: calc(100vh - 120px);">
+      <div class="training-card-header p-8 text-white text-center"
+           style="background: linear-gradient(135deg, #2d4a1e 0%, #3d6b2a 60%, #4a7c35 100%); flex-shrink: 0;">
+        <h2 class="text-3xl font-black tracking-tight">Upload New Training</h2>
+        <p style="color:rgba(255,255,255,0.7);" class="mt-2 text-base">Add PPT presentations for employees to view</p>
+      </div>
+
+      <div class="p-10 flex-grow">
+        <%= form_with model: @training, local: true, html: { multipart: true } do |f| %>
+          <%= render "form", f: f %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

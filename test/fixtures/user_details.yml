@@ -1,0 +1,33 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  department: one
+  activity: one
+  april: MyText
+  may: MyText
+  june: MyText
+  july: MyText
+  august: MyText
+  september: MyText
+  october: MyText
+  november: MyText
+  december: MyText
+  january: MyText
+  february: MyText
+  march: MyText
+
+two:
+  department: two
+  activity: two
+  april: MyText
+  may: MyText
+  june: MyText
+  july: MyText
+  august: MyText
+  september: MyText
+  october: MyText
+  november: MyText
+  december: MyText
+  january: MyText
+  february: MyText
+  march: MyText

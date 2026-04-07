@@ -1,0 +1,147 @@
+
+<div class="mb-4">
+  <%= f.label :title, class: "block text-sm font-medium text-gray-700 mb-1" %>
+  <%= f.text_field :title, class: "w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" %>
+</div>
+
+<!--
+<div class="mb-4">
+  <%= f.label :description, class: "block text-sm font-medium text-gray-700 mb-1" %>
+  <%= f.text_area :description, rows: 4, class: "w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" %>
+</div>
+-->
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+  <div>
+    <%= f.label :duration, "Duration", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <% options = [
+      ["30 Seconds", 30],
+      ["1 Minute", 60],
+      ["2 Minutes", 120],
+      ["3 Minutes", 180],
+      ["5 Minutes", 300],
+      ["10 Minutes", 600],
+      ["15 Minutes", 900],
+      ["20 Minutes", 1200],
+      ["30 Minutes", 1800],
+      ["45 Minutes", 2700],
+      ["60 Minutes", 3600],
+      ["90 Minutes", 5400],
+      ["120 Minutes", 7200],
+      ["180 Minutes", 10800],
+      ["240 Minutes", 14400]
+    ] %>
+    <%= f.select :duration, options_for_select(options, f.object.duration || 60), {}, 
+          class: "w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" %>
+  </div>
+
+  <div>
+    <%= f.label :month, "Select Month", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.select :month,
+          Date::MONTHNAMES.compact.each_with_index.map { |m, i| [m, i+1] },
+          {},
+          class: "w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" %>
+  </div>
+
+  <div>
+    <%= f.label :year, "Select Year", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.select :year,
+          (2026..2030).to_a,
+          {},
+          class: "w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" %>
+  </div>
+</div>
+
+<div class="mb-6">
+  <%= f.label :files, "Upload PPT Files", class: "block text-sm font-medium text-gray-700 mb-1" %>
+  <%= f.file_field :files, multiple: true, class: "w-full border border-gray-300 rounded-lg p-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition" %>
+  <p class="mt-1 text-sm text-gray-500">You can select multiple files. Existing files will be preserved unless replaced (depends on setup).</p>
+</div>
+
+<div class="mb-6 border p-4 rounded-lg bg-gray-50">
+  <div class="flex items-center mb-4">
+    <%= f.check_box :has_assessment, class: "h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2", id: "has_assessment_toggle" %>
+    <%= f.label :has_assessment, "Do you want to upload or create question/answers for Assessment?", class: "text-sm font-medium text-gray-700" %>
+  </div>
+
+  <div id="assessment_section" class="hidden">
+    <div class="mb-4">
+      <div class="flex items-center justify-between mb-1">
+        <label class="block text-sm font-medium text-gray-700">Upload Questions via Excel</label>
+        <%= link_to download_assessment_template_trainings_path(format: :xlsx), class: "text-xs px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-bold" do %>
+          ⬇ Export Format
+        <% end %>
+      </div>
+      <input type="file" name="excel_file" accept=".xlsx, .xls" class="w-full border border-gray-300 rounded-lg p-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition">
+      <p class="mt-1 text-xs text-gray-500">Excel format: Question | Option A | Option B | Option C | Option D | Answer</p>
+    </div>
+
+    <div class="my-4 text-center text-gray-500 font-bold border-b pb-2">OR Add Manually</div>
+
+    <div id="questions_container">
+      <%= f.fields_for :training_questions do |qf| %>
+        <%= render 'training_question_fields', f: qf %>
+      <% end %>
+    </div>
+    
+    <button type="button" id="add_question_btn" class="mt-2 text-sm text-blue-600 font-semibold hover:text-blue-800">
+      + Add manual question
+    </button>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("turbo:load", function() {
+    const toggle = document.getElementById("has_assessment_toggle");
+    const section = document.getElementById("assessment_section");
+    if(toggle && section) {
+      const updateVisibility = () => {
+        section.style.display = toggle.checked ? "block" : "none";
+      };
+      toggle.addEventListener("change", updateVisibility);
+      updateVisibility();
+    }
+    
+    // Simple js to add new question fields by cloning the first one if there's a template, or just fetching it.
+    // For simplicity, we just inject raw HTML.
+    let qIndex = <%= f.object.training_questions.size || 0 %>;
+    const addBtn = document.getElementById("add_question_btn");
+    if(addBtn) {
+      addBtn.addEventListener("click", function() {
+        qIndex++;
+        const tpl = `
+          <div class="p-3 mb-3 border border-gray-200 rounded relative bg-white">
+            <button type="button" class="absolute top-2 right-2 text-red-500 text-xs font-bold remove-btn">X</button>
+            <label class="block text-xs font-medium">Question</label>
+            <input type="text" name="training[training_questions_attributes][${qIndex}][question]" class="w-full border rounded p-1 mb-2 text-sm">
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="block text-xs">Option A</label><input type="text" name="training[training_questions_attributes][${qIndex}][option_a]" class="w-full border rounded p-1 text-sm"></div>
+              <div><label class="block text-xs">Option B</label><input type="text" name="training[training_questions_attributes][${qIndex}][option_b]" class="w-full border rounded p-1 text-sm"></div>
+              <div><label class="block text-xs">Option C</label><input type="text" name="training[training_questions_attributes][${qIndex}][option_c]" class="w-full border rounded p-1 text-sm"></div>
+              <div><label class="block text-xs">Option D</label><input type="text" name="training[training_questions_attributes][${qIndex}][option_d]" class="w-full border rounded p-1 text-sm"></div>
+              <div class="col-span-2"><label class="block text-xs font-bold">Correct Answer</label><input type="text" name="training[training_questions_attributes][${qIndex}][correct_answer]" class="w-full border rounded p-1 text-sm" placeholder="Exact text of correct option"></div>
+            </div>
+          </div>
+        `;
+        document.getElementById("questions_container").insertAdjacentHTML('beforeend', tpl);
+      });
+      document.getElementById("questions_container").addEventListener("click", function(e) {
+        if(e.target.classList.contains("remove-btn")) {
+          e.target.parentElement.style.display = 'none';
+          // If we had an ID, we'd need to set _destroy. Since these are new, just deleting HTML is fine.
+          const destroyInput = document.createElement("input");
+          destroyInput.type = "hidden";
+          destroyInput.name = e.target.nextElementSibling.name.replace("[question]", "[_destroy]");
+          destroyInput.value = "1";
+          e.target.parentElement.appendChild(destroyInput);
+        }
+      });
+    }
+  });
+</script>
+
+<div class="flex items-center gap-4">
+  <%= f.submit yield(:button_text),
+        class: "bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-lg transition shadow-md" %>
+  <%= link_to "Cancel", trainings_path, class: "text-gray-600 hover:text-gray-800 transition font-medium" %>
+</div>
