@@ -9,6 +9,7 @@
           <!-- Left side - Upload Section -->
           <div class="upload-section">
             <%= form_with url: import_user_details_path, method: :post, multipart: true, local: true, class: "upload-form" do |form| %>
+              <%= hidden_field_tag :financial_year, selected_financial_year %>
               <%= form.file_field :file, accept: ".xlsx,.xls", style: "display: none;", id: "excel-file-input" %>
               
               <button type="button" class="choose-file-btn" onclick="document.getElementById('excel-file-input').click()">
@@ -23,11 +24,24 @@
           
           <!-- Right side - Export Section -->
           <div class="export-section" style="display: flex; align-items: center;">
-            <%= link_to export_department_activity_data_user_details_path(format: :xlsx, department_id: params[:department_id], employee_detail_id: params[:employee_detail_id]), 
-                class: "btn btn-success export-btn", 
-                id: "export-btn",
-                style: "display: inline-block; visibility: visible; opacity: 1;" do %>
-              <i class="fas fa-download me-2"></i>Export Excel
+            <% export_ready = params[:department_id].present? && params[:employee_detail_id].present? %>
+            <% if export_ready %>
+              <%= link_to export_department_activity_data_user_details_path(format: :xlsx, department_id: params[:department_id], employee_detail_id: params[:employee_detail_id], financial_year: selected_financial_year),
+                  class: "btn btn-success export-btn",
+                  id: "export-btn",
+                  data: { turbo: false },
+                  style: "display: inline-block; visibility: visible; opacity: 1;" do %>
+                <i class="fas fa-download me-2"></i>Export Excel
+              <% end %>
+            <% else %>
+              <button type="button"
+                      class="btn btn-success export-btn"
+                      id="export-btn"
+                      style="display: inline-block; visibility: visible; opacity: 0.55; cursor: not-allowed;"
+                      disabled
+                      title="Select department and employee first">
+                <i class="fas fa-download me-2"></i>Export Excel
+              </button>
             <% end %>
           </div>
         </div>
@@ -44,6 +58,7 @@
             <table class="table table-bordered table-hover w-full text-sm text-gray-700 border border-gray-300">
               <thead class="bg-gray-light">
                 <tr>
+                  <th class="px-4 py-3 text-start">Financial Year</th>
                   <th class="px-4 py-3 text-start">Department</th>
                   <th class="px-4 py-3 text-start">Employee Name</th>
                   <th class="px-4 py-3 text-start">L1 Employer</th>
@@ -52,13 +67,24 @@
               </thead>
               <tbody>
                 <tr>
-                  <!-- Department Dropdown -->
                   <td class="px-4 py-3">
-                    <%= form.select :department_id,
-                        options_from_collection_for_select(@departments, :id, :department_type, params[:department_id]),
-                        { prompt: "-- Select Department --" },
+                    <%= form.select :financial_year,
+                        options_for_select(available_financial_years, selected_financial_year),
+                        {},
                         class: "form-select form-select-sm w-full border-gray-300 rounded",
                         onchange: "this.form.submit();" %>
+                  </td>
+
+                  <!-- Department Dropdown -->
+                  <td class="px-4 py-3">
+                    <select name="department_id" class="form-select form-select-sm w-full border-gray-300 rounded" onchange="this.form.submit();">
+                      <option value="">-- Select Department --</option>
+                      <% @departments.each do |department| %>
+                        <option value="<%= department.id %>" <%= 'selected' if department.department_type == @selected_department_type %>>
+                          <%= department.department_type %>
+                        </option>
+                      <% end %>
+                    </select>
                   </td>
 
                   <!-- Employee Dropdown -->
@@ -98,47 +124,21 @@
           <div class="card-header bg-gray text-white">
             <h5 class="mb-0">
               <i class="fas fa-table me-2"></i>
-              Activities & Monthly Data - <%= @selected_employee&.employee_name || 'Selected Employee' %>
+              Activities & Monthly Data - <%= @selected_employee&.employee_name || 'Selected Employee' %> (<%= selected_financial_year %>)
             </h5>
           </div>
           <div class="card-body p-0">
             <% 
-              # Filter activities to show only those with completely blank targets (April to March)
-              activities = []
-              if @employee_activities.present?
-                @employee_activities.each do |activity|
-                  # Check if this activity has any existing data
-                  existing_data = UserDetail.find_by(
-                    department_id: params[:department_id],
-                    activity_id: activity.id,
-                    employee_detail_id: params[:employee_detail_id]
-                  )
-                  
-                  # Only include activities that have no existing data OR have all blank target values
-                  if existing_data.nil?
-                    # No existing data - include this activity
-                    activities << activity
-                  else
-                    # Check if all target values are blank
-                    months = [:april, :may, :june, :july, :august, :september, :october, :november, :december, :january, :february, :march]
-                    all_blank = months.all? do |month|
-                      value = existing_data.send(month)
-                      # Consider blank if: nil, empty string, whitespace only, or '0'
-                      value.nil? || value.to_s.strip.empty? || value.to_s.strip == '0'
-                    end
-                    
-                    # Include only if all targets are blank
-                    activities << activity if all_blank
-                  end
-                end
-              end
+              activities = Array(@employee_activities).uniq { |activity| activity.id }
+              existing_details_by_activity = Array(@user_details).index_by(&:activity_id)
             %>
             
             
             <% if activities.any? %>
-              <%= form_with url: bulk_create_user_details_path, method: :post, local: true, id: 'bulk-form' do |form| %>
+              <%= form_with url: bulk_create_user_details_path, method: :post, local: true, id: 'bulk-form', data: { turbo: false } do |form| %>
                 <%= form.hidden_field :department_id, value: params[:department_id] %>
                 <%= form.hidden_field :employee_detail_id, value: params[:employee_detail_id] %>
+                <%= hidden_field_tag :financial_year, selected_financial_year %>
                 
                 <div class="table-responsive">
                   <table class="table table-bordered table-striped mb-0">
@@ -167,12 +167,7 @@
                     <tbody>
                       <% activities.each do |activity| %>
                         <% 
-                          # Get existing data for this activity
-                          existing_data = UserDetail.find_by(
-                            department_id: params[:department_id],
-                            activity_id: activity.id,
-                            employee_detail_id: params[:employee_detail_id]
-                          )
+                          existing_data = existing_details_by_activity[activity.id]
                         %>
                         <tr>
                           <td class="sticky-col activity-col">
@@ -237,6 +232,7 @@
             <h5 class="mb-0">
               <i class="fas fa-database me-2"></i>
               Existing Data for <%= @selected_employee&.employee_name || 'Selected Employee' %> (Limited to 100 records)
+              - <%= selected_financial_year %>
             </h5>
             <button class="btn btn-sm btn-outline-light" onclick="toggleExistingData()">
               <i class="fas fa-eye" id="toggle-icon"></i> Toggle View
@@ -250,6 +246,7 @@
                   <tr>
                     <th>Department</th>
                     <th>Employee Name</th>
+                    <th>Financial Year</th>
                     <th>Activity</th>
                     <th>Theme</th>
                     <th>Unit</th>
@@ -271,16 +268,17 @@
                 <tbody>
                   <% 
                     toggle_activities = (@employee_activities.present? ? @employee_activities : (Department.find_by(id: params[:department_id])&.activities || []))
-                    details_by_activity = @user_details.index_by(&:activity_id)
+                    details_by_activity = Array(@user_details).index_by(&:activity_id)
                   %>
                   <% toggle_activities.each do |activity| %>
                     <% detail = details_by_activity[activity.id] %>
                     <tr>
                       <td><%= activity.department&.department_type || '-' %></td>
                       <td><%= @selected_employee&.employee_name || (detail&.employee_detail ? detail.employee_detail.employee_name : 'N/A') %></td>
+                      <td><%= detail&.financial_year || selected_financial_year %></td>
                       <td><%= activity.activity_name %></td>
-                      <td><%= activity.theme_name.present? ? activity.theme_name : 'No Theme' %></td>
-                      <td><%= activity.unit.present? ? activity.unit : "" %></td>
+                      <td><%= detail&.display_theme_name.presence || activity.theme_name.presence || 'No Theme' %></td>
+                      <td><%= detail&.display_unit.presence || activity.unit.presence || "" %></td>
                       <td><%= detail&.april.presence || '-' %></td>
                       <td><%= detail&.may.presence || '-' %></td>
                       <td><%= detail&.june.presence || '-' %></td>
@@ -295,8 +293,8 @@
                       <td><%= detail&.march.presence || '-' %></td>
                       <td>
                         <% if detail %>
-                          <%= link_to "Edit", edit_user_detail_path(detail), class: "btn btn-sm btn-outline-gray me-1" %>
-                          <%= button_to "Delete", user_detail_path(detail),
+                          <%= link_to "Edit", edit_user_detail_path(detail, financial_year: detail.financial_year), class: "btn btn-sm btn-outline-gray me-1" %>
+                          <%= button_to "Delete", user_detail_path(detail, financial_year: detail.financial_year),
                               method: :delete,
                               class: "btn btn-sm btn-outline-danger",
                               form: { style: 'display: inline;' },

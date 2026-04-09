@@ -1,113 +1,91 @@
-  # class Department < ApplicationRecord
-  #   has_many :activities, dependent: :destroy
-  #   has_many :user_details
-
-  #   accepts_nested_attributes_for :activities, allow_destroy: true, reject_if: :all_blank
-  # end
-
-
-
-  class Department < ApplicationRecord
+class Department < ApplicationRecord
   has_many :activities
   has_many :user_details
 
   accepts_nested_attributes_for :activities, allow_destroy: true, reject_if: :all_blank
 
   validates :department_type, presence: true
-  # validates :employee_reference, presence: true
+  validates :financial_year, presence: true
 
-  # Callback to create UserDetail records when activities are created
+  before_validation :assign_default_financial_year
+  before_validation :assign_financial_year_to_activities
+
   after_save :create_user_details_for_activities
-
-  # Callback to handle activity updates and deletions
   after_update :sync_user_details_with_activities
+
+  scope :for_financial_year, ->(financial_year) {
+    normalized_year = UserDetail.normalize_financial_year(financial_year).presence || UserDetail.current_financial_year
+    where(financial_year: normalized_year)
+  }
+
+  def employee_name
+    employee_detail&.employee_name || "N/A"
+  end
+
+  def employee_detail
+    EmployeeDetail.find_by(employee_id: employee_reference) ||
+      EmployeeDetail.find_by(employee_code: employee_reference)
+  end
+
+  def employee_code
+    employee_detail&.employee_code || "N/A"
+  end
+
+  def employee_display_name
+    employee = employee_detail
+    return "N/A" unless employee
+
+    "#{employee.employee_name} (#{employee.employee_code.presence || employee.employee_id})"
+  end
 
   private
 
-  def create_user_details_for_activities
-    return unless employee_reference.present?
+  def assign_default_financial_year
+    self.financial_year = UserDetail.normalize_financial_year(financial_year).presence || UserDetail.current_financial_year
+  end
 
-    # Find the employee
-    employee = EmployeeDetail.find_by(employee_id: employee_reference)
+  def assign_financial_year_to_activities
+    activities.each do |activity|
+      activity.financial_year = financial_year
+    end
+  end
+
+  def create_user_details_for_activities
+    employee = employee_detail
     return unless employee
 
-    # Create UserDetail records for each activity
     activities.each do |activity|
-      # Check if UserDetail already exists to avoid duplicates
-      existing_user_detail = UserDetail.find_by(
-        department_id: id,
-        activity_id: activity.id,
-        employee_detail_id: employee.id
-      )
-
-      unless existing_user_detail
-        UserDetail.create!(
-          department_id: id,
-          activity_id: activity.id,
-          employee_detail_id: employee.id
-        )
-      end
+      upsert_user_detail_for(activity, employee)
     end
   end
 
   def sync_user_details_with_activities
-    return unless employee_reference.present?
-
-    # Find the employee
-    employee = EmployeeDetail.find_by(employee_id: employee_reference)
+    employee = employee_detail
     return unless employee
 
-    # Get current activity IDs
     current_activity_ids = activities.pluck(:id)
 
-    # Remove UserDetail records for activities that no longer exist
     UserDetail.where(
       department_id: id,
-      employee_detail_id: employee.id
+      employee_detail_id: employee.id,
+      financial_year: financial_year
     ).where.not(activity_id: current_activity_ids).destroy_all
 
-    # Create UserDetail records for new activities
-    current_activity_ids.each do |activity_id|
-      existing_user_detail = UserDetail.find_by(
-        department_id: id,
-        activity_id: activity_id,
-        employee_detail_id: employee.id
-      )
-
-      unless existing_user_detail
-        UserDetail.create!(
-          department_id: id,
-          activity_id: activity_id,
-          employee_detail_id: employee.id
-        )
-      end
+    activities.each do |activity|
+      upsert_user_detail_for(activity, employee)
     end
   end
 
-  # Get employee name from employee_reference (which stores employee_id)
-  def employee_name
-    employee = EmployeeDetail.find_by(employee_id: self.employee_reference)
-    employee&.employee_name || "N/A"
-  end
+  def upsert_user_detail_for(activity, employee)
+    user_detail = UserDetail.find_or_initialize_by(
+      department_id: id,
+      activity_id: activity.id,
+      employee_detail_id: employee.id,
+      financial_year: financial_year
+    )
 
-  # Get employee details
-  def employee_detail
-    EmployeeDetail.find_by(employee_id: self.employee_reference)
+    user_detail.theme_name = activity.theme_name
+    user_detail.unit = activity.unit
+    user_detail.save! if user_detail.new_record? || user_detail.changed?
   end
-
-  # Get employee code
-  def employee_code
-    employee = EmployeeDetail.find_by(employee_id: self.employee_reference)
-    employee&.employee_code || "N/A"
-  end
-
-  # Get full employee display name with code
-  def employee_display_name
-    employee = EmployeeDetail.find_by(employee_id: self.employee_reference)
-    if employee
-      "#{employee.employee_name} (#{employee.employee_code})"
-    else
-      "N/A"
-    end
-  end
-  end
+end

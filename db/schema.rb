@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_02_111113) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_07_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -38,6 +38,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_111113) do
     t.text "l2_remarks"
     t.float "l2_percentage"
     t.text "employee_remarks"
+    t.string "financial_year"
+    t.index ["financial_year"], name: "index_achievements_on_financial_year"
     t.index ["month"], name: "index_achievements_on_month"
     t.index ["status"], name: "index_achievements_on_status"
     t.index ["user_detail_id", "month"], name: "index_achievements_on_user_detail_id_and_month"
@@ -81,7 +83,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_111113) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "theme_name"
+    t.string "financial_year"
     t.index ["department_id"], name: "index_activities_on_department_id"
+    t.index ["financial_year"], name: "index_activities_on_financial_year"
   end
 
   create_table "departments", force: :cascade do |t|
@@ -91,6 +95,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_111113) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "employee_reference"
+    t.string "financial_year"
+    t.index ["financial_year"], name: "index_departments_on_financial_year"
   end
 
   create_table "employee_details", force: :cascade do |t|
@@ -165,7 +171,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_111113) do
     t.string "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "financial_year"
     t.index ["employee_detail_id"], name: "index_target_submissions_on_employee_detail_id"
+    t.index ["financial_year"], name: "index_target_submissions_on_financial_year"
     t.index ["user_detail_id"], name: "index_target_submissions_on_user_detail_id"
     t.index ["user_id"], name: "index_target_submissions_on_user_id"
   end
@@ -215,9 +223,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_02_111113) do
     t.datetime "updated_at", null: false
     t.bigint "employee_detail_id"
     t.bigint "user_id"
+    t.string "financial_year", null: false
+    t.string "theme_name"
+    t.string "unit"
     t.index ["activity_id"], name: "index_user_details_on_activity_id"
+    t.index ["department_id", "activity_id", "employee_detail_id", "financial_year"], name: "index_user_details_on_department_activity_employee_fy"
     t.index ["department_id"], name: "index_user_details_on_department_id"
+    t.index ["employee_detail_id", "financial_year"], name: "index_user_details_on_employee_detail_id_and_financial_year"
     t.index ["employee_detail_id"], name: "index_user_details_on_employee_detail_id"
+    t.index ["financial_year"], name: "index_user_details_on_financial_year"
     t.index ["user_id"], name: "index_user_details_on_user_id"
   end
 

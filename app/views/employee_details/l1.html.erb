@@ -29,21 +29,46 @@
 <div class="main-content sidebar-hidden bg-gray-50 min-h-screen" data-turbo="false">
   <div class="min-h-screen pl-64 pr-4 pt-4 pb-12 overflow-x-auto bg-gradient-to-br from-gray-50 to-gray-100">
     <div class="w-full max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-xl border border-gray-200">
-      <div class="flex items-center justify-between mb-8 pb-4 border-b-2 border-gray-200">
+      <div class="flex flex-col gap-4 mb-8 pb-4 border-b-2 border-gray-200 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center">
           <i class="fas fa-users text-2xl text-indigo-600 mr-3"></i>
-          <h2 class="text-3xl font-bold text-gray-800">L1 Employee View</h2>
-        </div>
-        
-        <!-- Search Box -->
-        <div class="relative">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i class="fas fa-search text-gray-400"></i>
+          <div>
+            <h2 class="text-3xl font-bold text-gray-800">L1 Employee View</h2>
+            <p class="text-sm text-gray-500 mt-1">Review quarterly employee activity for FY <span class="font-semibold text-indigo-600"><%= selected_financial_year %></span></p>
           </div>
-          <input type="text" 
-                 id="searchInput" 
-                 placeholder="Search employees..." 
-                 class="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
+        </div>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end lg:flex-nowrap lg:justify-end">
+          <div class="w-full sm:w-72">
+            <label for="searchInput" class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Search Employee</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
+              </div>
+              <input type="text"
+                     id="searchInput"
+                     placeholder="Search employees..."
+                     class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
+            </div>
+          </div>
+
+          <%= form_with url: l1_employee_details_path, method: :get, local: true, class: "w-full sm:w-56 shrink-0" do |form| %>
+            <label for="l1-financial-year-filter" class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Financial Year</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-calendar-alt text-indigo-500"></i>
+              </div>
+              <%= form.select :financial_year,
+                  options_for_select(available_financial_years, selected_financial_year),
+                  {},
+                  id: "l1-financial-year-filter",
+                  class: "block w-full appearance-none rounded-lg border border-gray-300 bg-white pl-10 pr-10 py-2.5 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500",
+                  onchange: "this.form.submit();" %>
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <i class="fas fa-chevron-down text-xs text-gray-400"></i>
+              </div>
+            </div>
+          <% end %>
         </div>
       </div>
 
@@ -97,8 +122,8 @@
                       </span>
                     </td>
                     <td class="px-6 py-4 text-sm">
-                      <%= link_to "View Details", 
-                          employee_detail_path(emp, quarter: quarter_name), 
+                      <%= link_to "View Details",
+                          employee_detail_path(emp, quarter: quarter_name, financial_year: selected_financial_year),
                           class: "inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md transform hover:scale-105" %>
                     </td>
                   </tr>

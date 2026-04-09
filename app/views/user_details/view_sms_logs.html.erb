@@ -4,10 +4,10 @@
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-900">SMS Logs</h1>
         <div class="flex gap-3">
-          <%= link_to "Clear SMS Tracking", clear_sms_tracking_user_details_path, 
+          <%= link_to "Clear SMS Tracking", clear_sms_tracking_user_details_path(financial_year: selected_financial_year),
               class: "px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700",
               data: { confirm: "This will clear all SMS tracking. Continue?" } %>
-          <%= link_to "Back to Form", get_user_detail_user_details_path, 
+          <%= link_to "Back to Form", get_user_detail_user_details_path(financial_year: selected_financial_year),
               class: "px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700" %>
         </div>
       </div>

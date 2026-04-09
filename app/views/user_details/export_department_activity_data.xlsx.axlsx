@@ -4,7 +4,7 @@ wb = xlsx_package.workbook
 wb.add_worksheet(name: "Department Activity Data") do |sheet|
   # Add header row
   headers = [
-    "Department", "Employee Name", "Employee Email", "Employee Mobile Number", "Employee Code", "Activity Name", "Theme Name", "Unit",
+    "Financial Year", "Department", "Employee Name", "Employee Email", "Employee Mobile Number", "Employee Code", "Activity Name", "Theme Name", "Unit",
     "L1 Employer Name", "L1 Employer Code", "L1 Mobile Number",
     "L2 Employer Name", "L2 Employer Code", "L2 Mobile Number",
     "April", "May", "June", "July", "August", "September",
@@ -36,14 +36,15 @@ wb.add_worksheet(name: "Department Activity Data") do |sheet|
     end
 
     row_data = [
+      user_detail.financial_year || "-",
       user_detail.department&.department_type || "-",
       user_detail.employee_detail&.employee_name || "-",
       user_detail.employee_detail&.employee_email || "-",
       user_detail.employee_detail&.mobile_number || "-",
       user_detail.employee_detail&.employee_code || "-",
       user_detail.activity&.activity_name || "-",
-      user_detail.activity&.theme_name || "-",
-      user_detail.activity&.unit || "-",
+      user_detail.display_theme_name || "-",
+      user_detail.display_unit || "-",
       # L1 Employer Information
       l1_employer&.employee_name || employee_detail&.l1_employer_name || "-",
       l1_employer&.employee_code || employee_detail&.l1_code || "-",
@@ -71,5 +72,5 @@ wb.add_worksheet(name: "Department Activity Data") do |sheet|
   end
 
   # Auto-fit columns
-  sheet.column_widths 15, 20, 28, 20, 15, 25, 15, 10, 20, 15, 15, 20, 15, 15, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+  sheet.column_widths 14, 15, 20, 28, 20, 15, 25, 15, 10, 20, 15, 15, 20, 15, 15, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
 end

@@ -25,5 +25,15 @@ class ApplicationController < ActionController::Base
     EmployeeDetail.exists?(l2_employer_name: current_user.email)
   end
 
-  helper_method :has_l1_responsibilities?, :has_l2_responsibilities?
+  def selected_financial_year
+    @selected_financial_year ||= UserDetail.normalize_financial_year(params[:financial_year]).presence ||
+                                 UserDetail.current_financial_year
+  end
+
+  def available_financial_years
+    UserDetail.available_financial_years
+  end
+
+  helper_method :has_l1_responsibilities?, :has_l2_responsibilities?,
+                :selected_financial_year, :available_financial_years
 end

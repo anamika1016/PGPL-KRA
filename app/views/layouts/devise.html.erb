@@ -1,28 +1,45 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>MyApp - Authentication</title>
+    <title>KRA Authentication</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
-    
+
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "auth", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   </head>
 
-  <body class="bg-light">
-    <% if notice %>
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <%= notice %>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  <body class="devise-layout">
+    <main class="auth-page">
+      <div class="auth-page__frame">
+        <% if flash[:notice].present? %>
+          <div class="auth-page__flash-stack">
+            <div class="auth-toast auth-toast--success" role="status">
+              <span class="auth-toast__icon">✓</span>
+              <span><%= flash[:notice] %></span>
+            </div>
+          </div>
+        <% end %>
+
+        <% if flash[:alert].present? %>
+          <div class="auth-page__flash-stack">
+            <div class="auth-toast auth-toast--danger" role="alert">
+              <span class="auth-toast__icon">!</span>
+              <span><%= flash[:alert] %></span>
+            </div>
+          </div>
+        <% end %>
+
+        <%= yield %>
       </div>
-    <% end %>
-      
-    <%= yield %>
-    
+    </main>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>

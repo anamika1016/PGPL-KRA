@@ -3,10 +3,27 @@
 <div class="main-content bg-gray-50 min-h-screen">
 <div class="p-8 bg-white rounded-xl shadow-lg border border-gray-200 mx-4">
   <div class="border-b border-gray-200 pb-6 mb-8">
-    <h2 class="text-3xl font-bold text-gray-800 flex items-center">
-      <i class="fas fa-user-circle mr-3 text-gray-600"></i>
-      Employee Detail - L2 Review
-    </h2>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h2 class="text-3xl font-bold text-gray-800 flex items-center">
+          <i class="fas fa-user-circle mr-3 text-gray-600"></i>
+          Employee Detail - L2 Review
+        </h2>
+        <p class="text-sm text-gray-500 mt-2">Financial Year: <%= selected_financial_year %></p>
+      </div>
+
+      <%= form_with url: show_l2_employee_detail_path(@employee_detail), method: :get, local: true, class: "flex items-end gap-3" do |form| %>
+        <%= hidden_field_tag :quarter, params[:quarter] if params[:quarter].present? %>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Financial Year</label>
+          <%= form.select :financial_year,
+              options_for_select(available_financial_years, selected_financial_year),
+              {},
+              class: "border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700",
+              onchange: "this.form.submit();" %>
+        </div>
+      <% end %>
+    </div>
   </div>
 
   <!-- Status Message Container -->
@@ -181,7 +198,7 @@
                       <%= detail.activity&.activity_name || 'N/A' %>
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 text-center">
-                      <%= detail.activity&.unit || '' %>
+                      <%= detail.display_unit || '' %>
                     </td>
 
                     <!-- Dynamic Month Data Columns -->
@@ -484,6 +501,7 @@
       <% end %>
       <input type="hidden" name="selected_quarter" value="<%= params[:quarter] %>">
       <input type="hidden" name="apply_to_all_activities" value="true">
+      <input type="hidden" name="financial_year" value="<%= selected_financial_year %>">
       
       <div class="flex justify-end gap-2">
         <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
@@ -541,11 +559,11 @@
     document.body.style.overflow = 'hidden';
 
     if (actionType === "l2_approve") {
-      currentActionUrl = "<%= l2_approve_employee_detail_path(@employee_detail) %>";
+      currentActionUrl = "<%= l2_approve_employee_detail_path(@employee_detail, financial_year: selected_financial_year) %>";
       modalTitle.innerText = "L2 Approve Quarter";
       console.log('Set action URL for approve:', currentActionUrl);
     } else if (actionType === "l2_reject") {
-      currentActionUrl = "<%= l2_return_employee_detail_path(@employee_detail) %>";
+      currentActionUrl = "<%= l2_return_employee_detail_path(@employee_detail, financial_year: selected_financial_year) %>";
       modalTitle.innerText = "L2 Return Quarter";
       console.log('Set action URL for reject:', currentActionUrl);
     }
@@ -823,8 +841,9 @@
     const formData = new FormData(event.target);
     formData.append('action_type', 'edit_l1');
     formData.append('selected_quarter', '<%= params[:quarter] %>');
+    formData.append('financial_year', '<%= selected_financial_year %>');
     
-    fetch('<%= edit_l1_employee_detail_path(@employee_detail) %>', {
+    fetch('<%= edit_l1_employee_detail_path(@employee_detail, financial_year: selected_financial_year) %>', {
       method: 'PATCH',
       body: formData,
       headers: {
@@ -888,8 +907,9 @@
     const formData = new FormData(event.target);
     formData.append('action_type', 'edit_l2');
     formData.append('selected_quarter', '<%= params[:quarter] %>');
+    formData.append('financial_year', '<%= selected_financial_year %>');
     
-    fetch('<%= edit_l2_employee_detail_path(@employee_detail) %>', {
+    fetch('<%= edit_l2_employee_detail_path(@employee_detail, financial_year: selected_financial_year) %>', {
       method: 'PATCH',
       body: formData,
       headers: {

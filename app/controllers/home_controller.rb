@@ -480,7 +480,7 @@ class HomeController < ApplicationController
   end
 
   def build_employee_dashboard_row(ed)
-    ud = ed.user_details
+    ud = user_details_for_selected_financial_year(ed.user_details)
     qs = quarter_summaries_for(ud)
     ap = (qs.sum { |q| q[:percentage] } / 4.0).round(1)
     pa = ed.l1_pulse_assessments.max_by(&:updated_at)
@@ -521,7 +521,8 @@ class HomeController < ApplicationController
     ts = pulse_total_for_assessment(a)
     ws_pulse = ((ts.to_f / 50.0) * 15.0).round(2)
     ws_pulse = 0.0 if a.blank? || assessment_blank?(a)
-    { employee_detail_id: ed.id, employee_name: ed.employee_name, employee_code: ed.employee_code, department: ed.user_details.first&.department&.department_type || ed.department, assessment: a, total_score: ts, pulse_weighted: ws_pulse, pulse_category: pulse_category_details(ts), manager_feedback_raw: manager_feedback_raw_percentage(a) }
+    selected_user_details = user_details_for_selected_financial_year(ed.user_details)
+    { employee_detail_id: ed.id, employee_name: ed.employee_name, employee_code: ed.employee_code, department: selected_user_details.first&.department&.department_type || ed.department, assessment: a, total_score: ts, pulse_weighted: ws_pulse, pulse_category: pulse_category_details(ts), manager_feedback_raw: manager_feedback_raw_percentage(a) }
   end
 
   def formatted_percent(value)
@@ -550,7 +551,7 @@ class HomeController < ApplicationController
   def load_employee_dashboard
     @dashboard_mode = :employee
     @employee_detail = current_user.employee_detail || EmployeeDetail.find_by(employee_email: current_user.email)
-    @user_details = @employee_detail ? UserDetail.includes(:department, achievements: :achievement_remark).where(employee_detail_id: @employee_detail.id) : UserDetail.none
+    @user_details = @employee_detail ? UserDetail.includes(:department, achievements: :achievement_remark).where(employee_detail_id: @employee_detail.id, financial_year: selected_financial_year) : UserDetail.none
     qs = quarter_summaries_for(@user_details)
     ap = (qs.sum { |q| q[:percentage] } / 4.0).round(1)
     pa = @employee_detail&.l1_pulse_assessments&.max_by(&:updated_at)
@@ -570,5 +571,15 @@ class HomeController < ApplicationController
     @annual_l1_remarks = qs.flat_map { |q| q[:l1_remarks] }.uniq
     @annual_remarks = qs.flat_map { |q| q[:l1_remarks] }.uniq
     @dashboard_summary_scores = weighted_summary_scores(annual_percentage: ap, pulse_total_score: ps[:total_score], remark_score: @dashboard_pulse_remark_score)
+  end
+
+  def user_details_for_selected_financial_year(user_details)
+    if user_details.respond_to?(:loaded?) && user_details.loaded?
+      user_details.select { |detail| detail.financial_year == selected_financial_year }
+    elsif user_details.respond_to?(:where)
+      user_details.where(financial_year: selected_financial_year)
+    else
+      Array(user_details).select { |detail| detail.financial_year == selected_financial_year }
+    end
   end
 end

@@ -47,8 +47,8 @@
                   <tr>
                     <td><%= detail.department&.department_type %></td>
                     <td><%= detail.activity&.activity_name %></td>
-                    <td><%= detail.activity&.theme_name.presence || 'No Theme' %></td>
-                    <td><%= detail.activity&.unit %></td>
+                    <td><%= detail.display_theme_name.presence || 'No Theme' %></td>
+                    <td><%= detail.display_unit %></td>
                     <td><%= detail.april.presence || '-' %></td>
                     <td><%= detail.may.presence || '-' %></td>
                     <td><%= detail.june.presence || '-' %></td>
@@ -62,8 +62,8 @@
                     <td><%= detail.february.presence || '-' %></td>
                     <td><%= detail.march.presence || '-' %></td>
                     <td>
-                      <%= link_to "Edit", edit_user_detail_path(detail), class: "btn btn-sm btn-outline-secondary me-1" %>
-                      <%= link_to "Delete", user_detail_path(detail), method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-sm btn-outline-danger" %>
+                      <%= link_to "Edit", edit_user_detail_path(detail, financial_year: detail.financial_year), class: "btn btn-sm btn-outline-secondary me-1" %>
+                      <%= link_to "Delete", user_detail_path(detail, financial_year: detail.financial_year), method: :delete, data: { confirm: "Are you sure?" }, class: "btn btn-sm btn-outline-danger" %>
                     </td>
                   </tr>
                 <% end %>

@@ -116,7 +116,7 @@ class EmployeeDetailsController < ApplicationController
           quarter_display = quarter_data[:display]
 
           # Get all achievements for this employee in this quarter
-          all_quarter_achievements = emp.user_details.flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
+          all_quarter_achievements = financial_year_user_details_for(emp).flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
 
           # Only add row if there are achievements in this quarter
           if all_quarter_achievements.any?
@@ -289,7 +289,7 @@ class EmployeeDetailsController < ApplicationController
     @selected_quarter = params[:quarter]
 
     # FIXED: Get ALL user details, not just those with achievements
-    @user_details = @employee_detail.user_details
+    @user_details = financial_year_user_details_for(@employee_detail)
                       .includes(:activity, :department, achievements: :achievement_remark)
 
     # If quarter is selected, filter achievements by quarter
@@ -340,7 +340,7 @@ class EmployeeDetailsController < ApplicationController
             updated_status: "l1_approved"
           }
         else
-          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                       notice: "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1"
         end
       else
@@ -365,7 +365,7 @@ class EmployeeDetailsController < ApplicationController
             message: "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
           }
         else
-          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                       notice: "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
         end
       else
@@ -423,7 +423,7 @@ class EmployeeDetailsController < ApplicationController
             updated_status: "l1_returned"
           }
         else
-          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                       alert: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1"
         end
       else
@@ -448,7 +448,7 @@ class EmployeeDetailsController < ApplicationController
             message: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
           }
         else
-          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+          redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                       alert: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
         end
       else
@@ -497,7 +497,7 @@ def l2
 
   # Filter to only include employees who have at least one L1+ approved achievement
   @employee_details = employee_details.select do |emp|
-    emp.user_details.any? do |ud|
+    financial_year_user_details_for(emp).any? do |ud|
       ud.achievements.any? do |achievement|
         # Only show records with L1 approved, L2 approved, or L2 returned status
         [ "l1_approved", "l2_approved", "l2_returned" ].include?(achievement.status)
@@ -523,7 +523,7 @@ end
     @selected_quarter = params[:quarter]
 
     # FIXED: Get ALL user details, not just those with achievements
-    @user_details = @employee_detail.user_details
+    @user_details = financial_year_user_details_for(@employee_detail)
                       .includes(:activity, :department, achievements: :achievement_remark)
 
     # If quarter is selected, filter achievements by quarter
@@ -555,7 +555,7 @@ end
       # For AJAX requests, we'll handle authorization in the processing method
     else
       unless current_user.hod? || can_act_as_l2?(@employee_detail)
-        redirect_to show_l2_employee_detail_path(@employee_detail), alert: "❌ You are not authorized to approve at L2 level"
+        redirect_to show_l2_employee_detail_path(@employee_detail, financial_year: selected_financial_year), alert: "❌ You are not authorized to approve at L2 level"
         return
       end
     end
@@ -573,14 +573,14 @@ end
           updated_status: "l2_approved"
         }
       else
-        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     notice: "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
       end
     else
       if request.xhr? || params[:action_type].present?
         render json: { success: false, message: result[:message] }, status: :unprocessable_entity
       else
-        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     alert: result[:message]
       end
     end
@@ -604,7 +604,7 @@ end
       # For AJAX requests, we'll handle authorization in the processing method
     else
       unless current_user.hod? || can_act_as_l2?(@employee_detail)
-        redirect_to show_l2_employee_detail_path(@employee_detail), alert: "❌ You are not authorized to return at L2 level"
+        redirect_to show_l2_employee_detail_path(@employee_detail, financial_year: selected_financial_year), alert: "❌ You are not authorized to return at L2 level"
         return
       end
     end
@@ -625,14 +625,14 @@ end
           updated_status: "l2_returned"
         }
       else
-        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     notice: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
       end
     else
       if request.xhr? || params[:action_type].present?
         render json: { success: false, message: result[:message] }, status: :unprocessable_entity
       else
-        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     alert: result[:message]
       end
     end
@@ -673,14 +673,14 @@ end
           remarks: result[:remarks]
         }
       else
-        redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     notice: "✅ Successfully updated L1 data for #{params[:selected_quarter] || 'all quarters'}"
       end
     else
       if request.xhr?
         render json: { success: false, message: result[:message] }, status: :unprocessable_entity
       else
-        redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     alert: result[:message]
       end
     end
@@ -721,14 +721,14 @@ end
           remarks: result[:remarks]
         }
       else
-        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     notice: "✅ Successfully updated L2 data for #{params[:selected_quarter] || 'all quarters'}"
       end
     else
       if request.xhr?
         render json: { success: false, message: result[:message] }, status: :unprocessable_entity
       else
-        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter]),
+        redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
                     alert: result[:message]
       end
     end
@@ -777,6 +777,18 @@ end
       :l1_code, :l1_employer_name, :l2_code, :l2_employer_name,
       :post, :department, :l1_remarks, :l1_percentage, :l2_remarks, :l2_percentage
     )
+  end
+
+  def financial_year_user_details_for(record_or_collection)
+    collection = record_or_collection.respond_to?(:user_details) ? record_or_collection.user_details : record_or_collection
+
+    if collection.respond_to?(:loaded?) && collection.loaded?
+      collection.select { |detail| detail.financial_year == selected_financial_year }
+    elsif collection.respond_to?(:where)
+      collection.where(financial_year: selected_financial_year)
+    else
+      Array(collection).select { |detail| detail.financial_year == selected_financial_year }
+    end
   end
 
   def can_act_as_l1?(employee_detail)
@@ -829,10 +841,9 @@ end
         quarter_months = get_quarter_months(quarter)
 
         # FIXED: Get ALL activities for this quarter, not just those with achievements
-        quarter_activities = employee.user_details
-                                    .where(activity_id: Activity.joins(:department)
-                                                               .where(departments: { department_type: employee.department })
-                                                               .select(:id))
+        quarter_activities = financial_year_user_details_for(employee).select do |detail|
+          detail.department&.department_type == employee.department
+        end
 
         if quarter_activities.any?
           employee_quarter_data = {
@@ -845,7 +856,7 @@ end
           }
 
           # PERFORMANCE FIX: Preload achievements to avoid N+1 queries
-          quarter_activities.includes(:achievements, :activity, :department).each do |user_detail|
+          quarter_activities.each do |user_detail|
             # PERFORMANCE FIX: Create a hash of achievements by month for fast lookup
             achievements_by_month = user_detail.achievements.index_by(&:month)
 
@@ -1066,7 +1077,7 @@ end
       # FIXED: Approve/Return specific quarter as a single unit
       quarter_months = get_quarter_months(params[:selected_quarter])
 
-      @employee_detail.user_details.each do |detail|
+      financial_year_user_details_for(@employee_detail).each do |detail|
         # FIXED: Process the entire quarter as one unit, not month by month
         quarter_achievements = []
 
@@ -1110,7 +1121,7 @@ end
       end
     else
       # Approve/Return all quarters
-      @employee_detail.user_details.each do |detail|
+      financial_year_user_details_for(@employee_detail).each do |detail|
         get_all_quarters.each do |quarter|
           quarter_months = get_quarter_months(quarter)
 
@@ -1171,7 +1182,7 @@ def process_quarterly_l2_approval
     # FIXED: Approve/Return specific quarter as a single unit
     quarter_months = get_quarter_months(params[:selected_quarter])
 
-    @employee_detail.user_details.each do |detail|
+    financial_year_user_details_for(@employee_detail).each do |detail|
       # FIXED: Process the entire quarter as one unit, not month by month
       quarter_achievements = []
 
@@ -1235,7 +1246,7 @@ def process_quarterly_l2_approval
     end
   else
     # Approve/Return all quarters
-    @employee_detail.user_details.each do |detail|
+    financial_year_user_details_for(@employee_detail).each do |detail|
       get_all_quarters.each do |quarter|
         quarter_months = get_quarter_months(quarter)
 
@@ -1306,7 +1317,7 @@ end
     employee_details.each do |emp|
       quarters.each do |quarter_name, quarter_months|
         # PERFORMANCE FIX: Use preloaded associations instead of flat_map
-        all_quarter_achievements = emp.user_details.flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
+        all_quarter_achievements = financial_year_user_details_for(emp).flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
 
         next if all_quarter_achievements.empty?
 
@@ -1375,7 +1386,7 @@ end
     employee_details.each do |emp|
       quarters.each do |quarter_name, quarter_months|
         # Get all achievements for this employee in this quarter
-        all_quarter_achievements = emp.user_details.flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
+        all_quarter_achievements = financial_year_user_details_for(emp).flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
 
         # Only include if there are achievements in this quarter
         if all_quarter_achievements.any?
@@ -1430,7 +1441,7 @@ end
       # Update specific quarter
       quarter_months = get_quarter_months(params[:selected_quarter])
 
-      @employee_detail.user_details.each do |detail|
+      financial_year_user_details_for(@employee_detail).each do |detail|
         quarter_months.each do |month|
           # Find or create achievement for this month
           achievement = detail.achievements.find_or_create_by(month: month)
@@ -1447,7 +1458,7 @@ end
       end
     else
       # Update all quarters
-      @employee_detail.user_details.each do |detail|
+      financial_year_user_details_for(@employee_detail).each do |detail|
         get_all_quarters.each do |quarter|
           quarter_months = get_quarter_months(quarter)
 
@@ -1483,7 +1494,7 @@ end
       # Update specific quarter
       quarter_months = get_quarter_months(params[:selected_quarter])
 
-      @employee_detail.user_details.each do |detail|
+      financial_year_user_details_for(@employee_detail).each do |detail|
         quarter_months.each do |month|
           # Find or create achievement for this month
           achievement = detail.achievements.find_or_create_by(month: month)
@@ -1500,7 +1511,7 @@ end
       end
     else
       # Update all quarters
-      @employee_detail.user_details.each do |detail|
+      financial_year_user_details_for(@employee_detail).each do |detail|
         get_all_quarters.each do |quarter|
           quarter_months = get_quarter_months(quarter)
 

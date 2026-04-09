@@ -6,6 +6,7 @@
 
     <div class="card-body">
       <%= form_with(model: @user_detail, local: true) do |form| %>
+        <%= form.hidden_field :financial_year, value: @user_detail.financial_year %>
         <div class="form-row">
           <div class="form-group">
             <%= form.label :department_id, "Department", class: "form-label" %>
@@ -20,6 +21,21 @@
           <div class="form-group">
             <%= form.label :activity_id, "Activity", class: "form-label" %>
             <%= form.select :activity_id, Activity.all.map { |a| [a.activity_name, a.id] }, {}, class: "form-control" %>
+          </div>
+
+          <div class="form-group">
+            <%= form.label :theme_name, "Theme", class: "form-label" %>
+            <%= form.text_field :theme_name, class: "form-control", placeholder: "Theme Name" %>
+          </div>
+
+          <div class="form-group">
+            <%= form.label :unit, "Unit", class: "form-label" %>
+            <%= form.text_field :unit, class: "form-control", placeholder: "Unit" %>
+          </div>
+
+          <div class="form-group">
+            <%= form.label :financial_year, "Financial Year", class: "form-label" %>
+            <%= text_field_tag :financial_year_display, @user_detail.financial_year, class: "form-control", readonly: true %>
           </div>
         </div>
 
@@ -37,7 +53,7 @@
 
         <div class="text-center mt-4">
           <%= form.submit "Update", class: "btn btn-success" %>
-          <%= link_to "Back", new_user_detail_path, class: "btn btn-secondary" %>
+          <%= link_to "Back", new_user_detail_path(department_id: @user_detail.department_id, employee_detail_id: @user_detail.employee_detail_id, financial_year: @user_detail.financial_year), class: "btn btn-secondary" %>
         </div>
       <% end %>
     </div>

@@ -4,20 +4,21 @@
       <div class="max-w-7xl mx-auto">
         <div class="bg-white p-6 rounded-lg shadow-md mb-6">
           <h2 class="text-2xl font-bold text-gray-800 mb-6">Department Management</h2>
-          
-          <div id="success-container" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 hidden">
-            <div id="success-message"></div>
+
+          <div id="success-container" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 <%= notice.present? ? '' : 'hidden' %>">
+            <div id="success-message"><%= notice %></div>
           </div>
    
-          <div id="error-container" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden">
-            <h4 id="error-title"></h4>
-            <ul id="error-list"></ul>
+          <div id="error-container" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 <%= alert.present? ? '' : 'hidden' %>">
+            <h4 id="error-title"><%= alert.present? ? 'Error occurred:' : '' %></h4>
+            <ul id="error-list"><%= content_tag(:li, alert) if alert.present? %></ul>
           </div>
 
           <!-- Hidden form for deleting user activities -->
           <form id="delete-user-form" method="POST" action="" style="display: none;">
             <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
             <input type="hidden" name="employee_id" id="delete-user-employee-id">
+            <input type="hidden" name="financial_year" value="<%= selected_financial_year %>" id="delete_financial_year">
           </form>
 
 
@@ -31,24 +32,36 @@
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                   
                   <form action="/departments/import" method="post" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                    <input type="hidden" name="financial_year" value="<%= selected_financial_year %>" id="import_financial_year">
                     <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="border border-gray-300 p-2 rounded-md w-full sm:w-auto">
                     <input type="submit" value="Upload" class="bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2 px-6 rounded shadow cursor-pointer">
                   </form>
 
-                  <a href="/departments/export.xlsx" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded shadow">Export Departments</a>
+                  <%= link_to "Export Departments",
+                      export_departments_path(format: :xlsx, financial_year: selected_financial_year, employee_id: params[:employee_id], employee_code: params[:employee_code]),
+                      class: "bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded shadow" %>
                 </div>
 
                 <p class="text-sm text-gray-500 mt-4 italic">
-                  * Excel must have columns: <strong>Department</strong>, <strong>Employee Name</strong>, <strong>Theme Name</strong>, <strong>Activity Name</strong>, <strong>Unit</strong>, <strong>Weight</strong>
+                  * Excel columns: <strong>Department</strong>, <strong>Employee Name</strong>, <strong>Theme Name</strong>, <strong>Activity Name</strong>, <strong>Unit</strong>, <strong>Weight</strong>. Optional: <strong>Financial Year</strong>. If that column is missing, upload will save in <strong><%= selected_financial_year %></strong>.
                 </p>
               </div>
             </div>
             
             <!-- Form Section -->
+            <% selected_form_employee_reference = params.dig(:department, :employee_reference).presence || params[:employee_id].presence || params[:employee_code].presence || @selected_employee&.employee_id.presence || @selected_employee&.employee_code %>
+            <% selected_form_department = params.dig(:department, :department_type).presence || params[:department_type].presence || @selected_employee&.department %>
             <form id="department-form" method="POST" action="/departments">
               <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+              <%= hidden_field_tag :financial_year, selected_financial_year, id: "page_financial_year" %>
               <input type="hidden" name="_method" value="POST" id="form-method">
               <input type="hidden" name="department[theme_name]" value="" id="department-theme-name">
+              <input type="hidden" name="department[financial_year]" value="<%= selected_financial_year %>" id="department_financial_year">
+
+              <div id="department-financial-year-badge" class="mb-4 inline-flex items-center px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-sm font-medium">
+                Saving activities for Financial Year: <span id="department-financial-year-label" class="ml-1"><%= selected_financial_year %></span>
+              </div>
               
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <!-- Department Dropdown -->
@@ -61,7 +74,7 @@
                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
                     <option value="">Select Department / Region</option>
                     <% @employee_departments.each do |dept| %>
-                      <option value="<%= dept %>"><%= dept %></option>
+                      <option value="<%= dept %>" <%= 'selected' if dept == selected_form_department %>><%= dept %></option>
                     <% end %>
                   </select>
                 </div>
@@ -76,8 +89,9 @@
                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
                     <option value="">Select Employee</option>
                     <% @employees.each do |employee| %>
-                      <option value="<%= employee.employee_id %>" data-department="<%= employee.department %>">
-                        <%= employee.employee_name %> (<%= employee.employee_id %>)
+                      <% employee_reference = employee.employee_id.presence || employee.employee_code %>
+                      <option value="<%= employee_reference %>" data-department="<%= employee.department %>" <%= 'selected' if employee_reference.to_s == selected_form_employee_reference.to_s %>>
+                        <%= employee.employee_name %> (<%= employee.employee_code.presence || employee.employee_id %>)
                       </option>
                     <% end %>
                   </select>
@@ -102,7 +116,13 @@
                 <div id="activities-container">
                   <!-- Default activity field - will be replaced by JavaScript if needed -->
                   <div class="activity-fields border border-gray-200 rounded-md p-4 mb-4 bg-gray-50">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700">Financial Year</label>
+                        <select class="activity-financial-year-select mt-1 block w-full border rounded-md px-3 py-2 text-sm bg-white">
+                          <%= options_for_select(available_financial_years, selected_financial_year) %>
+                        </select>
+                      </div>
                       <div>
                         <label class="block text-sm font-medium text-gray-700">Theme Name</label>
                         <input type="text" name="department[activities_attributes][default][theme_name]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter theme name" required>
@@ -155,7 +175,7 @@
                   </div>
                   <div>
                     <h2 class="text-2xl font-bold text-gray-800">Department List</h2>
-                    <p class="text-sm text-gray-600 mt-1">Manage employee departments and activities</p>
+                    <p class="text-sm text-gray-600 mt-1">Manage employee departments and activities for <strong><%= selected_financial_year %></strong></p>
                   </div>
                   <% if @selected_employee %>
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
@@ -173,9 +193,11 @@
                     <select id="employee-filter" class="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent shadow-sm transition-all duration-200 hover:border-gray-400">
                       <option value="">All Employees</option>
                       <% @employees.each do |employee| %>
-                        <option value="<%= employee.employee_id %>" data-code="<%= employee.employee_name || '' %>" 
-                                <%= 'selected' if params[:employee_id] == employee.employee_id.to_s %>>
-                          <%= employee.employee_name %> (<%= employee.employee_name %>)
+                        <% employee_filter_value = employee.employee_id.presence || employee.employee_code %>
+                        <% employee_filter_param = employee.employee_id.present? ? 'employee_id' : 'employee_code' %>
+                        <option value="<%= employee_filter_value %>" data-code="<%= employee.employee_code || '' %>" data-filter-param="<%= employee_filter_param %>"
+                                <%= 'selected' if params[:employee_id] == employee.employee_id.to_s || params[:employee_code] == employee.employee_code.to_s %>>
+                          <%= employee.employee_name %> (<%= employee.employee_code.presence || employee.employee_id %>)
                         </option>
                       <% end %>
                     </select>
@@ -193,6 +215,20 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                   </div>
+
+                  <form id="departments-financial-year-form" action="<%= departments_path %>" method="get" class="flex items-center gap-3">
+                    <% if params[:employee_id].present? %>
+                      <input type="hidden" name="employee_id" value="<%= params[:employee_id] %>">
+                    <% end %>
+                    <% if params[:employee_code].present? %>
+                      <input type="hidden" name="employee_code" value="<%= params[:employee_code] %>">
+                    <% end %>
+                    <label for="financial-year-filter" class="text-sm font-semibold text-gray-700 whitespace-nowrap">Financial Year:</label>
+                    <select id="financial-year-filter" name="financial_year"
+                      class="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent shadow-sm transition-all duration-200 hover:border-gray-400">
+                      <%= options_for_select(available_financial_years, selected_financial_year) %>
+                    </select>
+                  </form>
                 </div>
               </div>
             </div>
@@ -347,6 +383,16 @@ class DepartmentManager {
     // Bind events immediately so buttons work right away
     this.bindEvents();
     console.log('Events bound, buttons should now be functional');
+
+    try {
+      const savedSuccessMessage = sessionStorage.getItem('departmentsSuccessMessage');
+      if (savedSuccessMessage) {
+        this.showSuccess(savedSuccessMessage);
+        sessionStorage.removeItem('departmentsSuccessMessage');
+      }
+    } catch (error) {
+      console.warn('Unable to restore success message from session storage:', error);
+    }
     
     // Set the initial activity index since we now have a default activity in HTML
     const container = document.getElementById('activities-container');
@@ -364,6 +410,14 @@ class DepartmentManager {
         });
         console.log('Updated default activity input names from default to index 0');
       }
+    }
+
+    const departmentSelect = document.getElementById('department_department_type');
+    const employeeSelect = document.getElementById('department_employee_reference');
+    if (employeeSelect?.value && !departmentSelect?.value) {
+      this.syncDepartmentWithSelectedEmployee(true);
+    } else if (departmentSelect?.value) {
+      this.filterEmployeesByDepartment(departmentSelect.value, true);
     }
     
     // Load employee data in background (non-blocking)
@@ -399,9 +453,11 @@ class DepartmentManager {
         this.employeeDepartments = window.employeeDepartments;
       }
 
-      if (window.employees) {
+    if (window.employees) {
         this.employees = window.employees;
       }
+
+      this.syncFinancialYearControls(this.getSelectedFinancialYear());
     } catch (error) {
       console.error('Error loading employee data:', error);
     }
@@ -420,6 +476,44 @@ class DepartmentManager {
   populateEmployeeDropdown() {
     // Employee dropdown is now populated directly in ERB
     console.log('Employee dropdown populated via ERB');
+  }
+
+  getSelectedFinancialYear() {
+    return document.getElementById('department_financial_year')?.value ||
+           document.getElementById('page_financial_year')?.value ||
+           '<%= selected_financial_year %>';
+  }
+
+  syncFinancialYearControls(financialYear) {
+    if (!financialYear) return;
+
+    const topFilter = document.getElementById('financial-year-filter');
+    const pageFinancialYear = document.getElementById('page_financial_year');
+    const departmentFinancialYear = document.getElementById('department_financial_year');
+    const importFinancialYear = document.getElementById('import_financial_year');
+    const deleteFinancialYear = document.getElementById('delete_financial_year');
+    const financialYearLabel = document.getElementById('department-financial-year-label');
+
+    if (topFilter) topFilter.value = financialYear;
+    if (pageFinancialYear) pageFinancialYear.value = financialYear;
+    if (departmentFinancialYear) departmentFinancialYear.value = financialYear;
+    if (importFinancialYear) importFinancialYear.value = financialYear;
+    if (deleteFinancialYear) deleteFinancialYear.value = financialYear;
+    if (financialYearLabel) financialYearLabel.textContent = financialYear;
+
+    document.querySelectorAll('.activity-financial-year-select').forEach((select) => {
+      select.value = financialYear;
+    });
+  }
+
+  handleFinancialYearChange(financialYear) {
+    if (!financialYear) return;
+
+    this.syncFinancialYearControls(financialYear);
+
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('financial_year', financialYear);
+    window.location.href = currentUrl.toString();
   }
 
   bindEvents() {
@@ -474,6 +568,13 @@ class DepartmentManager {
       console.error('Department form not found!');
     }
 
+    const financialYearFilter = document.getElementById('financial-year-filter');
+    if (financialYearFilter) {
+      financialYearFilter.addEventListener('change', (e) => {
+        this.handleFinancialYearChange(e.target.value);
+      });
+    }
+
     const cancelBtn = document.getElementById('cancel-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', (e) => {
@@ -494,7 +595,7 @@ class DepartmentManager {
     const employeeFilter = document.getElementById('employee-filter');
     if (employeeFilter) {
       employeeFilter.addEventListener('change', (e) => {
-        this.handleEmployeeFilter(e.target.value);
+        this.handleEmployeeFilter(e.target);
       });
     }
 
@@ -503,6 +604,13 @@ class DepartmentManager {
     if (deptSelect) {
       deptSelect.addEventListener('change', (e) => {
         this.filterEmployeesByDepartment(e.target.value);
+      });
+    }
+
+    const employeeSelect = document.getElementById('department_employee_reference');
+    if (employeeSelect) {
+      employeeSelect.addEventListener('change', () => {
+        this.syncDepartmentWithSelectedEmployee();
       });
     }
 
@@ -538,6 +646,12 @@ class DepartmentManager {
         this.deleteDepartment(e.target.dataset.departmentId);
       }
     });
+
+    document.addEventListener('change', (e) => {
+      if (e.target.classList.contains('activity-financial-year-select')) {
+        this.handleFinancialYearChange(e.target.value);
+      }
+    });
   }
 
   removeEventListeners() {
@@ -546,27 +660,62 @@ class DepartmentManager {
     console.log('Event listeners bound for DepartmentManager instance');
   }
 
-  filterEmployeesByDepartment(selectedDept) {
+  filterEmployeesByDepartment(selectedDept, preserveSelection = false) {
     const employeeSelect = document.getElementById('department_employee_reference');
-    if (!employeeSelect || !selectedDept) {
+    if (!employeeSelect) {
+      return;
+    }
+
+    const currentSelection = employeeSelect.value;
+
+    if (!selectedDept) {
       // Show all employees if no department selected
       const options = employeeSelect.querySelectorAll('option[data-department]');
       options.forEach(option => option.style.display = '');
+      if (!preserveSelection) {
+        employeeSelect.value = '';
+      }
       return;
     }
 
     // Hide/show options based on department
     const options = employeeSelect.querySelectorAll('option[data-department]');
+    let selectedEmployeeStillVisible = false;
+
     options.forEach(option => {
       if (option.getAttribute('data-department') === selectedDept) {
         option.style.display = '';
+        if (preserveSelection && option.value === currentSelection) {
+          selectedEmployeeStillVisible = true;
+        }
       } else {
         option.style.display = 'none';
       }
     });
 
-    // Reset employee selection
-    employeeSelect.value = '';
+    if (!preserveSelection || !selectedEmployeeStillVisible) {
+      employeeSelect.value = '';
+    }
+  }
+
+  syncDepartmentWithSelectedEmployee(preserveSelection = true) {
+    const departmentSelect = document.getElementById('department_department_type');
+    const employeeSelect = document.getElementById('department_employee_reference');
+
+    if (!departmentSelect || !employeeSelect || !employeeSelect.value) {
+      return;
+    }
+
+    const selectedOption = employeeSelect.options[employeeSelect.selectedIndex];
+    const employeeDepartment = selectedOption?.getAttribute('data-department');
+
+    if (!employeeDepartment) {
+      return;
+    }
+
+    departmentSelect.value = employeeDepartment;
+    this.filterEmployeesByDepartment(employeeDepartment, preserveSelection);
+    employeeSelect.value = selectedOption.value;
   }
 
   addActivity() {
@@ -708,7 +857,13 @@ class DepartmentManager {
   getActivityTemplate(index) {
     return `
       <div class="activity-fields border border-gray-200 rounded-md p-4 mb-4 bg-gray-50">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Financial Year</label>
+            <select class="activity-financial-year-select mt-1 block w-full border rounded-md px-3 py-2 text-sm bg-white">
+              <%= options_for_select(available_financial_years, selected_financial_year) %>
+            </select>
+          </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Theme Name</label>
             <input type="text" name="department[activities_attributes][${index}][theme_name]" class="mt-1 block w-full border rounded-md px-3 py-2 text-sm" placeholder="Enter theme name" required>
@@ -973,7 +1128,8 @@ class DepartmentManager {
       
       // Add cache-busting parameter to ensure fresh data
       const timestamp = Date.now();
-      const response = await fetch(`/departments/${employeeId}/edit_data?t=${timestamp}`, {
+      const financialYear = encodeURIComponent(this.getSelectedFinancialYear());
+      const response = await fetch(`/departments/${employeeId}/edit_data?t=${timestamp}&financial_year=${financialYear}`, {
         headers: {
           'X-CSRF-Token': csrfToken,
           'Accept': 'application/json', // Request JSON response
@@ -1012,6 +1168,8 @@ class DepartmentManager {
     
     document.getElementById('department_department_type').value = department.department_type || '';
     document.getElementById('department-theme-name').value = department.theme_name || '';
+    document.getElementById('department_financial_year').value = department.financial_year || this.getSelectedFinancialYear();
+    document.getElementById('page_financial_year').value = department.financial_year || this.getSelectedFinancialYear();
     
     // First filter employees by department, then set the employee
     if (department.department_type) {
@@ -1139,7 +1297,8 @@ class DepartmentManager {
       }
       
       // For DELETE requests, use Rails method override with POST
-      console.log('Sending DELETE request to:', `/departments/${departmentId}`);
+      const financialYear = encodeURIComponent(this.getSelectedFinancialYear());
+      console.log('Sending DELETE request to:', `/departments/${departmentId}?financial_year=${financialYear}`);
       console.log('Request method: POST (with _method override)');
       console.log('CSRF Token:', csrfToken);
       
@@ -1148,7 +1307,7 @@ class DepartmentManager {
       formData.append('_method', 'DELETE');
       formData.append('authenticity_token', csrfToken);
       
-      const response = await fetch(`/departments/${departmentId}`, {
+      const response = await fetch(`/departments/${departmentId}?financial_year=${financialYear}`, {
         method: 'POST', // Use POST, let Rails handle method override
         body: formData,
         headers: {
@@ -1209,7 +1368,7 @@ class DepartmentManager {
       }
       
       // Set the form action and employee ID
-      form.action = `/departments/${departmentId}/delete_user_activities`;
+      form.action = `/departments/${departmentId}/delete_user_activities?financial_year=${encodeURIComponent(this.getSelectedFinancialYear())}`;
       employeeIdInput.value = employeeId;
       
       // Submit the form
@@ -1307,7 +1466,22 @@ class DepartmentManager {
     }
 
     if (response.ok && result.success === true) {
-      this.showSuccess(result.message || (this.isEditing ? 'Department updated successfully!' : 'Department created successfully!'));
+      const successMessage = result.message || (this.isEditing ? 'Department updated successfully!' : 'Department created successfully!');
+      this.showSuccess(successMessage);
+
+      if (result.redirect_url) {
+        try {
+          sessionStorage.setItem('departmentsSuccessMessage', successMessage);
+        } catch (error) {
+          console.warn('Unable to persist success message in session storage:', error);
+        }
+
+        setTimeout(() => {
+          window.location.href = result.redirect_url;
+        }, 500);
+        return;
+      }
+
       this.resetForm();
       // Reload the page to show updated data
       setTimeout(() => {
@@ -1335,7 +1509,7 @@ class DepartmentManager {
         
         // Fallback: if backend doesn't provide employee_display_name, construct it manually
         if (employeeDisplay === 'N/A' && dept.employee_reference) {
-          const employee = this.employees.find(emp => emp.employee_id === dept.employee_reference);
+          const employee = this.employees.find(emp => emp.employee_reference === dept.employee_reference || emp.employee_id === dept.employee_reference || emp.employee_code === dept.employee_reference);
           if (employee) {
             employeeDisplay = `${employee.employee_name} (${employee.employee_code || dept.employee_reference})`;
           } else {
@@ -1385,11 +1559,16 @@ class DepartmentManager {
     });
   }
 
-  handleEmployeeFilter(employeeId) {
-    if (employeeId) {
+  handleEmployeeFilter(employeeSelectElement) {
+    const employeeReference = employeeSelectElement?.value;
+    const filterParam = employeeSelectElement?.selectedOptions?.[0]?.dataset?.filterParam || 'employee_id';
+
+    if (employeeReference) {
       // Redirect to filtered view
       const currentUrl = new URL(window.location);
-      currentUrl.searchParams.set('employee_id', employeeId);
+      currentUrl.searchParams.delete('employee_id');
+      currentUrl.searchParams.delete('employee_code');
+      currentUrl.searchParams.set(filterParam, employeeReference);
       window.location.href = currentUrl.toString();
     } else {
       // Remove filter and show all
@@ -1480,7 +1659,7 @@ class DepartmentManager {
   <% end %>
   
   <% if @employees %>
-    window.employees = <%= raw @employees.map { |emp| { employee_name: emp.employee_name, employee_id: emp.employee_id, department: emp.department } }.to_json %>;
+    window.employees = <%= raw @employees.map { |emp| { employee_name: emp.employee_name, employee_id: emp.employee_id, employee_code: emp.employee_code, employee_reference: emp.employee_id.presence || emp.employee_code, department: emp.department } }.to_json %>;
     console.log('Employees loaded:', window.employees);
   <% else %>
     window.employees = [];

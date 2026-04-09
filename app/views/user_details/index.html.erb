@@ -1,10 +1,23 @@
 <div class="main-content bg-gray-50 min-h-screen">
+  <div class="bg-white border border-gray-200 rounded-xl shadow-lg mt-4 mb-4 p-4">
+    <%= form_with url: user_details_path, method: :get, local: true, class: "flex flex-wrap items-end gap-4" do |form| %>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Financial Year</label>
+        <%= form.select :financial_year,
+            options_for_select(available_financial_years, selected_financial_year),
+            {},
+            class: "border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700",
+            onchange: "this.form.submit();" %>
+      </div>
+    <% end %>
+  </div>
+
   <% if @user_details.any? %>
     <div class="bg-white border border-gray-200 rounded-xl shadow-lg mt-4">
       <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 rounded-t-xl">
         <h2 class="text-3xl font-bold text-gray-800 flex items-center">
           <i class="fas fa-users me-2 text-indigo-600"></i>
-           HOD TARGET FORM 
+           HOD TARGET FORM - <%= selected_financial_year %>
         </h2>
       </div>
 
@@ -15,6 +28,7 @@
               <tr>
                 <th class="px-5 py-4 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Department</th>
                 <th class="px-5 py-4 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Employee Name</th>
+                <th class="px-5 py-4 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Financial Year</th>
                 <th class="px-5 py-4 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Activity</th>
                 <th class="px-5 py-4 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Theme</th>
                 <th class="px-5 py-4 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Unit</th>
@@ -38,9 +52,10 @@
                 <tr class="<%= index.even? ? 'bg-gray-50' : 'bg-white' %> hover:bg-gray-100 transition-colors duration-200">
                   <td class="px-5 py-4 text-sm text-gray-800 font-medium border-r border-gray-200"><%= detail.department.department_type %></td>
                   <td class="px-5 py-4 text-sm text-gray-800 font-medium border-r border-gray-200"><%= detail.employee_detail&.employee_name || 'N/A' %></td>
+                  <td class="px-5 py-4 text-sm text-gray-800 font-medium border-r border-gray-200"><%= detail.financial_year %></td>
                   <td class="px-5 py-4 text-sm text-gray-800 border-r border-gray-200"><%= detail.activity.activity_name %></td>
-                  <td class="px-5 py-4 text-sm text-gray-800 border-r border-gray-200"><%= detail.activity.theme_name.present? ? detail.activity.theme_name : 'No Theme' %></td>
-                  <td class="px-5 py-4 text-sm text-gray-800 border-r border-gray-200 text-center"><%= detail.activity.unit.present? ? detail.activity.unit : "" %></td>
+                  <td class="px-5 py-4 text-sm text-gray-800 border-r border-gray-200"><%= detail.display_theme_name.presence || 'No Theme' %></td>
+                  <td class="px-5 py-4 text-sm text-gray-800 border-r border-gray-200 text-center"><%= detail.display_unit.presence || "" %></td>
                   <td class="px-5 py-4 text-sm text-center border-r border-gray-200">
                     <span class="<%= detail.april.presence ? 'text-indigo-700 font-semibold bg-indigo-50 px-3 py-1 rounded-full' : 'text-gray-400' %>">
                       <%= detail.april.presence || '-' %>
@@ -103,7 +118,7 @@
                   </td>
                   <td class="px-5 py-4 text-center border-r border-gray-200">
                     <div class="flex space-x-2 justify-center">
-                      <%= link_to edit_user_detail_path(detail), 
+                      <%= link_to edit_user_detail_path(detail, financial_year: detail.financial_year),
                           class: "inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200",
                           title: "Edit this target" do %>
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +127,7 @@
                         Edit
                       <% end %>
                       
-                      <%= link_to user_detail_path(detail), 
+                      <%= link_to user_detail_path(detail, financial_year: detail.financial_year),
                           method: :delete,
                           data: { 
                             confirm: "Are you sure you want to delete this target? This action cannot be undone.",
