@@ -14,7 +14,7 @@
 
     <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "auth-form", data: { turbo: false } }) do |f| %>
       <div class="auth-field">
-        <%= f.label :email, class: "auth-field__label" %>
+        <%= f.label :email, "Email (optional)", class: "auth-field__label" %>
         <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "auth-field__control", placeholder: "name@company.com" %>
       </div>
 
@@ -49,6 +49,10 @@
         <%= f.label :employee_code, "Employee Code", class: "auth-field__label" %>
         <%= f.text_field :employee_code, class: "auth-field__control", placeholder: "Enter your employee code" %>
       </div>
+
+      <p class="auth-panel__description" style="margin-top: -0.5rem; margin-bottom: 0;">
+        If your employee is already in the employee list, you can sign in with your employee code and default password <strong>123456</strong> without registering first.
+      </p>
 
       <div class="auth-form__meta">
         <% if devise_mapping.rememberable? %>

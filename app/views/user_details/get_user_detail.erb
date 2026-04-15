@@ -19,17 +19,10 @@
         <i class="fas fa-filter me-3 text-teal-700"></i>
         Filter Activities
       </h2>
-      <p class="filter-subtitle">Choose activity, quarter, and month to keep the target sheet focused and easy to review.</p>
+      <p class="filter-subtitle">Choose quarter and month to keep the target sheet focused and easy to review.</p>
     </div>
     <div class="p-6 md:p-7">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-        <div class="filter-field">
-          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-[0.18em] mb-2">Select Activity</label>
-          <select id="activityFilter" class="dashboard-select w-full">
-            <option value="">All Activities</option>
-          </select>
-        </div>
-
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
         <div class="filter-field">
           <label class="block text-xs font-semibold text-slate-600 uppercase tracking-[0.18em] mb-2">Select Quarter</label>
           <select id="quarterFilter" class="dashboard-select w-full">
@@ -62,9 +55,6 @@
         <div class="flex gap-3 filter-actions">
           <button id="showSelected" class="dashboard-action-btn dashboard-action-btn-primary">
             <i class="fas fa-eye me-1"></i> Show Selected
-          </button>
-          <button id="showAll" class="dashboard-action-btn dashboard-action-btn-secondary">
-            <i class="fas fa-list me-1"></i> Show All
           </button>
         </div>
       </div>
@@ -156,9 +146,7 @@
                   { label: "January - March", months: ["January", "February", "March"] }
                 ] %>
                 <tr>
-                  <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Department</th>
-                  <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Employee Name</th>
-                  <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Activity</th>
+                  <th rowspan="3" class="activity-column px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Activity</th>
                   <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Theme</th>
                   <th rowspan="3" class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Unit</th>
                   <% quarter_groups.each do |quarter| %>
@@ -206,10 +194,8 @@
                       data-activity="<%= detail.activity.activity_name %>" 
                       data-targets='<%= target_data.to_json.html_safe %>'
                       data-has-any-target="<%= has_any_target %>">
-                    
-                    <td class="px-4 py-3 text-sm text-gray-800 font-medium border-r border-gray-200"><%= detail.department.department_type %></td>
-                    <td class="px-4 py-3 text-sm text-gray-800 font-medium border-r border-gray-200"><%= detail.employee_detail&.employee_name || 'N/A' %></td>
-                    <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200"><%= detail.activity.activity_name %></td>
+
+                    <td class="activity-cell px-4 py-3 text-sm text-gray-800 border-r border-gray-200"><%= detail.activity.activity_name %></td>
                     <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200"><%= detail.display_theme_name.presence || 'No Theme' %></td>
                     <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 text-center"><%= detail.display_unit %></td>
 
@@ -310,11 +296,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const activityFilter = document.getElementById('activityFilter');
     const quarterFilter = document.getElementById('quarterFilter');
     const monthFilter = document.getElementById('monthFilter');
     const showSelectedBtn = document.getElementById('showSelected');
-    const showAllBtn = document.getElementById('showAll');
     const activityRows = document.querySelectorAll('.activity-row');
     const quarterHeaders = document.querySelectorAll('.quarter-header');
     const monthHeaders = document.querySelectorAll('.month-header');
@@ -340,39 +324,6 @@ document.addEventListener('DOMContentLoaded', function() {
         february: 'january-march',
         march: 'january-march'
     };
-
-    // Populate activity filter dropdown
-    function populateActivityFilter() {
-        const activities = new Set();
-        activityRows.forEach(row => {
-            const activity = row.dataset.activity;
-            if (activity) {
-                activities.add(activity);
-            }
-        });
-
-        // Clear existing options except "All Activities"
-        activityFilter.innerHTML = '<option value="">All Activities</option>';
-        
-        // Add unique activities
-        Array.from(activities).sort().forEach(activity => {
-            const option = document.createElement('option');
-            option.value = activity;
-            option.textContent = activity;
-            activityFilter.appendChild(option);
-        });
-    }
-
-    // Filter functions
-    function filterByActivity(selectedActivity) {
-        activityRows.forEach(row => {
-            if (!selectedActivity || row.dataset.activity === selectedActivity) {
-                row.removeAttribute('data-activity-hidden');
-            } else {
-                row.setAttribute('data-activity-hidden', 'true');
-            }
-        });
-    }
 
     function filterByQuarter(selectedQuarter, selectedMonth) {
         const months = ['april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december', 'january', 'february', 'march'];
@@ -457,7 +408,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function applyFilters() {
-        const selectedActivity = activityFilter.value;
         const selectedQuarter = quarterFilter.value || 'april-june';
         const selectedMonth = monthFilter.value;
 
@@ -467,7 +417,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Reset all filters first
         activityRows.forEach(row => {
-            row.removeAttribute('data-activity-hidden');
             row.removeAttribute('data-filtered-hidden');
         });
 
@@ -476,8 +425,6 @@ document.addEventListener('DOMContentLoaded', function() {
         monthSubheaders.forEach(subheader => subheader.removeAttribute('data-month-hidden'));
         monthCells.forEach(cell => cell.removeAttribute('data-month-hidden'));
 
-        // Apply filters
-        filterByActivity(selectedActivity);
         filterByQuarter(quarterFilter.value || selectedQuarter, selectedMonth);
 
         // Update visibility
@@ -486,10 +433,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateRowVisibility() {
         activityRows.forEach(row => {
-            const isActivityHidden = row.hasAttribute('data-activity-hidden');
             const isFilteredHidden = row.hasAttribute('data-filtered-hidden');
 
-            if (isActivityHidden || isFilteredHidden) {
+            if (isFilteredHidden) {
                 row.style.display = 'none';
             } else {
                 row.style.display = '';
@@ -497,18 +443,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function showAll() {
-        activityFilter.value = '';
-        quarterFilter.value = 'april-june';
-        monthFilter.value = '';
-        applyFilters();
-    }
-
     // Event listeners
-    showSelectedBtn.addEventListener('click', applyFilters);
-    showAllBtn.addEventListener('click', showAll);
+    if (showSelectedBtn) showSelectedBtn.addEventListener('click', applyFilters);
     
-    activityFilter.addEventListener('change', applyFilters);
     quarterFilter.addEventListener('change', function() {
         const selectedMonth = monthFilter.value;
         const selectedQuarter = quarterFilter.value;
@@ -522,8 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
     monthFilter.addEventListener('change', applyFilters);
 
     // Initialize
-    populateActivityFilter();
-    
     quarterFilter.value = 'april-june';
     monthFilter.value = '';
     applyFilters();
@@ -639,6 +574,19 @@ document.addEventListener('DOMContentLoaded', function() {
   border-right: 1px solid #dbe5f0;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+.activity-column,
+.activity-cell {
+  min-width: 280px;
+  width: 280px;
+  text-align: left !important;
+}
+
+.activity-cell {
+  white-space: normal !important;
+  word-break: break-word;
+  line-height: 1.5;
 }
 
 .table th {
@@ -1117,35 +1065,6 @@ document.addEventListener('turbo:load', function() {
 
     // A function to set up all the event listeners for the page
     function initializePage() {
-        // Function to populate activities
-        function populateActivityDropdown() {
-            const activityRows = document.querySelectorAll('.activity-row');
-            const activities = new Set();
-            
-            activityRows.forEach(row => {
-                const activity = row.dataset.activity;
-                if (activity && activity.trim() !== '') {
-                    activities.add(activity);
-                }
-            });
-            
-            const activityFilter = document.getElementById('activityFilter');
-            if (!activityFilter) return; // Guard clause
-            
-            // Clear existing options except the first one
-            while (activityFilter.children.length > 1) {
-                activityFilter.removeChild(activityFilter.lastChild);
-            }
-            
-            // Populate activity dropdown
-            activities.forEach(activity => {
-                const option = document.createElement('option');
-                option.value = activity;
-                option.textContent = activity;
-                activityFilter.appendChild(option);
-            });
-        }
-        
         // Month mapping
         const monthMapping = {
             'april': 0, 'may': 1, 'june': 2, 'july': 3, 'august': 4, 'september': 5,
@@ -1346,12 +1265,10 @@ document.addEventListener('turbo:load', function() {
         }
         
         function filterTable() {
-            const activityFilter = document.getElementById('activityFilter');
             const quarterFilter = document.getElementById('quarterFilter');
             const monthFilter = document.getElementById('monthFilter');
-            if (!activityFilter || !quarterFilter || !monthFilter) return; // Guard clause
+            if (!quarterFilter || !monthFilter) return; // Guard clause
 
-            const selectedActivity = activityFilter.value;
             const selectedQuarter = quarterFilter.value || 'april-june';
             const selectedMonth = monthFilter.value;
             const activeQuarterMonths = quarterMonths[selectedQuarter] || quarterMonths['april-june'];
@@ -1359,20 +1276,6 @@ document.addEventListener('turbo:load', function() {
             if (selectedMonth && monthToQuarter[selectedMonth] !== selectedQuarter) {
                 quarterFilter.value = monthToQuarter[selectedMonth];
             }
-            
-            // Filter activity rows
-            document.querySelectorAll('.activity-row').forEach(row => {
-                const rowActivity = row.dataset.activity;
-                const shouldShowRow = !selectedActivity || rowActivity === selectedActivity;
-                row.style.display = shouldShowRow ? '' : 'none';
-            });
-            
-            // Filter submitted activity rows
-            document.querySelectorAll('.submitted-activity-row').forEach(row => {
-                const rowActivity = row.dataset.activity;
-                const shouldShowRow = !selectedActivity || rowActivity === selectedActivity;
-                row.style.display = shouldShowRow ? '' : 'none';
-            });
 
             document.querySelectorAll('.quarter-header').forEach(header => {
                 const shouldShowQuarter = header.dataset.quarter === (quarterFilter.value || selectedQuarter);
@@ -1415,34 +1318,25 @@ document.addEventListener('turbo:load', function() {
         }
 
         function resetAllFilters() {
-             const activityFilter = document.getElementById('activityFilter');
              const quarterFilter = document.getElementById('quarterFilter');
              const monthFilter = document.getElementById('monthFilter');
-             if (activityFilter) activityFilter.value = '';
              if (quarterFilter) quarterFilter.value = 'april-june';
              if (monthFilter) monthFilter.value = '';
              filterTable(); // Apply the reset state
         }
         
         // --- Setup ---
-        // Populate dropdown immediately
-        populateActivityDropdown();
-        
         // Setup modal functionality
         setupModal();
 
         // Attach event listeners
         const showSelectedBtn = document.getElementById('showSelected');
-        const showAllBtn = document.getElementById('showAll');
         const clearFiltersBtn = document.getElementById('clearFilters');
-        const activityFilterSelect = document.getElementById('activityFilter');
         const quarterFilterSelect = document.getElementById('quarterFilter');
         const monthFilterSelect = document.getElementById('monthFilter');
 
         if (showSelectedBtn) showSelectedBtn.addEventListener('click', filterTable);
-        if (showAllBtn) showAllBtn.addEventListener('click', resetAllFilters);
         if (clearFiltersBtn) clearFiltersBtn.addEventListener('click', resetAllFilters);
-        if (activityFilterSelect) activityFilterSelect.addEventListener('change', filterTable);
         if (quarterFilterSelect) {
             quarterFilterSelect.addEventListener('change', function() {
                 const monthFilter = document.getElementById('monthFilter');

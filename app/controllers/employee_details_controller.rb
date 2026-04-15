@@ -88,12 +88,15 @@ class EmployeeDetailsController < ApplicationController
   end
 
   def export_quarterly_xlsx
-    @employee_details = EmployeeDetail.includes(user_details: [ :activity, :department, :achievements ]).all
+    requested_financial_year = selected_financial_year
+    @employee_details = EmployeeDetail.includes(user_details: [ :activity, :department, { achievements: :achievement_remark } ]).all
 
     package = Axlsx::Package.new
     workbook = package.workbook
 
-    workbook.add_worksheet(name: "Quarterly L1 L2 Data") do |sheet|
+    worksheet_name = "Quarterly L1 L2 #{requested_financial_year}".truncate(31)
+
+    workbook.add_worksheet(name: worksheet_name) do |sheet|
       # Add header row
       sheet.add_row [
         "Employee Name", "Employee Code", "Department", "Quarter End Month",
@@ -111,12 +114,15 @@ class EmployeeDetailsController < ApplicationController
 
       # Process each employee and quarter
       @employee_details.each do |emp|
+        yearly_user_details = financial_year_user_details_for(emp)
+        next if yearly_user_details.blank?
+
         quarters.each do |quarter_name, quarter_data|
           quarter_months = quarter_data[:months]
           quarter_display = quarter_data[:display]
 
           # Get all achievements for this employee in this quarter
-          all_quarter_achievements = financial_year_user_details_for(emp).flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
+          all_quarter_achievements = yearly_user_details.flat_map(&:achievements).select { |ach| quarter_months.include?(ach.month) }
 
           # Only add row if there are achievements in this quarter
           if all_quarter_achievements.any?
@@ -172,7 +178,9 @@ class EmployeeDetailsController < ApplicationController
 
     tempfile = Tempfile.new([ "quarterly_l1_l2_data", ".xlsx" ])
     package.serialize(tempfile.path)
-    send_file tempfile.path, filename: "quarterly_l1_l2_data.xlsx", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    send_file tempfile.path,
+              filename: "quarterly_l1_l2_data_#{requested_financial_year.tr('-', '_')}.xlsx",
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   end
 
   def import
@@ -783,12 +791,29 @@ end
     collection = record_or_collection.respond_to?(:user_details) ? record_or_collection.user_details : record_or_collection
 
     if collection.respond_to?(:loaded?) && collection.loaded?
-      collection.select { |detail| detail.financial_year == selected_financial_year }
+      Array(collection).select do |detail|
+        detail.financial_year == selected_financial_year && assignment_consistent_for_employee?(detail)
+      end
     elsif collection.respond_to?(:where)
-      collection.where(financial_year: selected_financial_year)
+      collection.assignment_consistent.where(financial_year: selected_financial_year)
     else
-      Array(collection).select { |detail| detail.financial_year == selected_financial_year }
+      Array(collection).select do |detail|
+        detail.financial_year == selected_financial_year && assignment_consistent_for_employee?(detail)
+      end
     end
+  end
+
+  def assignment_consistent_for_employee?(detail)
+    return false if detail.blank? || detail.department.blank? || detail.activity.blank? || detail.employee_detail.blank?
+    return false unless detail.activity.department_id == detail.department_id
+
+    department_reference = detail.department.employee_reference.to_s.strip
+    return true if department_reference.blank?
+
+    employee_references = [ detail.employee_detail.employee_id, detail.employee_detail.employee_code ].compact_blank
+    return false if employee_references.empty?
+
+    employee_references.include?(department_reference)
   end
 
   def can_act_as_l1?(employee_detail)
@@ -1323,15 +1348,8 @@ end
 
         summary_data[:total_quarterly_records] += 1
 
-        # PERFORMANCE FIX: Optimize status calculation
-        quarter_statuses = all_quarter_achievements.map { |ach| ach.status || "pending" }
-
-        # Check for actual approval data in achievement remarks
-        has_l1_approval = all_quarter_achievements.any? { |ach| ach.achievement_remark&.l1_percentage.present? && ach.achievement_remark&.l1_remarks.present? }
-        has_l2_approval = all_quarter_achievements.any? { |ach| ach.achievement_remark&.l2_percentage.present? && ach.achievement_remark&.l2_remarks.present? }
-
         # PERFORMANCE FIX: More efficient status calculation
-        current_status = calculate_quarter_status(quarter_statuses, has_l1_approval, has_l2_approval)
+        current_status = calculate_quarter_status(all_quarter_achievements)
 
         # Store status for this employee-quarter combination
         summary_data[:employee_quarter_statuses]["#{emp.id}_#{quarter_name}"] = current_status
@@ -1356,20 +1374,8 @@ end
   end
 
   # PERFORMANCE FIX: Optimized status calculation method
-  def calculate_quarter_status(quarter_statuses, has_l1_approval, has_l2_approval)
-    if quarter_statuses.any? { |s| s == "l2_returned" }
-      "l2_returned"
-    elsif quarter_statuses.all? { |s| s == "l2_approved" } || has_l2_approval
-      "l2_approved"
-    elsif quarter_statuses.any? { |s| s == "l1_returned" }
-      "l1_returned"
-    elsif quarter_statuses.all? { |s| s == "l1_approved" } || has_l1_approval
-      "l1_approved"
-    elsif quarter_statuses.any? { |s| s == "submitted" }
-      "submitted"
-    else
-      "pending"
-    end
+  def calculate_quarter_status(quarter_achievements)
+    helpers.calculate_overall_quarter_status_from_achievements(quarter_achievements)
   end
 
   # Build the quarterly employee data structure expected by the view
@@ -1391,11 +1397,7 @@ end
         # Only include if there are achievements in this quarter
         if all_quarter_achievements.any?
           # Calculate quarter status
-          quarter_statuses = all_quarter_achievements.map { |ach| ach.status || "pending" }
-          has_l1_approval = all_quarter_achievements.any? { |ach| ach.achievement_remark&.l1_percentage.present? && ach.achievement_remark&.l1_remarks.present? }
-          has_l2_approval = all_quarter_achievements.any? { |ach| ach.achievement_remark&.l2_percentage.present? && ach.achievement_remark&.l2_remarks.present? }
-
-          current_status = calculate_quarter_status(quarter_statuses, has_l1_approval, has_l2_approval)
+          current_status = calculate_quarter_status(all_quarter_achievements)
           status_config = get_status_config(current_status)
 
           # Create unique key for this employee-quarter combination

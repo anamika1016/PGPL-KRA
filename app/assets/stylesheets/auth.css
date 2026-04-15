@@ -1,22 +1,25 @@
 body.devise-layout {
-  --auth-bg-top: #f8dfc2;
-  --auth-bg-bottom: #f0c89d;
-  --auth-card: rgba(255, 248, 240, 0.92);
-  --auth-surface: #fffdfa;
-  --auth-showcase-top: #ea982e;
-  --auth-showcase-bottom: #c87311;
-  --auth-text: #23140d;
-  --auth-muted: #8b6e5a;
-  --auth-border: rgba(80, 45, 16, 0.12);
-  --auth-shadow: 0 32px 90px rgba(94, 56, 19, 0.18);
-  --auth-input: #f8efe6;
-  --auth-button: #18120f;
-  --auth-button-hover: #2a201b;
+  --auth-bg-top: #fbfcf8;
+  --auth-bg-bottom: #edf3eb;
+  --auth-card: rgba(255, 255, 255, 0.72);
+  --auth-surface: rgba(255, 255, 255, 0.94);
+  --auth-showcase-top: #2e6a3d;
+  --auth-showcase-bottom: #143220;
+  --auth-text: #231a13;
+  --auth-muted: #5f7765;
+  --auth-border: rgba(41, 67, 47, 0.12);
+  --auth-shadow: 0 36px 110px rgba(26, 58, 33, 0.14);
+  --auth-input: #f6f1ea;
+  --auth-button: #153523;
+  --auth-button-hover: #0f291a;
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at top left, #ffe6c9 0%, rgba(255, 230, 201, 0.65) 18%, transparent 42%),
+    radial-gradient(circle at 12% 18%, rgba(197, 229, 203, 0.85) 0%, rgba(197, 229, 203, 0) 22%),
+    radial-gradient(circle at 88% 82%, rgba(222, 238, 224, 0.9) 0%, rgba(222, 238, 224, 0) 24%),
+    radial-gradient(circle at 52% 46%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 40%),
     linear-gradient(180deg, var(--auth-bg-top) 0%, var(--auth-bg-bottom) 100%);
+  background-attachment: fixed;
   color: var(--auth-text);
   font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
 }
@@ -27,6 +30,34 @@ body.devise-layout {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.devise-layout .auth-page::before,
+.devise-layout .auth-page::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.devise-layout .auth-page::before {
+  inset: 0;
+  background:
+    linear-gradient(rgba(29, 66, 38, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 66, 38, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.7) 0%, transparent 74%);
+}
+
+.devise-layout .auth-page::after {
+  width: 420px;
+  height: 420px;
+  right: -120px;
+  top: -120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(203, 231, 207, 0.7) 0%, rgba(203, 231, 207, 0) 70%);
+  filter: blur(10px);
 }
 
 .devise-layout .auth-page__frame {
@@ -34,6 +65,8 @@ body.devise-layout {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .devise-layout .auth-page__flash-stack {
@@ -47,9 +80,9 @@ body.devise-layout {
   gap: 12px;
   padding: 14px 18px;
   border-radius: 18px;
-  border: 1px solid rgba(58, 37, 19, 0.12);
-  background: rgba(255, 251, 245, 0.92);
-  box-shadow: 0 14px 36px rgba(80, 44, 16, 0.08);
+  border: 1px solid rgba(56, 82, 61, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 40px rgba(38, 65, 43, 0.08);
 }
 
 .devise-layout .auth-toast__icon {
@@ -80,9 +113,11 @@ body.devise-layout {
   gap: 22px;
   padding: 18px;
   border-radius: 30px;
-  background: var(--auth-card);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: var(--auth-shadow);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(250, 252, 249, 0.72) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow:
+    var(--auth-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(14px);
 }
 
@@ -93,9 +128,10 @@ body.devise-layout {
   padding: 24px;
   border-radius: 24px;
   background:
-    radial-gradient(circle at 18% 18%, rgba(255, 218, 162, 0.9) 0%, rgba(255, 218, 162, 0) 24%),
-    radial-gradient(circle at 82% 82%, rgba(121, 55, 0, 0.18) 0%, rgba(121, 55, 0, 0) 34%),
-    linear-gradient(160deg, var(--auth-showcase-top) 0%, #dd8a1f 40%, var(--auth-showcase-bottom) 100%);
+    radial-gradient(circle at 18% 18%, rgba(183, 222, 147, 0.28) 0%, rgba(183, 222, 147, 0) 24%),
+    radial-gradient(circle at 84% 16%, rgba(255, 226, 146, 0.18) 0%, rgba(255, 226, 146, 0) 28%),
+    radial-gradient(circle at 82% 82%, rgba(18, 48, 22, 0.32) 0%, rgba(18, 48, 22, 0) 34%),
+    linear-gradient(160deg, #1d4226 0%, #112918 48%, #09130c 100%);
   color: #fffaf4;
   display: flex;
   flex-direction: column;
@@ -107,7 +143,7 @@ body.devise-layout {
   content: "";
   position: absolute;
   border-radius: 999px;
-  background: rgba(255, 244, 228, 0.12);
+  background: rgba(243, 249, 240, 0.14);
   pointer-events: none;
 }
 
@@ -154,133 +190,55 @@ body.devise-layout {
 
 .devise-layout .auth-visual__description {
   margin: 0;
-  color: rgba(255, 248, 240, 0.86);
+  color: rgba(245, 248, 241, 0.84);
   font-size: 0.95rem;
   line-height: 1.5;
 }
 
-.devise-layout .auth-visual__art {
+.devise-layout .auth-visual__media {
   position: relative;
-  min-height: 210px;
-  margin: 18px 0;
+  min-height: 280px;
+  margin: 24px 0 18px;
 }
 
-.devise-layout .auth-visual__halo {
+.devise-layout .auth-visual__media-card {
   position: absolute;
-  inset: 50% auto auto 50%;
-  width: 240px;
-  height: 240px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 35%, rgba(255, 247, 235, 0.95) 0%, rgba(255, 223, 179, 0.86) 28%, rgba(246, 170, 78, 0.38) 62%, rgba(246, 170, 78, 0) 100%);
-  filter: blur(0.2px);
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(245, 252, 245, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 60px rgba(5, 15, 8, 0.28);
 }
 
-.devise-layout .auth-visual__dashboard {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: min(240px, 74%);
-  padding: 15px;
-  transform: translate(-50%, -50%);
-  border-radius: 24px;
-  background: rgba(255, 248, 240, 0.18);
-  border: 1px solid rgba(255, 247, 238, 0.24);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 24px 48px rgba(116, 58, 4, 0.2);
-}
-
-.devise-layout .auth-visual__dashboard-top {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.devise-layout .auth-visual__dashboard-top span {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 247, 238, 0.74);
-}
-
-.devise-layout .auth-visual__metric {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.devise-layout .auth-visual__metric strong {
-  font-size: 2.75rem;
-  line-height: 0.95;
-  letter-spacing: -0.06em;
-}
-
-.devise-layout .auth-visual__metric span {
-  color: rgba(255, 247, 239, 0.78);
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.devise-layout .auth-visual__bars {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  align-items: end;
-  gap: 8px;
-  height: 72px;
-}
-
-.devise-layout .auth-visual__bars span {
-  border-radius: 999px 999px 16px 16px;
-  background: linear-gradient(180deg, rgba(255, 249, 242, 0.95) 0%, rgba(255, 215, 162, 0.68) 100%);
-}
-
-.devise-layout .auth-visual__bars span:nth-child(1) {
-  height: 44%;
-}
-
-.devise-layout .auth-visual__bars span:nth-child(2) {
-  height: 70%;
-}
-
-.devise-layout .auth-visual__bars span:nth-child(3) {
-  height: 88%;
-}
-
-.devise-layout .auth-visual__bars span:nth-child(4) {
-  height: 58%;
-}
-
-.devise-layout .auth-visual__chip {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 18px;
-  background: rgba(255, 248, 240, 0.84);
-  color: #5d3c22;
-  font-size: 0.78rem;
-  font-weight: 700;
-  box-shadow: 0 18px 34px rgba(114, 57, 7, 0.18);
-}
-
-.devise-layout .auth-visual__chip::before {
+.devise-layout .auth-visual__media-card::after {
   content: "";
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: #11100f;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(8, 18, 10, 0.12) 100%);
+  pointer-events: none;
 }
 
-.devise-layout .auth-visual__chip--top {
-  top: 24%;
-  right: 8%;
+.devise-layout .auth-visual__media-card--primary {
+  top: 0;
+  left: 0;
+  width: min(304px, 76%);
+  aspect-ratio: 367 / 372;
+  transform: rotate(-4deg);
 }
 
-.devise-layout .auth-visual__chip--bottom {
-  bottom: 8%;
-  left: 10%;
+.devise-layout .auth-visual__media-card--secondary {
+  right: 2%;
+  bottom: 0;
+  width: min(264px, 58%);
+  aspect-ratio: 349 / 231;
+  transform: rotate(4deg);
+}
+
+.devise-layout .auth-visual__media-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .devise-layout .auth-visual__footer {
@@ -294,8 +252,8 @@ body.devise-layout {
 .devise-layout .auth-visual__card {
   padding: 13px 15px;
   border-radius: 20px;
-  background: rgba(255, 248, 240, 0.13);
-  border: 1px solid rgba(255, 246, 236, 0.18);
+  background: rgba(246, 252, 245, 0.12);
+  border: 1px solid rgba(240, 248, 238, 0.16);
 }
 
 .devise-layout .auth-visual__card span {
@@ -319,8 +277,9 @@ body.devise-layout {
   flex-direction: column;
   justify-content: center;
   padding: 20px 22px 18px;
-  background: var(--auth-surface);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 247, 0.95) 100%);
   border-radius: 24px;
+  box-shadow: inset 0 0 0 1px rgba(229, 238, 231, 0.82);
 }
 
 .devise-layout .auth-panel__brand {
@@ -340,7 +299,7 @@ body.devise-layout {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #9a7962;
+  color: #4f765a;
 }
 
 .devise-layout .auth-panel__title {
@@ -377,26 +336,36 @@ body.devise-layout {
   margin-bottom: 8px;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #4f3728;
+  color: #274332;
 }
 
 .devise-layout .auth-field__control {
   width: 100%;
-  border: 1px solid transparent;
+  border: 1px solid rgba(64, 92, 72, 0.1);
   border-radius: 16px;
   background: var(--auth-input);
   padding: 13px 16px;
   color: var(--auth-text);
   font-size: 0.98rem;
-  box-shadow: inset 0 0 0 1px rgba(75, 39, 12, 0.02);
+  box-shadow: inset 0 0 0 1px rgba(41, 67, 47, 0.03);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.devise-layout .auth-field__control:-webkit-autofill,
+.devise-layout .auth-field__control:-webkit-autofill:hover,
+.devise-layout .auth-field__control:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--auth-text);
+  box-shadow:
+    inset 0 0 0 1px rgba(41, 67, 47, 0.03),
+    0 0 0 1000px var(--auth-input) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .devise-layout select.auth-field__control {
   appearance: none;
   background-image:
-    linear-gradient(45deg, transparent 50%, #6b4c36 50%),
-    linear-gradient(135deg, #6b4c36 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, #44664f 50%),
+    linear-gradient(135deg, #44664f 50%, transparent 50%);
   background-position:
     calc(100% - 22px) calc(50% - 2px),
     calc(100% - 16px) calc(50% - 2px);
@@ -406,13 +375,13 @@ body.devise-layout {
 }
 
 .devise-layout .auth-field__control::placeholder {
-  color: #b39a88;
+  color: #9aaa9b;
 }
 
 .devise-layout .auth-field__control:focus {
   outline: none;
-  border-color: rgba(180, 103, 18, 0.42);
-  box-shadow: 0 0 0 4px rgba(224, 143, 54, 0.13);
+  border-color: rgba(46, 106, 61, 0.38);
+  box-shadow: 0 0 0 4px rgba(91, 160, 111, 0.14);
   transform: translateY(-1px);
 }
 
@@ -437,18 +406,18 @@ body.devise-layout {
   border: 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.55);
-  color: #7f624e;
+  color: #56705d;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .devise-layout .auth-password__toggle:hover {
   background: rgba(255, 255, 255, 0.82);
-  color: #473022;
+  color: #1f3a29;
 }
 
 .devise-layout .auth-password__toggle:focus-visible {
-  outline: 2px solid rgba(180, 103, 18, 0.42);
+  outline: 2px solid rgba(46, 106, 61, 0.38);
   outline-offset: 2px;
 }
 
@@ -482,24 +451,24 @@ body.devise-layout {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #6f594a;
+  color: #546a59;
   font-size: 0.94rem;
 }
 
 .devise-layout .auth-check input {
   width: 18px;
   height: 18px;
-  accent-color: #221712;
+  accent-color: #1d4c31;
 }
 
 .devise-layout .auth-link {
-  color: #4f3728;
+  color: #24563a;
   font-weight: 600;
   text-decoration: none;
 }
 
 .devise-layout .auth-link:hover {
-  color: #20130d;
+  color: #163a25;
   text-decoration: underline;
 }
 
@@ -513,14 +482,14 @@ body.devise-layout {
   font-size: 0.98rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  box-shadow: 0 18px 30px rgba(28, 19, 14, 0.15);
+  box-shadow: 0 18px 30px rgba(21, 53, 35, 0.22);
   transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .devise-layout .auth-button:hover {
   background: var(--auth-button-hover);
   transform: translateY(-1px);
-  box-shadow: 0 22px 34px rgba(28, 19, 14, 0.19);
+  box-shadow: 0 22px 34px rgba(15, 41, 26, 0.26);
 }
 
 .devise-layout .auth-panel__switch {
@@ -593,6 +562,10 @@ body.devise-layout {
     min-height: 360px;
   }
 
+  .devise-layout .auth-visual__media {
+    min-height: 240px;
+  }
+
   .devise-layout .auth-visual__footer,
   .devise-layout .auth-form__row {
     grid-template-columns: 1fr;
@@ -603,11 +576,14 @@ body.devise-layout {
     line-height: 1.08;
   }
 
-  .devise-layout .auth-visual__chip--top {
-    right: 2%;
+  .devise-layout .auth-visual__media-card--primary {
+    width: min(260px, 80%);
+    transform: rotate(-2deg);
   }
 
-  .devise-layout .auth-visual__chip--bottom {
-    left: 4%;
+  .devise-layout .auth-visual__media-card--secondary {
+    right: 0;
+    width: min(208px, 58%);
+    transform: rotate(2deg);
   }
 }

@@ -15,10 +15,22 @@ class UserDetail < ApplicationRecord
   before_validation :assign_default_financial_year
 
   validates :financial_year, presence: true
+  validate :activity_matches_department
+  validate :employee_matches_department_reference
+  validate :financial_year_matches_associations
 
   scope :for_financial_year, ->(financial_year) {
     normalized_year = normalize_financial_year(financial_year).presence || current_financial_year
     where(financial_year: normalized_year)
+  }
+
+  scope :assignment_consistent, -> {
+    joins(:department, :activity)
+      .left_joins(:employee_detail)
+      .where("activities.department_id = user_details.department_id")
+      .where(
+        "departments.employee_reference IS NULL OR BTRIM(departments.employee_reference) = '' OR employee_details.id IS NULL OR departments.employee_reference = employee_details.employee_id OR departments.employee_reference = employee_details.employee_code"
+      )
   }
 
   def self.current_financial_year(date = Time.zone.today)
@@ -82,5 +94,35 @@ class UserDetail < ApplicationRecord
 
   def assign_default_financial_year
     self.financial_year = self.class.normalize_financial_year(financial_year).presence || self.class.current_financial_year
+  end
+
+  def activity_matches_department
+    return unless activity && department
+    return if activity.department_id == department_id
+
+    errors.add(:activity_id, "must belong to the selected department")
+  end
+
+  def employee_matches_department_reference
+    return unless employee_detail && department&.employee_reference.present?
+    return if employee_references.include?(department.employee_reference)
+
+    errors.add(:employee_detail_id, "does not belong to the selected department")
+  end
+
+  def financial_year_matches_associations
+    return if financial_year.blank?
+
+    if department&.financial_year.present? && department.financial_year != financial_year
+      errors.add(:financial_year, "must match the department financial year")
+    end
+
+    if activity&.financial_year.present? && activity.financial_year != financial_year
+      errors.add(:financial_year, "must match the activity financial year")
+    end
+  end
+
+  def employee_references
+    [ employee_detail&.employee_id, employee_detail&.employee_code ].compact_blank
   end
 end

@@ -6,31 +6,18 @@
     <p class="auth-visual__description"><%= description %></p>
   </div>
 
-  <div class="auth-visual__art" aria-hidden="true">
-    <div class="auth-visual__halo"></div>
-
-    <div class="auth-visual__dashboard">
-      <div class="auth-visual__dashboard-top">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-
-      <div class="auth-visual__metric">
-        <strong>75%</strong>
-        <span>KRA weightage in one focused workspace</span>
-      </div>
-
-      <div class="auth-visual__bars">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
+  <div class="auth-visual__media" aria-hidden="true">
+    <div class="auth-visual__media-card auth-visual__media-card--primary">
+      <%= image_tag "Screenshot from 2026-04-15 10-28-29.png",
+                    class: "auth-visual__media-image",
+                    alt: "" %>
     </div>
 
-    <div class="auth-visual__chip auth-visual__chip--top">Pulse 15%</div>
-    <div class="auth-visual__chip auth-visual__chip--bottom">Manager 10%</div>
+    <div class="auth-visual__media-card auth-visual__media-card--secondary">
+      <%= image_tag "Screenshot from 2026-04-15 10-28-38.png",
+                    class: "auth-visual__media-image",
+                    alt: "" %>
+    </div>
   </div>
 
   <div class="auth-visual__footer">

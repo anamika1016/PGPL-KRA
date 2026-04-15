@@ -7,7 +7,7 @@
         <div class="flex justify-between items-center">
           <h1 class="text-3xl font-bold flex items-center">
             <i class="fas fa-edit me-3 text-2xl"></i>
-            Quarterly Achievement Editor
+            Quarter Wise Edit Details
           </h1>
           <%= link_to user_details_path(financial_year: selected_financial_year), class: "bg-white bg-opacity-90 hover:bg-opacity-100 text-black px-4 py-2 rounded-lg transition-all duration-200 flex items-center" do %>
             <i class="fas fa-arrow-left me-2"></i>Back to List
@@ -17,7 +17,7 @@
       
       <div class="p-6">
         <div class="text-gray-600 mb-4">
-          <p class="mb-4">Select a quarter to edit achievements and remarks for ALL activities in that quarter for <strong><%= selected_financial_year %></strong>.</p>
+          <p class="mb-4">Select a quarter to edit quarter-wise achievements and remarks for all activities in <strong><%= selected_financial_year %></strong>.</p>
         </div>
 
         <!-- Quarter and Month Filter Dropdowns -->
@@ -66,7 +66,7 @@
         <div id="quarterHeader" class="bg-white border border-gray-200 rounded-xl shadow-lg mb-6 hidden">
           <div id="quarterHeaderContent" class="bg-gray-600 text-white px-6 py-4 rounded-t-xl">
             <div class="flex justify-between items-center">
-              <h2 class="text-2xl font-bold">Quarterly Activity Editor</h2>
+              <h2 class="text-2xl font-bold">Quarter Wise Edit Details</h2>
               <span id="quarterTitle" class="text-xl font-bold"></span>
             </div>
           </div>

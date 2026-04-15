@@ -18,14 +18,23 @@
         <%= f.submit "Upload Excel", class: "bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800" %>
       <% end %>
 
-      <div class="flex space-x-4">
-        <%= link_to export_quarterly_xlsx_employee_details_path, 
-                    class: "inline-flex items-center px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg shadow-md transition duration-200 transform hover:scale-105" do %>
-          <i class="fas fa-file-excel mr-2"></i>
-          Export Quarterly L1 L2 Data
+      <div class="flex flex-wrap items-end gap-4">
+        <%= form_with url: export_quarterly_xlsx_employee_details_path, method: :get, local: true, class: "flex flex-wrap items-end gap-3" do %>
+          <div>
+            <%= label_tag :financial_year, "Financial Year", class: "block text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 mb-2" %>
+            <%= select_tag :financial_year,
+                           options_for_select(available_financial_years, selected_financial_year),
+                           class: "min-w-[150px] border border-emerald-200 bg-emerald-50/70 text-emerald-900 rounded-lg px-4 py-3 shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200" %>
+          </div>
+
+          <%= button_tag type: :submit,
+                         class: "inline-flex items-center px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-md transition duration-200 transform hover:scale-105" do %>
+            <i class="fas fa-file-excel mr-2"></i>
+            Export Quarterly L1 L2 Data
+          <% end %>
         <% end %>
-        
-        <%= link_to "Export to Excel", export_xlsx_employee_details_path(format: :xlsx), class: "bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800" %>
+
+        <%= link_to "Export to Excel", export_xlsx_employee_details_path(format: :xlsx), class: "bg-emerald-700 text-white px-4 py-3 rounded-lg hover:bg-emerald-800 shadow-sm font-semibold" %>
       </div>
     </div>
 

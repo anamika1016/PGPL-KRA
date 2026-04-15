@@ -18,6 +18,34 @@ body {
   font-family: Arial, sans-serif;
 }
 
+body:not(.devise-layout) {
+  --app-heading-green: #1d5a35;
+}
+
+body:not(.devise-layout) h1,
+body:not(.devise-layout) h2,
+body:not(.devise-layout) h3,
+body:not(.devise-layout) h4,
+body:not(.devise-layout) .section-heading,
+body:not(.devise-layout) .training-title {
+  color: var(--app-heading-green) !important;
+}
+
+body:not(.devise-layout) .text-white h1,
+body:not(.devise-layout) .text-white h2,
+body:not(.devise-layout) .text-white h3,
+body:not(.devise-layout) .text-white h4,
+body:not(.devise-layout) .text-white .section-heading,
+body:not(.devise-layout) .text-white .training-title,
+body:not(.devise-layout) h1.text-white,
+body:not(.devise-layout) h2.text-white,
+body:not(.devise-layout) h3.text-white,
+body:not(.devise-layout) h4.text-white,
+body:not(.devise-layout) .section-heading.text-white,
+body:not(.devise-layout) .training-title.text-white {
+  color: #ffffff !important;
+}
+
 /* Flash Message Styles */
 .alert {
   border-radius: 8px;

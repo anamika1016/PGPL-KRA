@@ -11,6 +11,7 @@ class UserDetailsController < ApplicationController
       @user_details = if employee_detail
         # Get all user_details for this employee and deduplicate by activity
         all_details = UserDetail.includes(:department, :activity, :employee_detail)
+                               .assignment_consistent
                                .for_financial_year(selected_financial_year)
                                .where(employee_detail_id: employee_detail.id)
 
@@ -28,6 +29,7 @@ class UserDetailsController < ApplicationController
     elsif current_user.role == "hod"
       # Get all user_details and deduplicate by activity and employee
       all_details = UserDetail.includes(:department, :activity, :employee_detail)
+                            .assignment_consistent
                             .for_financial_year(selected_financial_year)
 
       # Deduplicate by keeping the most recent record for each activity-employee combination
@@ -44,20 +46,21 @@ class UserDetailsController < ApplicationController
     @user_detail = UserDetail.new
 
     # Load unique departments
-    @departments = Department.select("MIN(id) AS id, department_type")
+    @departments = Department.for_financial_year(selected_financial_year)
+                             .select("MIN(id) AS id, department_type")
                              .group(:department_type)
                              .order(:department_type)
     selected_department = nil
     selected_department_type = nil
+    @selected_department_record = nil
 
     # Filter employees based on selected department
     if params[:department_id].present?
       begin
-        selected_department = Department.find(params[:department_id])
+        selected_department = Department.for_financial_year(selected_financial_year).find_by(id: params[:department_id]) ||
+                              Department.find(params[:department_id])
         selected_department_type = selected_department.department_type
-        @employee_details = EmployeeDetail.where(department: selected_department_type)
-                                          .select(:id, :employee_name, :l1_employer_name, :l2_employer_name, :department)
-                                          .order(:employee_name)
+        @employee_details = eligible_employee_details_for_department(selected_department_type, selected_financial_year)
       rescue ActiveRecord::RecordNotFound
         flash[:alert] = "Department not found."
         @employee_details = EmployeeDetail.none
@@ -70,6 +73,13 @@ class UserDetailsController < ApplicationController
     if params[:employee_detail_id].present?
       begin
         @selected_employee = EmployeeDetail.find_by(id: params[:employee_detail_id])
+        if @selected_employee.present? && selected_department_type.present? && @selected_employee.department != selected_department_type
+          flash.now[:alert] = "Department badalne ke baad employee dobara select kijiye."
+          @selected_employee = nil
+        elsif @selected_employee.present? && @employee_details.present? && @employee_details.none? { |employee| employee.id == @selected_employee.id }
+          flash.now[:notice] = "#{selected_department_type} ke liye sirf configured employees dikhaye ja rahe hain. Please list me se employee select kijiye."
+          @selected_employee = nil
+        end
       rescue ActiveRecord::RecordNotFound
         flash[:alert] = "Employee not found."
         @selected_employee = nil
@@ -81,33 +91,41 @@ class UserDetailsController < ApplicationController
     # Load employee-specific activities when both department and employee are selected
     if params[:department_id].present? && params[:employee_detail_id].present?
       begin
-        selected_department ||= Department.find(params[:department_id])
+        selected_department ||= Department.for_financial_year(selected_financial_year).find_by(id: params[:department_id]) ||
+                                Department.find(params[:department_id])
         selected_department_type ||= selected_department.department_type
+        @selected_department_record = department_for_employee(@selected_employee, selected_department_type, selected_financial_year)
 
-        employee_details_for_department = UserDetail.includes(:department, :activity, :employee_detail)
-                                                   .joins(:department)
-                                                   .for_financial_year(selected_financial_year)
-                                                   .where(employee_detail_id: params[:employee_detail_id])
-                                                   .where(departments: { department_type: selected_department_type })
-                                                   .where.not(activity_id: nil)
-                                                   .to_a
-
-        deduplicated_user_details = employee_details_for_department
-          .group_by(&:activity_id)
-          .values
-          .map { |records| records.max_by(&:updated_at) }
-          .compact
-
-        @user_details = deduplicated_user_details.first(100)
-
-        @employee_activities = if deduplicated_user_details.any?
-          deduplicated_user_details.filter_map(&:activity).uniq(&:id)
+        if @selected_employee.blank?
+          @employee_activities = []
+          @user_details = UserDetail.none
+        elsif @selected_department_record.blank?
+          flash.now[:alert] = "Selected employee ke liye #{selected_department_type} department setup nahi mila."
+          @employee_activities = []
+          @user_details = UserDetail.none
         else
-          Activity.joins(:department)
-                  .for_financial_year(selected_financial_year)
-                  .where(departments: { department_type: selected_department_type })
-                  .distinct
-                  .order(:activity_name)
+          employee_details_for_department = UserDetail.includes(:department, :activity, :employee_detail)
+                                                     .assignment_consistent
+                                                     .for_financial_year(selected_financial_year)
+                                                     .where(employee_detail_id: @selected_employee.id, department_id: @selected_department_record.id)
+                                                     .where.not(activity_id: nil)
+                                                     .to_a
+
+          deduplicated_user_details = employee_details_for_department
+            .group_by(&:activity_id)
+            .values
+            .map { |records| records.max_by(&:updated_at) }
+            .compact
+
+          @user_details = deduplicated_user_details.first(100)
+
+          @employee_activities = if deduplicated_user_details.any?
+            deduplicated_user_details.filter_map(&:activity).uniq(&:id)
+          else
+            @selected_department_record.activities
+                                       .for_financial_year(selected_financial_year)
+                                       .order(:activity_name)
+          end
         end
       rescue ActiveRecord::RecordNotFound => e
         flash[:alert] = "Error loading data: #{e.message}"
@@ -330,6 +348,7 @@ class UserDetailsController < ApplicationController
       employee_detail = EmployeeDetail.find_by(employee_email: current_user.email)
       @user_details = if employee_detail
         UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                .assignment_consistent
                 .for_financial_year(selected_financial_year)
                 .where(employee_detail_id: employee_detail.id)
                 .order("departments.department_type, activities.activity_name")
@@ -338,6 +357,7 @@ class UserDetailsController < ApplicationController
       end
     elsif current_user.role == "hod"
       @user_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                              .assignment_consistent
                               .for_financial_year(selected_financial_year)
                               .order("departments.department_type, employee_details.employee_name, activities.activity_name")
     else
@@ -478,6 +498,7 @@ class UserDetailsController < ApplicationController
       @user_details = if @employee_detail
         # Get all user_details for this employee and deduplicate by activity
         all_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                               .assignment_consistent
                                .for_financial_year(selected_financial_year)
                                .where(employee_detail_id: @employee_detail.id)
 
@@ -495,6 +516,7 @@ class UserDetailsController < ApplicationController
     elsif current_user.role == "hod"
       # Get all user_details and deduplicate by activity and employee
       all_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                             .assignment_consistent
                              .for_financial_year(selected_financial_year)
 
       # Deduplicate by keeping the most recent record for each activity-employee combination
@@ -515,6 +537,7 @@ class UserDetailsController < ApplicationController
       @user_details = if @employee_detail
         # Get all user_details for this employee and deduplicate by activity
         all_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                               .assignment_consistent
                                .for_financial_year(selected_financial_year)
                                .where(employee_detail_id: @employee_detail.id)
 
@@ -532,6 +555,7 @@ class UserDetailsController < ApplicationController
     elsif current_user.role == "hod"
       # Get all user_details and deduplicate by activity and employee
       all_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                             .assignment_consistent
                              .for_financial_year(selected_financial_year)
 
       # Deduplicate by keeping the most recent record for each activity-employee combination
@@ -712,8 +736,8 @@ class UserDetailsController < ApplicationController
       return
     end
 
-    # Validate that department and employee exist
-    unless Department.exists?(department_id)
+    department = Department.for_financial_year(financial_year).find_by(id: department_id) || Department.find_by(id: department_id)
+    unless department
       respond_to do |format|
         format.html { redirect_to new_user_detail_path(financial_year: financial_year), alert: "Department not found", status: :see_other }
         format.turbo_stream { redirect_to new_user_detail_path(financial_year: financial_year), alert: "Department not found", status: :see_other }
@@ -722,11 +746,24 @@ class UserDetailsController < ApplicationController
       return
     end
 
-    unless EmployeeDetail.exists?(employee_detail_id)
+    employee_detail = EmployeeDetail.find_by(id: employee_detail_id)
+    unless employee_detail
       respond_to do |format|
         format.html { redirect_to redirect_path, alert: "Employee not found", status: :see_other }
         format.turbo_stream { redirect_to redirect_path, alert: "Employee not found", status: :see_other }
         format.json { render json: { error: "Employee not found" }, status: :not_found }
+      end
+      return
+    end
+
+    actual_department = department_for_employee(employee_detail, department.department_type, financial_year)
+    if actual_department.blank? || actual_department.id != department.id
+      mismatch_message = "Selected department is not assigned to the chosen employee."
+
+      respond_to do |format|
+        format.html { redirect_to redirect_path, alert: mismatch_message, status: :see_other }
+        format.turbo_stream { redirect_to redirect_path, alert: mismatch_message, status: :see_other }
+        format.json { render json: { error: mismatch_message }, status: :unprocessable_entity }
       end
       return
     end
@@ -738,8 +775,14 @@ class UserDetailsController < ApplicationController
     ActiveRecord::Base.transaction do
       user_details_params.each do |activity_id, details|
         begin
-          unless Activity.exists?(activity_id)
+          activity = Activity.find_by(id: activity_id)
+          unless activity
             errors << "Activity with ID #{activity_id} not found"
+            next
+          end
+
+          if activity.department_id != department.id
+            errors << "Activity #{activity_id} does not belong to the selected department"
             next
           end
 
@@ -771,14 +814,13 @@ class UserDetailsController < ApplicationController
 
           # Use find_or_initialize_by to prevent duplicates
           user_detail_record = UserDetail.find_or_initialize_by(
-            department_id: department_id,
+            department_id: department.id,
             activity_id: activity_id,
-            employee_detail_id: employee_detail_id,
+            employee_detail_id: employee_detail.id,
             financial_year: financial_year
           )
 
           # Update Activity metadata (always update to handle clearing values)
-          activity = Activity.find(activity_id)
           activity_update_data = {}
 
           # Always include unit and theme_name in update (nil values will clear the fields)
@@ -865,6 +907,7 @@ class UserDetailsController < ApplicationController
 
   def export
     @user_details = UserDetail.includes(:employee_detail, :department, :activity)
+                              .assignment_consistent
                               .for_financial_year(selected_financial_year)
                               .limit(5000)
 
@@ -876,39 +919,102 @@ class UserDetailsController < ApplicationController
   end
 
   def export_department_activity_data
+    requested_financial_year = UserDetail.normalize_financial_year(params[:financial_year]).presence || selected_financial_year
+
     if params[:department_id].blank? || params[:employee_detail_id].blank?
-      redirect_to new_user_detail_path(financial_year: selected_financial_year), alert: "Please select department and employee first."
+      @user_details = UserDetail.includes(:employee_detail, :department, :activity)
+                                .assignment_consistent
+                                .for_financial_year(requested_financial_year)
+                                .where.not(activity_id: nil)
+                                .limit(5000)
+                                .to_a
+                                .group_by { |detail| [ detail.employee_detail_id, detail.department_id, detail.activity_id ] }
+                                .values
+                                .map { |records| records.max_by(&:updated_at) }
+                                .compact
+                                .sort_by do |detail|
+                                  [
+                                    detail.employee_detail&.employee_name.to_s.downcase,
+                                    detail.department&.department_type.to_s.downcase,
+                                    detail.activity&.activity_name.to_s.downcase
+                                  ]
+                                end
+
+      filename_prefix = @user_details.any? ? "department_activity_data" : "department_activity_template"
+
+      respond_to do |format|
+        format.xlsx {
+          response.headers["Content-Disposition"] = "attachment; filename=\"#{filename_prefix}_#{requested_financial_year.tr('-', '_')}.xlsx\""
+        }
+      end
       return
     end
 
-    selected_department = Department.find_by(id: params[:department_id])
+    selected_department = Department.for_financial_year(requested_financial_year).find_by(id: params[:department_id]) ||
+                          Department.find_by(id: params[:department_id])
     unless selected_department
       redirect_to new_user_detail_path(financial_year: selected_financial_year), alert: "Selected department was not found."
       return
     end
 
+    selected_employee = EmployeeDetail.find_by(id: params[:employee_detail_id])
+    unless selected_employee
+      redirect_to new_user_detail_path(financial_year: selected_financial_year), alert: "Selected employee was not found."
+      return
+    end
+
+    actual_department = department_for_employee(selected_employee, selected_department.department_type, requested_financial_year)
+    unless actual_department
+      redirect_to new_user_detail_path(financial_year: selected_financial_year), alert: "Selected department does not belong to the chosen employee."
+      return
+    end
+
     @user_details = UserDetail.includes(:employee_detail, :department, :activity)
-                              .joins(:department, :activity)
-                              .for_financial_year(selected_financial_year)
+                              .assignment_consistent
+                              .for_financial_year(requested_financial_year)
                               .where(
-                                employee_detail_id: params[:employee_detail_id],
-                                departments: { department_type: selected_department.department_type }
+                                employee_detail_id: selected_employee.id,
+                                department_id: actual_department.id
                               )
-                              .order("activities.activity_name ASC")
+                              .where.not(activity_id: nil)
                               .limit(5000)
+                              .to_a
+                              .group_by(&:activity_id)
+                              .values
+                              .map { |records| records.max_by(&:updated_at) }
+                              .compact
+                              .sort_by { |detail| detail.activity&.activity_name.to_s.downcase }
 
     if @user_details.blank?
-      redirect_to new_user_detail_path(
-        department_id: params[:department_id],
-        employee_detail_id: params[:employee_detail_id],
-        financial_year: selected_financial_year
-      ), alert: "No records found to export for the selected department and employee."
-      return
+      export_activities = actual_department.activities
+                                           .for_financial_year(requested_financial_year)
+                                           .order(:activity_name)
+                                           .to_a
+
+      if export_activities.blank?
+        redirect_to new_user_detail_path(
+          department_id: params[:department_id],
+          employee_detail_id: params[:employee_detail_id],
+          financial_year: requested_financial_year
+        ), alert: "No activities found to export for the selected department and employee."
+        return
+      end
+
+      @user_details = export_activities.map do |activity|
+        UserDetail.new(
+          financial_year: requested_financial_year,
+          department: actual_department,
+          employee_detail: selected_employee,
+          activity: activity,
+          theme_name: activity.theme_name,
+          unit: activity.unit
+        )
+      end
     end
 
     respond_to do |format|
       format.xlsx {
-        response.headers["Content-Disposition"] = "attachment; filename=\"department_activity_data_#{selected_financial_year.tr('-', '_')}.xlsx\""
+        response.headers["Content-Disposition"] = "attachment; filename=\"department_activity_data_#{requested_financial_year.tr('-', '_')}.xlsx\""
       }
     end
   end
@@ -923,13 +1029,12 @@ class UserDetailsController < ApplicationController
     end
 
     begin
-      spreadsheet = Roo::Excelx.new(file.tempfile.path)
+      spreadsheet = Roo::Spreadsheet.open(file.tempfile.path, extension: File.extname(file.original_filename).delete("."))
       header = spreadsheet.row(1)
-
-
 
       errors = []
       success_count = 0
+      skipped_blank_rows = 0
       batch_size = 100
 
       # Process in batches for better performance
@@ -944,7 +1049,10 @@ class UserDetailsController < ApplicationController
               row[key] = row_data[index]
             end
 
-
+            if row_blank_for_user_detail_import?(row)
+              skipped_blank_rows += 1
+              next
+            end
 
             employee_name = row["employee_name"]
             employee_email = row["employee_email"]
@@ -958,10 +1066,8 @@ class UserDetailsController < ApplicationController
             l2_employer_name = row["l2_employer_name"]
             department_type = row["department"]
             activity_name = row["activity_name"]
-            activity_theme_name = row["theme"] || row["activity_theme"]
+            activity_theme_name = row["theme_name"] || row["theme"] || row["activity_theme"]
             unit = row["unit"]
-
-
 
             months = {
               april: normalize_percentage(row["april"]),
@@ -1058,8 +1164,12 @@ class UserDetailsController < ApplicationController
         else
           redirect_to new_user_detail_path(financial_year: requested_financial_year), alert: "Import failed. Errors:\n#{errors.first(10).join("\n")}"
         end
+      elsif success_count.zero?
+        redirect_to new_user_detail_path(financial_year: requested_financial_year), alert: "Import file contains no filled data rows. Please enter data in the Excel file before uploading."
       else
-        redirect_to new_user_detail_path(financial_year: requested_financial_year), notice: "Excel file imported successfully! #{success_count} records processed."
+        notice_message = "Excel file imported successfully! #{success_count} records processed."
+        notice_message += " #{skipped_blank_rows} blank rows skipped." if skipped_blank_rows.positive?
+        redirect_to new_user_detail_path(financial_year: requested_financial_year), notice: notice_message
       end
 
     rescue => e
@@ -1104,6 +1214,12 @@ class UserDetailsController < ApplicationController
     nil
   end
 
+  def row_blank_for_user_detail_import?(row)
+    row.values.all? do |value|
+      value.blank? || (value.is_a?(String) && value.strip.blank?)
+    end
+  end
+
   def find_employee_for_user_detail_import(employee_attributes)
     if employee_attributes[:employee_code].present?
       employee = EmployeeDetail.find_by(employee_code: employee_attributes[:employee_code])
@@ -1128,6 +1244,47 @@ class UserDetailsController < ApplicationController
 
   def set_user_detail
     @user_detail = UserDetail.find(params[:id])
+  end
+
+  def department_for_employee(employee, department_type, financial_year)
+    return if employee.blank? || department_type.blank?
+
+    references = [ employee.employee_id, employee.employee_code ].compact_blank
+    scope = Department.for_financial_year(financial_year).where(department_type: department_type)
+
+    if references.any?
+      specific_department = scope.where(employee_reference: references).order(:id).first
+      return specific_department if specific_department
+    end
+
+    scope.where(employee_reference: [ nil, "" ]).order(:id).first
+  end
+
+  def eligible_employee_details_for_department(department_type, financial_year)
+    return EmployeeDetail.none if department_type.blank?
+
+    normalized_year = UserDetail.normalize_financial_year(financial_year).presence || UserDetail.current_financial_year
+    employee_scope = EmployeeDetail.where(department: department_type)
+
+    generic_department_exists = Department.for_financial_year(normalized_year)
+                                         .where(department_type: department_type, employee_reference: [ nil, "" ])
+                                         .exists?
+
+    unless generic_department_exists
+      join_sql = ActiveRecord::Base.send(
+        :sanitize_sql_array,
+        [
+          "INNER JOIN departments matching_departments ON matching_departments.financial_year = ? AND matching_departments.department_type = ? AND (matching_departments.employee_reference = employee_details.employee_id OR matching_departments.employee_reference = employee_details.employee_code)",
+          normalized_year,
+          department_type
+        ]
+      )
+
+      employee_scope = employee_scope.joins(join_sql).distinct
+    end
+
+    employee_scope.select(:id, :employee_name, :l1_employer_name, :l2_employer_name, :department)
+                  .order(:employee_name)
   end
 
   def user_detail_params
@@ -1185,12 +1342,18 @@ class UserDetailsController < ApplicationController
   end
 
   def load_form_data
-    @departments = Department.select(:id, :department_type)
+    @departments = Department.for_financial_year(selected_financial_year)
+                             .select("MIN(id) AS id, department_type")
+                             .group(:department_type)
+                             .order(:department_type)
     @activities = @user_detail.department_id.present? ?
                   Activity.select(:id, :activity_name, :unit, :theme_name)
                          .where(department_id: @user_detail.department_id) : []
     selected_year = @user_detail&.financial_year.presence || selected_financial_year
-    @user_details = UserDetail.includes(:department, :activity).for_financial_year(selected_year).limit(100)
+    @user_details = UserDetail.includes(:department, :activity)
+                              .assignment_consistent
+                              .for_financial_year(selected_year)
+                              .limit(100)
   end
 
   def filter_conditions

@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  DEFAULT_EMPLOYEE_PASSWORD = "123456".freeze
+
   # Devise modules for authentication
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
@@ -46,6 +48,64 @@ class User < ApplicationRecord
     login = conditions.delete(:login)
     value = login.strip.downcase # 👈 Also strip and downcase login input
     where(conditions).where([ "lower(email) = :value OR lower(employee_code) = :value", { value: value } ]).first
+  end
+
+  def self.find_by_email_or_employee_code(email:, employee_code:)
+    normalized_code = employee_code.to_s.strip
+    normalized_email = email.to_s.strip.downcase
+
+    if normalized_code.present?
+      user = where("lower(employee_code) = ?", normalized_code.downcase).first
+      return user if user
+    end
+
+    return nil if normalized_email.blank?
+
+    where("lower(email) = ?", normalized_email).first
+  end
+
+  def self.provision_from_employee_detail(employee_detail)
+    return if employee_detail.blank? || employee_detail.employee_code.blank?
+
+    existing_user = find_by_email_or_employee_code(
+      email: employee_detail.employee_email,
+      employee_code: employee_detail.employee_code
+    )
+
+    user = existing_user || new
+    user.email = provision_login_email_for(employee_detail, existing_user)
+    user.employee_code = employee_detail.employee_code
+    user.role = user.role.presence || "employee"
+
+    if user.new_record?
+      user.password = DEFAULT_EMPLOYEE_PASSWORD
+      user.password_confirmation = DEFAULT_EMPLOYEE_PASSWORD
+    end
+
+    user.save! if user.new_record? || user.changed?
+
+    if employee_detail.user_id != user.id
+      employee_detail.update!(user: user)
+    end
+
+    user
+  end
+
+  def self.provision_login_email_for(employee_detail, existing_user = nil)
+    return existing_user.email if existing_user&.email.present?
+    return employee_detail.employee_email if employee_detail.employee_email.present?
+
+    base_local_part = employee_detail.employee_code.to_s.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
+    base_local_part = "employee" if base_local_part.blank?
+    generated_email = "#{base_local_part}@papl.local"
+    suffix = 1
+
+    while where.not(id: existing_user&.id).exists?(email: generated_email)
+      suffix += 1
+      generated_email = "#{base_local_part}_#{suffix}@papl.local"
+    end
+
+    generated_email
   end
 
   def name

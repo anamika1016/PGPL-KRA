@@ -90,54 +90,35 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <% 
                 # Calculate quarter statuses based on ALL activities across ALL rows
-                all_q1_statuses = []
-                all_q2_statuses = []
-                all_q3_statuses = []
-                all_q4_statuses = []
+                all_q1_achievements = []
+                all_q2_achievements = []
+                all_q3_achievements = []
+                all_q4_achievements = []
                 
                 @user_details.each do |detail|
                   achievements = detail.achievements.index_by(&:month)
                   # Q1 (APR-JUN)
                   ['april', 'may', 'june'].each do |month|
-                    all_q1_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                    all_q1_achievements << achievements[month] if achievements[month].present?
                   end
                   # Q2 (JUL-SEP)
                   ['july', 'august', 'september'].each do |month|
-                    all_q2_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                    all_q2_achievements << achievements[month] if achievements[month].present?
                   end
                   # Q3 (OCT-DEC)
                   ['october', 'november', 'december'].each do |month|
-                    all_q3_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                    all_q3_achievements << achievements[month] if achievements[month].present?
                   end
                   # Q4 (JAN-MAR)
                   ['january', 'february', 'march'].each do |month|
-                    all_q4_statuses << achievements[month]&.status if achievements[month]&.status.present?
+                    all_q4_achievements << achievements[month] if achievements[month].present?
                   end
                 end
-                
-                # Determine overall quarter statuses based on highest priority
-                def calculate_overall_quarter_status(statuses)
-                  return "pending" if statuses.empty?
-                  # Priority: L2 Returned > L1 Returned > L2 Approved > L1 Approved > Submitted > Pending
-                  if statuses.include?("l2_returned")
-                    "l2_returned"
-                  elsif statuses.include?("l1_returned")
-                    "l1_returned"
-                  elsif statuses.include?("l2_approved")
-                    "l2_approved"
-                  elsif statuses.include?("l1_approved")
-                    "l1_approved"
-                  elsif statuses.include?("submitted")
-                    "submitted"
-                  else
-                    "pending"
-                  end
-                end
-                
-                overall_q1_status = calculate_overall_quarter_status(all_q1_statuses)
-                overall_q2_status = calculate_overall_quarter_status(all_q2_statuses)
-                overall_q3_status = calculate_overall_quarter_status(all_q3_statuses)
-                overall_q4_status = calculate_overall_quarter_status(all_q4_statuses)
+
+                overall_q1_status = calculate_overall_quarter_status_from_achievements(all_q1_achievements)
+                overall_q2_status = calculate_overall_quarter_status_from_achievements(all_q2_achievements)
+                overall_q3_status = calculate_overall_quarter_status_from_achievements(all_q3_achievements)
+                overall_q4_status = calculate_overall_quarter_status_from_achievements(all_q4_achievements)
               %>
               
               <% @user_details.each_with_index do |detail, index| %>
@@ -614,17 +595,36 @@
           }
         }
 
+        function hasDisplayValue(value) {
+          return value !== null &&
+            value !== undefined &&
+            value.toString().trim() !== '' &&
+            value.toString().trim().toLowerCase() !== 'null' &&
+            value.toString().trim().toLowerCase() !== 'undefined' &&
+            value.toString().trim().toLowerCase() !== 'nil';
+        }
+
+        function calculateOverallQuarterStatus(statuses, quarterData) {
+          if (!quarterData || quarterData.length === 0) return 'pending';
+
+          const hasLevelReview = (level) => quarterData.some((monthData) => {
+            const remarks = level === 'l1' ? monthData.l1_remarks : monthData.l2_remarks;
+            const percentage = level === 'l1' ? monthData.l1_percentage : monthData.l2_percentage;
+
+            return hasDisplayValue(remarks) ||
+              (hasDisplayValue(percentage) && !isNaN(parseFloat(percentage)));
+          });
+
+          if (statuses.includes('l2_returned')) return 'l2_returned';
+          if (statuses.includes('l1_returned')) return 'l1_returned';
+          if (statuses.includes('l2_approved') || hasLevelReview('l2')) return 'l2_approved';
+          if (statuses.includes('l1_approved') || hasLevelReview('l1')) return 'l1_approved';
+          if (statuses.includes('submitted')) return 'submitted';
+          return 'pending';
+        }
+
         function openModal(button) {
           const data = button.dataset;
-
-          function hasDisplayValue(value) {
-            return value !== null &&
-              value !== undefined &&
-              value.toString().trim() !== '' &&
-              value.toString().trim().toLowerCase() !== 'null' &&
-              value.toString().trim().toLowerCase() !== 'undefined' &&
-              value.toString().trim().toLowerCase() !== 'nil';
-          }
           
           // Populate quarter info
           document.getElementById('modalQuarter').textContent = data.quarter || 'N/A';
@@ -649,8 +649,6 @@
           
           console.log('Quarter data:', quarterData);
           
-          let totalTarget = 0;
-          let totalAchievement = 0;
           let quarterStatuses = [];
           
           // Collect all L1 and L2 data for overall summary
@@ -663,14 +661,8 @@
           
           quarterData.forEach((monthData, index) => {
             console.log(`Month ${index}:`, monthData);
-            
-            const target = parseFloat(monthData.target) || 0;
-            const achievement = parseFloat(monthData.achievement) || 0;
-            const percentage = target > 0 ? ((achievement / target) * 100).toFixed(1) : '0';
-            
-            totalTarget += target;
-            totalAchievement += achievement;
-            quarterStatuses.push(monthData.status);
+
+            quarterStatuses.push(monthData.status || 'pending');
             
             // Collect L1 and L2 data - be more inclusive and handle different data sources
             console.log(`Month ${monthData.month} - L1 Remarks: "${monthData.l1_remarks}", L1 Percentage: "${monthData.l1_percentage}"`);
@@ -707,12 +699,12 @@
           console.log('Collected L2 Remarks:', allL2Remarks);
           console.log('Collected L2 Percentages:', allL2Percentages);
           
-          // Calculate overall L1 and L2 averages
-          const derivedQuarterPercentage = totalTarget > 0 ? ((totalAchievement / totalTarget) * 100).toFixed(1) : null;
+          const overallQuarterStatus = calculateOverallQuarterStatus(quarterStatuses, quarterData);
+          const hasAnyAchievements = quarterData.some(monthData => hasDisplayValue(monthData.achievement));
           let overallL1Percentage = allL1Percentages.length > 0 ?
-            (allL1Percentages.reduce((a, b) => a + b, 0) / allL1Percentages.length).toFixed(1) : derivedQuarterPercentage;
+            (allL1Percentages.reduce((a, b) => a + b, 0) / allL1Percentages.length).toFixed(1) : null;
           let overallL2Percentage = allL2Percentages.length > 0 ?
-            (allL2Percentages.reduce((a, b) => a + b, 0) / allL2Percentages.length).toFixed(1) : derivedQuarterPercentage;
+            (allL2Percentages.reduce((a, b) => a + b, 0) / allL2Percentages.length).toFixed(1) : null;
           
           // Combine all L1 and L2 remarks - show unique remarks only once
           let uniqueL1Remarks = [...new Set(allL1Remarks)];
@@ -720,47 +712,24 @@
           
           let overallL1Remarks = uniqueL1Remarks.length > 0 ? uniqueL1Remarks.join('; ') : 'No remarks';
           let overallL2Remarks = uniqueL2Remarks.length > 0 ? uniqueL2Remarks.join('; ') : 'No remarks';
-          
-          // Only show data if it exists, otherwise show appropriate message
-          if (overallL1Remarks === 'No remarks' && overallL2Remarks === 'No remarks' &&
-              overallL1Percentage === null &&
-              overallL2Percentage === null) {
-            // Check if any achievements have been submitted for this quarter
-            const hasAnyAchievements = quarterData.some(monthData => hasDisplayValue(monthData.achievement));
-            
-            if (hasAnyAchievements) {
-              // Check the status of achievements to determine appropriate message
-              const hasSubmitted = quarterStatuses.includes('submitted');
-              const hasL1Approved = quarterStatuses.includes('l1_approved');
-              const hasL1Returned = quarterStatuses.includes('l1_returned');
-              const hasL2Approved = quarterStatuses.includes('l2_approved');
-              const hasL2Returned = quarterStatuses.includes('l2_returned');
-              
-              if (hasL2Approved) {
-                overallL1Remarks = 'L1 Review Completed';
-                overallL2Remarks = 'L2 Review Completed';
-              } else if (hasL2Returned) {
-                overallL1Remarks = 'L1 Review Completed';
-                overallL2Remarks = 'L2 Review Completed - Returned for Revision';
-              } else if (hasL1Approved) {
-                overallL1Remarks = 'L1 Review Completed';
-                overallL2Remarks = 'Pending L2 Review';
-              } else if (hasL1Returned) {
-                overallL1Remarks = 'L1 Review Completed - Returned for Revision';
-                overallL2Remarks = 'Pending L2 Review';
-              } else if (hasSubmitted) {
-                overallL1Remarks = 'Pending L1 Review';
-                overallL2Remarks = 'Pending L2 Review';
-              } else {
-                overallL1Remarks = 'Pending L1 Review';
-                overallL2Remarks = 'Pending L2 Review';
-              }
-            } else {
-              // No achievements submitted yet
-              overallL1Remarks = 'No achievements submitted';
-              overallL2Remarks = 'No achievements submitted';
-            }
-            console.log('No L1/L2 data found, showing appropriate status');
+
+          if (!hasAnyAchievements) {
+            overallL1Percentage = null;
+            overallL2Percentage = null;
+            overallL1Remarks = 'No achievements submitted';
+            overallL2Remarks = 'No achievements submitted';
+          } else if (['pending', 'submitted'].includes(overallQuarterStatus)) {
+            overallL1Percentage = null;
+            overallL2Percentage = null;
+            overallL1Remarks = 'Pending L1 Review';
+            overallL2Remarks = 'Pending L2 Review';
+          } else if (['l1_approved', 'l1_returned'].includes(overallQuarterStatus)) {
+            overallL1Remarks = uniqueL1Remarks.length > 0 ? uniqueL1Remarks.join('; ') : 'No remarks';
+            overallL2Percentage = null;
+            overallL2Remarks = 'Pending L2 Review';
+          } else if (['l2_approved', 'l2_returned'].includes(overallQuarterStatus)) {
+            overallL1Remarks = uniqueL1Remarks.length > 0 ? uniqueL1Remarks.join('; ') : 'No remarks';
+            overallL2Remarks = uniqueL2Remarks.length > 0 ? uniqueL2Remarks.join('; ') : 'No remarks';
           }
           
           console.log('Final L1 Remarks:', overallL1Remarks);

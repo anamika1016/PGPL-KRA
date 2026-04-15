@@ -10,13 +10,7 @@
     if (window.Turbo) {
       window.Turbo.session.drive = false;
     }
-    
-    // Prevent any automatic page refreshes
-    window.addEventListener('beforeunload', function(e) {
-      e.preventDefault();
-      e.returnValue = '';
-    });
-    
+
     // Override any refresh triggers
     const originalReload = window.location.reload;
     window.location.reload = function() {

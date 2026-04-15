@@ -23,26 +23,25 @@
           </div>
           
           <!-- Right side - Export Section -->
-          <div class="export-section" style="display: flex; align-items: center;">
-            <% export_ready = params[:department_id].present? && params[:employee_detail_id].present? %>
-            <% if export_ready %>
-              <%= link_to export_department_activity_data_user_details_path(format: :xlsx, department_id: params[:department_id], employee_detail_id: params[:employee_detail_id], financial_year: selected_financial_year),
-                  class: "btn btn-success export-btn",
-                  id: "export-btn",
-                  data: { turbo: false },
-                  style: "display: inline-block; visibility: visible; opacity: 1;" do %>
+            <% export_ready = @selected_department_record.present? && @selected_employee.present? %>
+            <% export_path = export_department_activity_data_user_details_path(
+                 format: :xlsx,
+                 department_id: @selected_department_record&.id,
+                 employee_detail_id: @selected_employee&.id,
+                 financial_year: selected_financial_year
+               ) %>
+            <% export_classes = ["btn", "btn-success", "export-btn"] %>
+            <% export_classes << "export-btn--pending" unless export_ready %>
+
+          <div class="export-section">
+            <%= link_to export_path,
+                class: export_classes.join(" "),
+                id: "export-btn",
+                data: { turbo: false },
+                title: export_ready ? "Download filtered Excel" : "Download all saved data for this financial year" do %>
                 <i class="fas fa-download me-2"></i>Export Excel
-              <% end %>
-            <% else %>
-              <button type="button"
-                      class="btn btn-success export-btn"
-                      id="export-btn"
-                      style="display: inline-block; visibility: visible; opacity: 0.55; cursor: not-allowed;"
-                      disabled
-                      title="Select department and employee first">
-                <i class="fas fa-download me-2"></i>Export Excel
-              </button>
             <% end %>
+
           </div>
         </div>
       </div>
@@ -119,7 +118,7 @@
       </div>
 
       <!-- Activities and Monthly Data Table -->
-<% if params[:department_id].present? && params[:employee_detail_id].present? %>
+<% if @selected_department_record.present? && @selected_employee.present? %>
         <div class="card">
           <div class="card-header bg-gray text-white">
             <h5 class="mb-0">
@@ -136,8 +135,8 @@
             
             <% if activities.any? %>
               <%= form_with url: bulk_create_user_details_path, method: :post, local: true, id: 'bulk-form', data: { turbo: false } do |form| %>
-                <%= form.hidden_field :department_id, value: params[:department_id] %>
-                <%= form.hidden_field :employee_detail_id, value: params[:employee_detail_id] %>
+                <%= form.hidden_field :department_id, value: @selected_department_record.id %>
+                <%= form.hidden_field :employee_detail_id, value: @selected_employee.id %>
                 <%= hidden_field_tag :financial_year, selected_financial_year %>
                 
                 <div class="table-responsive">
@@ -218,6 +217,8 @@
                 <i class="fas fa-info-circle me-2"></i>
                 <% if params[:department_id].blank? || params[:employee_detail_id].blank? %>
                   Please select both department and employee.
+                <% else %>
+                  No valid department activities found for the selected employee.
                 <% end %>
               </div>
             <% end %>
@@ -226,7 +227,7 @@
       <% end %>
 
       <!-- Existing Data Display - Only show when filters are applied and limited results -->
-      <% if @user_details.any? && params[:department_id].present? && params[:employee_detail_id].present? %>
+      <% if @user_details.any? && @selected_department_record.present? && @selected_employee.present? %>
         <div class="card mt-4">
           <div class="card-header bg-gray text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
@@ -707,13 +708,38 @@
 
   .export-section {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
     flex-shrink: 0;
   }
 
   .export-btn {
     min-width: 140px;
     white-space: nowrap;
+  }
+
+  .export-btn.export-btn--pending {
+    background-color: #dbeee0;
+    border-color: #7ab08b;
+    color: #1f5a35;
+    box-shadow: none;
+  }
+
+  .export-btn.export-btn--pending:hover {
+    background-color: #d2e8d8;
+    border-color: #5f9871;
+    color: #18492b;
+    transform: none;
+  }
+
+  .export-hint {
+    margin: 0;
+    max-width: 240px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: #4d6a55;
+    text-align: right;
   }
 
   .btn-success {
@@ -729,14 +755,6 @@
     border-color: #1e7e34;
     color: var(--white);
     transform: translateY(-1px);
-  }
-
-  #export-btn {
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important;
-    z-index: 10 !important;
   }
 
   .badge {
@@ -904,7 +922,13 @@
     }
     
     .export-section {
-      align-self: flex-end;
+      align-self: stretch;
+      align-items: flex-start;
+    }
+
+    .export-hint {
+      max-width: none;
+      text-align: left;
     }
     
     .table-responsive {

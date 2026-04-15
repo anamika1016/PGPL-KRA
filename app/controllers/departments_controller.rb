@@ -89,9 +89,10 @@ class DepartmentsController < ApplicationController
 
         # Get activities from UserDetail records for this specific employee
         user_details = UserDetail.includes(:activity, :department)
+                                .assignment_consistent
                                 .for_financial_year(selected_financial_year)
                                 .where(employee_detail_id: employee.id)
-                                .where("activity_id IS NOT NULL")
+                                .where.not(user_details: { activity_id: nil })
 
         # Map activities from user_details (employee-specific activities)
         activities = user_details.map do |user_detail|
@@ -132,9 +133,10 @@ class DepartmentsController < ApplicationController
       if employee
         # Get activities for this employee using UserDetail
         user_details = UserDetail.includes(:activity, :department)
+                                .assignment_consistent
                                 .for_financial_year(selected_financial_year)
                                 .where(employee_detail_id: employee.id)
-                                .where("activity_id IS NOT NULL")
+                                .where.not(user_details: { activity_id: nil })
 
         activities = user_details.map do |user_detail|
           activity = user_detail.activity
@@ -179,7 +181,8 @@ class DepartmentsController < ApplicationController
       begin
         ActiveRecord::Base.transaction do
           financial_year = requested_financial_year
-          existing_user_details = UserDetail.where(employee_detail_id: employee.id, financial_year: financial_year)
+          existing_user_details = UserDetail.assignment_consistent
+                                           .where(employee_detail_id: employee.id, financial_year: financial_year)
           Rails.logger.info "Found #{existing_user_details.count} existing user_details for employee"
 
           department = existing_user_details.first&.department ||
@@ -1115,9 +1118,10 @@ class DepartmentsController < ApplicationController
 
     # Get all user_details for this employee and deduplicate
     user_details = UserDetail.includes(:activity, :department)
+                            .assignment_consistent
                             .for_financial_year(selected_financial_year)
                             .where(employee_detail_id: employee.id)
-                            .where("activity_id IS NOT NULL")
+                            .where.not(user_details: { activity_id: nil })
 
     # Deduplicate by keeping the most recent record for each activity
     deduplicated_details = user_details.group_by(&:activity_id).map do |activity_id, records|
@@ -1164,16 +1168,17 @@ class DepartmentsController < ApplicationController
 
     # Get all employees who have user_details
     employees_with_activities = EmployeeDetail.joins(:user_details)
-                                             .merge(UserDetail.for_financial_year(selected_financial_year))
+                                             .merge(UserDetail.assignment_consistent.for_financial_year(selected_financial_year))
                                              .distinct
                                              .includes(:user_details)
 
     employees_with_activities.each do |employee|
       # Get activities for this employee and deduplicate
       user_details = UserDetail.includes(:activity, :department)
+                              .assignment_consistent
                               .for_financial_year(selected_financial_year)
                               .where(employee_detail_id: employee.id)
-                              .where("activity_id IS NOT NULL")
+                              .where.not(user_details: { activity_id: nil })
 
       # Deduplicate by keeping the most recent record for each activity
       deduplicated_details = user_details.group_by(&:activity_id).map do |activity_id, records|

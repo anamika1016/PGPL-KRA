@@ -1,28 +1,64 @@
 <!-- L2 Employee Detail Quarterly View with Fixed L2 Remarks Display -->
 <meta name="csrf-token" content="<%= form_authenticity_token %>">
-<div class="main-content bg-gray-50 min-h-screen">
-<div class="p-8 bg-white rounded-xl shadow-lg border border-gray-200 mx-4">
-  <div class="border-b border-gray-200 pb-6 mb-8">
-    <div class="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h2 class="text-3xl font-bold text-gray-800 flex items-center">
-          <i class="fas fa-user-circle mr-3 text-gray-600"></i>
+<div class="main-content review-page min-h-screen">
+<div class="review-shell">
+  <%
+    review_department = @user_details.first&.department&.department_type.presence || @employee_detail.department.presence || "N/A"
+    review_employee_name = @employee_detail.employee_name.presence || @user_details.first&.employee_detail&.employee_name.presence || "N/A"
+    review_quarter_label = case params[:quarter]
+                           when "Q1" then "Q1 • April to June"
+                           when "Q2" then "Q2 • July to September"
+                           when "Q3" then "Q3 • October to December"
+                           when "Q4" then "Q4 • January to March"
+                           else
+                             "Submitted Achievements"
+                           end
+  %>
+  <div class="review-hero">
+    <div class="review-hero-top">
+      <div class="review-title-block">
+        <span class="review-title-eyebrow">Quarter Review Workspace</span>
+        <h2 class="review-page-title">
+          <span class="review-title-icon">
+            <i class="fas fa-user-circle"></i>
+          </span>
           Employee Detail - L2 Review
         </h2>
-        <p class="text-sm text-gray-500 mt-2">Financial Year: <%= selected_financial_year %></p>
+        <p class="review-subtitle">
+          Review monthly targets, achievements, and remarks in one polished quarter-wise workspace.
+        </p>
       </div>
 
-      <%= form_with url: show_l2_employee_detail_path(@employee_detail), method: :get, local: true, class: "flex items-end gap-3" do |form| %>
+      <%= form_with url: show_l2_employee_detail_path(@employee_detail), method: :get, local: true, class: "review-year-form" do |form| %>
         <%= hidden_field_tag :quarter, params[:quarter] if params[:quarter].present? %>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Financial Year</label>
+        <div class="review-year-panel">
+          <label class="review-year-label">Financial Year</label>
           <%= form.select :financial_year,
               options_for_select(available_financial_years, selected_financial_year),
               {},
-              class: "border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700",
+              class: "review-year-select",
               onchange: "this.form.submit();" %>
         </div>
       <% end %>
+    </div>
+
+    <div class="review-meta-grid">
+      <div class="review-meta-card">
+        <span class="review-meta-label">Department</span>
+        <span class="review-meta-value"><%= review_department %></span>
+      </div>
+      <div class="review-meta-card">
+        <span class="review-meta-label">Employee Name</span>
+        <span class="review-meta-value"><%= review_employee_name %></span>
+      </div>
+      <div class="review-meta-card">
+        <span class="review-meta-label">Financial Year</span>
+        <span class="review-meta-value"><%= selected_financial_year %></span>
+      </div>
+      <div class="review-meta-card review-meta-card--accent">
+        <span class="review-meta-label">Current View</span>
+        <span class="review-meta-value"><%= review_quarter_label %></span>
+      </div>
     </div>
   </div>
 
@@ -44,8 +80,8 @@
                        []
                      end
 
-    # Calculate quarterly data - collect all statuses for the quarter
-    quarterly_statuses = []
+    # Calculate quarterly data for the quarter
+    all_quarter_achievements = []
     quarter_l1_total = 0
     quarter_l2_total = 0
     quarter_achievement_count = 0
@@ -56,7 +92,7 @@
       @user_details.each do |detail|
         quarter_achievements = detail.achievements.select { |a| display_months.map { |m| m[0].to_s }.include?(a.month) }
         quarter_achievements.each do |achievement|
-          quarterly_statuses << (achievement.status || "pending")
+          all_quarter_achievements << achievement
           
           if achievement.achievement_remark.present?
             quarter_achievement_count += 1
@@ -86,41 +122,14 @@
     end
     
     # FIXED: Corrected status logic with L2 data detection
-    overall_quarter_status = "pending"
-    l2_status = "pending"  # Separate L2 status tracking
-    
-    # Check if L2 has provided data (percentage or remarks)
+    overall_quarter_status = calculate_overall_quarter_status_from_achievements(all_quarter_achievements)
     has_l2_data = quarter_l2_total > 0 || quarter_remarks_l2.any?
-    
-    if quarterly_statuses.any?
-      # Check for L2 actions first (highest priority)
-      if quarterly_statuses.all? { |s| s == "l2_approved" } || has_l2_data
-        overall_quarter_status = "l2_approved"
-        l2_status = "approved"
-      elsif quarterly_statuses.any? { |s| s == "l2_returned" }
-        overall_quarter_status = "l2_returned" 
-        l2_status = "returned"
-      # Check for L1 status when L2 hasn't acted
-      elsif quarterly_statuses.all? { |s| s == "l1_approved" } || 
-            (quarter_l1_total > 0 && quarter_remarks_l1.any? && !quarterly_statuses.any? { |s| ["l1_returned", "l2_returned"].include?(s) })
-        overall_quarter_status = "l1_approved"
-        l2_status = "pending"  # L2 is still pending when L1 is approved
-      elsif quarterly_statuses.any? { |s| s == "l1_returned" }
-        overall_quarter_status = "l1_returned"
-        l2_status = "pending"
-      elsif quarterly_statuses.any? { |s| s == "submitted" }
-        overall_quarter_status = "submitted"
-        l2_status = "pending"
-      else
-        overall_quarter_status = "pending"
-        l2_status = "pending"
-      end
-    end
-    
-    # Override status if L2 data exists (means L2 has acted)
-    if has_l2_data && l2_status == "pending"
-      overall_quarter_status = "l2_approved"
-      l2_status = "approved"
+    l2_status = if overall_quarter_status == "l2_returned"
+      "returned"
+    elsif has_l2_data || overall_quarter_status == "l2_approved"
+      "approved"
+    else
+      "pending"
     end
 
     status_config = case overall_quarter_status
@@ -150,22 +159,26 @@
   %>
 
   <% if @user_details.any? && params[:quarter].present? %>
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm mt-8">
-      <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 rounded-t-xl">
-        <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-          <i class="fas fa-trophy mr-3 text-gray-600"></i>
-           Quarter Achievement Details
-        </h2>
+    <div class="achievement-panel mt-8">
+      <div class="achievement-panel-header">
+        <div>
+          <h2 class="achievement-panel-title">
+            <i class="fas fa-trophy"></i>
+             Quarter Achievement Details
+          </h2>
+          <p class="achievement-panel-subtitle">
+            Viewing <%= review_quarter_label %> targets, achievements, and remarks.
+          </p>
+        </div>
       </div>
 
-      <div class="p-6">
+      <div class="achievement-panel-body">
         <div class="table-wrapper overflow-auto bg-white rounded-lg border border-gray-200">
-          <table class="table table-hover w-full min-w-full">
-            <thead class="bg-gray-800">
+          <table class="table table-hover review-table w-full min-w-full">
+            <thead class="review-table-head">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Department</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Employee Name</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Activity</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600 activity-column">Activity</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600 theme-column">Theme</th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-white uppercase tracking-wider border-r border-gray-600">Unit</th>
 
                 <!-- DYNAMIC MONTH COLUMNS -->
@@ -186,19 +199,15 @@
                   end
                 %>
                 <% if has_quarterly_data %>
-                  <tr class="<%= detail_index.even? ? 'bg-gray-50' : 'bg-white' %> hover:bg-gray-100 transition-colors duration-200">
-                    <!-- Static Columns -->
-                    <td class="px-4 py-3 text-sm text-gray-800 font-medium border-r border-gray-200">
-                      <%= detail.department&.department_type || 'N/A' %>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-800 font-medium border-r border-gray-200">
-                      <%= detail.employee_detail&.employee_name || 'N/A' %>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200">
+                  <tr class="review-row <%= detail_index.even? ? 'bg-gray-50' : 'bg-white' %> hover:bg-gray-100 transition-colors duration-200">
+                    <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 activity-cell">
                       <%= detail.activity&.activity_name || 'N/A' %>
                     </td>
+                    <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 theme-cell">
+                      <span class="theme-badge"><%= detail.display_theme_name.presence || detail.activity&.theme_name || 'N/A' %></span>
+                    </td>
                     <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 text-center">
-                      <%= detail.display_unit || '' %>
+                      <span class="unit-pill"><%= detail.display_unit || '' %></span>
                     </td>
 
                     <!-- Dynamic Month Data Columns -->
@@ -211,26 +220,26 @@
                       %>
                       <!-- Target -->
                       <td class="px-4 py-3 text-sm text-gray-800 text-center border-r border-gray-200 bg-gray-50">
-                        <span class="<%= target_value.presence ? 'text-gray-800 font-medium' : 'text-gray-400' %>">
+                        <span class="target-pill <%= target_value.presence ? 'target-pill--filled' : 'target-pill--empty' %>">
                           <%= target_value.presence || '-' %>
                         </span>
                       </td>
                       
                       <!-- Achievement -->
                       <td class="px-4 py-3 text-sm text-center border-r border-gray-200 achievement-cell">
-                        <span class="<%= achievement_value.presence ? 'text-green-700 font-semibold bg-green-50 px-2 py-1 rounded' : 'text-gray-400' %>">
+                        <span class="achievement-pill <%= achievement_value.presence ? 'achievement-pill--filled' : 'achievement-pill--empty' %>">
                           <%= achievement_value.presence || '-' %>
                         </span>
                       </td>
                       
                       <!-- Remarks -->
-                      <td class="px-4 py-3 text-sm text-center border-r border-gray-200 remarks-cell">
+                      <td class="px-4 py-3 text-sm border-r border-gray-200 remarks-cell">
                         <% if employee_remarks.present? %>
-                          <div class="text-blue-700 font-medium bg-blue-50 px-2 py-1 rounded text-xs break-words">
+                          <div class="remarks-content remarks-content--filled text-xs break-words">
                             <%= employee_remarks %>
                           </div>
                         <% else %>
-                          <span class="text-gray-400 text-xs">-</span>
+                          <span class="remarks-empty">No remarks</span>
                         <% end %>
                       </td>
                     <% end %>
@@ -246,7 +255,7 @@
 
 <!-- Single Overall Status Display for Quarter -->
 <% if params[:quarter].present? %>
-  <% if quarterly_statuses.any? %>
+  <% if all_quarter_achievements.any? %>
     <div class="mt-8 pt-6 border-t border-gray-200" id="quarterStatusSection">
       <div class="text-center mb-6">
         <h3 class="text-xl font-bold text-gray-800 mb-4">
@@ -1018,6 +1027,35 @@
   vertical-align: middle;
 }
 
+.activity-column,
+.activity-cell {
+  text-align: left !important;
+  width: 250px;
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.activity-cell {
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  vertical-align: top !important;
+}
+
+.theme-column,
+.theme-cell {
+  text-align: left !important;
+  width: 180px;
+  min-width: 160px;
+  max-width: 220px;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+  vertical-align: top !important;
+}
+
 .table th {
   background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
   color: white;
@@ -1112,19 +1150,34 @@ input:valid, textarea:valid {
 }
 
 .achievement-cell {
-  min-width: 300px;
-  max-width: 400px;
+  width: 120px;
+  min-width: 110px;
+  max-width: 140px;
 }
 
 .remarks-cell {
-  min-width: 350px;
-  max-width: 450px;
+  width: auto;
+  min-width: 140px;
+  max-width: none;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  text-align: left !important;
+  vertical-align: top !important;
 }
 
 .break-words {
   word-wrap: break-word;
   word-break: break-word;
   hyphens: auto;
+}
+
+.remarks-content {
+  display: inline-block;
+  min-width: 80px;
+  max-width: none;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .space-y-3 > * + * {
@@ -1206,6 +1259,431 @@ button:disabled {
 
 body.modal-open {
   overflow: hidden;
+}
+
+/* Review page visual refresh */
+.review-page {
+  background:
+    radial-gradient(circle at top left, rgba(22, 101, 52, 0.10), transparent 26%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.09), transparent 22%),
+    linear-gradient(180deg, #f4f8f5 0%, #eef4f7 100%);
+  padding: 1.5rem 1.75rem 3rem;
+}
+
+.review-shell {
+  margin: 0 1rem;
+  padding: 1.75rem;
+  border-radius: 28px;
+  border: 1px solid rgba(209, 219, 213, 0.85);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
+}
+
+.review-hero {
+  position: relative;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border-radius: 24px;
+  border: 1px solid rgba(214, 226, 217, 0.9);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(244, 250, 246, 0.92) 48%, rgba(239, 245, 251, 0.95) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.review-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(22, 163, 74, 0.10), transparent 22%),
+    radial-gradient(circle at 88% 24%, rgba(59, 130, 246, 0.10), transparent 20%);
+  pointer-events: none;
+}
+
+.review-hero-top,
+.review-meta-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.review-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.review-title-eyebrow {
+  display: inline-flex;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(22, 101, 52, 0.08);
+  color: #256645;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.review-page-title {
+  margin: 1rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  color: #173c2b !important;
+  font-size: 3rem !important;
+  line-height: 1.05;
+  text-shadow: none !important;
+}
+
+.review-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #1f6f49 0%, #2f8c62 100%);
+  color: white;
+  box-shadow: 0 14px 30px rgba(31, 111, 73, 0.22);
+  flex-shrink: 0;
+}
+
+.review-subtitle {
+  margin: 1rem 0 0;
+  max-width: 42rem;
+  color: #5d6d67;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.review-year-form {
+  margin-left: auto;
+}
+
+.review-year-panel {
+  min-width: 230px;
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(203, 215, 207, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 250, 248, 0.94) 100%);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.review-year-label {
+  display: block;
+  margin-bottom: 0.65rem;
+  color: #667a70;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.review-year-select {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid #c9d7cf;
+  background: white;
+  padding: 0.85rem 1rem;
+  color: #1f2937;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.review-meta-grid {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.review-meta-card {
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(214, 226, 217, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 251, 248, 0.96) 100%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.review-meta-card--accent {
+  background: linear-gradient(135deg, #215a3d 0%, #334964 100%);
+  border-color: transparent;
+  box-shadow: 0 18px 34px rgba(33, 90, 61, 0.20);
+}
+
+.review-meta-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #6f8178;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.review-meta-value {
+  display: block;
+  color: #173c2b;
+  font-size: 1.03rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.review-meta-card--accent .review-meta-label {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.review-meta-card--accent .review-meta-value {
+  color: white;
+}
+
+.achievement-panel {
+  border-radius: 24px;
+  border: 1px solid rgba(214, 226, 217, 0.9);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+}
+
+.achievement-panel-header {
+  padding: 1.4rem 1.5rem;
+  border-bottom: 1px solid #e4ece7;
+  background: linear-gradient(135deg, #f8fbf9 0%, #edf5f1 100%);
+}
+
+.achievement-panel-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: #165a3c !important;
+  font-size: 2.2rem !important;
+  text-shadow: none !important;
+}
+
+.achievement-panel-title i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 0.95rem;
+  background: linear-gradient(135deg, #1f6f49 0%, #2e8a62 100%);
+  color: white;
+  box-shadow: 0 10px 24px rgba(31, 111, 73, 0.20);
+}
+
+.achievement-panel-subtitle {
+  margin: 0.55rem 0 0;
+  color: #6a7b73;
+  font-size: 0.96rem;
+}
+
+.achievement-panel-body {
+  padding: 1.5rem;
+}
+
+.table-wrapper {
+  border: 1px solid #e2ebe5;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbf8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.review-table {
+  min-width: 1180px;
+}
+
+.review-table-head th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(135deg, #233528 0%, #37455d 100%);
+}
+
+.review-row td {
+  border-bottom: 1px solid #e8efeb;
+}
+
+.review-row:nth-child(odd) td {
+  background: linear-gradient(180deg, rgba(250, 252, 251, 0.98) 0%, rgba(245, 249, 247, 0.98) 100%);
+}
+
+.review-row:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.review-row:hover td {
+  background: linear-gradient(135deg, rgba(238, 248, 242, 1) 0%, rgba(241, 247, 252, 1) 100%) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.activity-column,
+.activity-cell {
+  width: 280px;
+  min-width: 240px;
+  max-width: 320px;
+}
+
+.theme-column,
+.theme-cell {
+  width: 190px;
+  min-width: 170px;
+  max-width: 220px;
+}
+
+.theme-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(22, 101, 52, 0.14);
+  background: rgba(22, 101, 52, 0.08);
+  color: #215a3d;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.unit-pill,
+.target-pill,
+.achievement-pill,
+.remarks-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+}
+
+.unit-pill {
+  min-width: 56px;
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #dbe6de;
+  background: #f5f8f6;
+  color: #41564b;
+  font-weight: 700;
+}
+
+.target-pill {
+  min-width: 72px;
+  padding: 0.48rem 0.75rem;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+.target-pill--filled {
+  border: 1px solid #dde5eb;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  color: #334155;
+}
+
+.target-pill--empty {
+  color: #94a3b8;
+}
+
+.achievement-cell {
+  width: 126px;
+  min-width: 118px;
+  max-width: 138px;
+}
+
+.achievement-pill {
+  min-width: 88px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 16px;
+  font-weight: 800;
+}
+
+.achievement-pill--filled {
+  border: 1px solid #b7e4c7;
+  background: linear-gradient(135deg, #effcf4 0%, #def7e8 100%);
+  color: #067647;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.achievement-pill--empty {
+  border: 1px dashed #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc 0%, #eff3f8 100%);
+  color: #94a3b8;
+}
+
+.remarks-cell {
+  min-width: 130px;
+}
+
+.remarks-content {
+  width: fit-content;
+  max-width: 28rem;
+  padding: 0.58rem 0.82rem;
+  border-radius: 14px;
+}
+
+.remarks-content--filled {
+  border: 1px solid #cbdff3;
+  background: linear-gradient(135deg, #eef6ff 0%, #e7f0fb 100%);
+  color: #275a8a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.remarks-empty {
+  padding: 0.4rem 0.72rem;
+  border-radius: 999px;
+  border: 1px dashed #d6dee6;
+  background: #f7f9fb;
+  color: #94a3b8;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+@media (max-width: 1024px) {
+  .review-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-page-title {
+    font-size: 2.4rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .review-page {
+    padding: 1rem 0 2rem;
+  }
+
+  .review-shell {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 22px;
+  }
+
+  .review-hero-top {
+    flex-direction: column;
+  }
+
+  .review-year-form {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .review-year-panel {
+    min-width: 100%;
+  }
+
+  .review-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .review-page-title {
+    font-size: 2rem !important;
+  }
+
+  .achievement-panel-title {
+    font-size: 1.7rem !important;
+  }
 }
 </style>
 

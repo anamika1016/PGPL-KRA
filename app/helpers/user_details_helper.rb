@@ -58,36 +58,31 @@ module UserDetailsHelper
   end
 
   def calculate_quarter_status(months, existing_achievements)
-    statuses = months.map { |month| existing_achievements[month]&.status }.compact
+    achievements = months.map { |month| existing_achievements[month] }.compact
+    calculate_overall_quarter_status_from_achievements(achievements)
+  end
 
-    # FIXED: L2 statuses should take highest priority
-    # If ANY month has L2 approved, the quarter is L2 approved
-    if statuses.include?("l2_approved")
-      return "l2_approved"
-    end
+  def calculate_overall_quarter_status_from_achievements(achievements)
+    achievements = Array(achievements).compact
+    return "pending" if achievements.empty?
 
-    # If ANY month has L2 returned, the quarter is L2 returned
+    statuses = achievements.map { |achievement| achievement.status.presence || "pending" }
+    has_l1_review = quarter_review_present?(achievements, :l1)
+    has_l2_review = quarter_review_present?(achievements, :l2)
+
     if statuses.include?("l2_returned")
-      return "l2_returned"
+      "l2_returned"
+    elsif statuses.include?("l1_returned")
+      "l1_returned"
+    elsif statuses.include?("l2_approved") || has_l2_review
+      "l2_approved"
+    elsif statuses.include?("l1_approved") || has_l1_review
+      "l1_approved"
+    elsif statuses.include?("submitted")
+      "submitted"
+    else
+      "pending"
     end
-
-    # If ALL months are L1 approved, the quarter is L1 approved
-    if statuses.all? { |s| s == "l1_approved" }
-      return "l1_approved"
-    end
-
-    # If ANY month has L1 returned, the quarter is L1 returned
-    if statuses.include?("l1_returned")
-      return "l1_returned"
-    end
-
-    # If ANY month has submitted status, the quarter is submitted
-    if statuses.include?("submitted")
-      return "submitted"
-    end
-
-    # Default to pending
-    "pending"
   end
 
   def quarter_summary(user_detail, months)
@@ -103,5 +98,19 @@ module UserDetailsHelper
       percentage: percentage,
       status: calculate_quarter_status(months, existing_achievements)
     }
+  end
+
+  private
+
+  def quarter_review_present?(achievements, level)
+    achievements.any? do |achievement|
+      remark = achievement.achievement_remark
+      next false unless remark
+
+      percentage = level == :l1 ? remark.l1_percentage : remark.l2_percentage
+      review_remarks = level == :l1 ? remark.l1_remarks : remark.l2_remarks
+
+      percentage.present? || review_remarks.present?
+    end
   end
 end
