@@ -100,17 +100,49 @@ module UserDetailsHelper
     }
   end
 
+  def quarter_modal_summary_payload(user_details, months)
+    quarter_achievements = Array(user_details).flat_map do |detail|
+      detail.achievements.select { |achievement| months.include?(achievement.month.to_s.downcase) }
+    end
+
+    l1_percentages = quarter_achievements.filter_map do |achievement|
+      value = review_value_for(achievement, :l1_percentage)
+      value.to_f if value.present?
+    end
+
+    l2_percentages = quarter_achievements.filter_map do |achievement|
+      value = review_value_for(achievement, :l2_percentage)
+      value.to_f if value.present?
+    end
+
+    {
+      has_any_achievements: quarter_achievements.any? { |achievement| achievement.achievement.present? },
+      status: calculate_overall_quarter_status_from_achievements(quarter_achievements),
+      l1_percentage: l1_percentages.any? ? (l1_percentages.sum / l1_percentages.size).round(1) : nil,
+      l2_percentage: l2_percentages.any? ? (l2_percentages.sum / l2_percentages.size).round(1) : nil,
+      l1_remarks: quarter_achievements.filter_map { |achievement| review_value_for(achievement, :l1_remarks)&.strip }.uniq,
+      l2_remarks: quarter_achievements.filter_map { |achievement| review_value_for(achievement, :l2_remarks)&.strip }.uniq
+    }
+  end
+
   private
 
   def quarter_review_present?(achievements, level)
     achievements.any? do |achievement|
-      remark = achievement.achievement_remark
-      next false unless remark
-
-      percentage = level == :l1 ? remark.l1_percentage : remark.l2_percentage
-      review_remarks = level == :l1 ? remark.l1_remarks : remark.l2_remarks
+      percentage = review_value_for(achievement, "#{level}_percentage")
+      review_remarks = review_value_for(achievement, "#{level}_remarks")
 
       percentage.present? || review_remarks.present?
     end
+  end
+
+  def review_value_for(achievement, field)
+    return if achievement.blank?
+
+    field_name = field.to_sym
+    remark_value = achievement.achievement_remark&.public_send(field_name)
+    return remark_value if remark_value.present?
+
+    achievement.public_send(field_name) if achievement.respond_to?(field_name)
   end
 end

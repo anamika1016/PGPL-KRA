@@ -507,8 +507,10 @@ class UserDetailsController < ApplicationController
           records.max_by(&:updated_at)
         end
 
-        # Convert to ActiveRecord relation and limit
-        UserDetail.where(id: deduplicated_details.map(&:id)).limit(100)
+        # Convert to ActiveRecord relation and keep review data preloaded for quarter summaries
+        UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                  .where(id: deduplicated_details.map(&:id))
+                  .limit(100)
       else
         UserDetail.none
       end
@@ -524,8 +526,10 @@ class UserDetailsController < ApplicationController
         records.max_by(&:updated_at)
       end
 
-      # Convert to ActiveRecord relation and limit
-      @user_details = UserDetail.where(id: deduplicated_details.map(&:id)).limit(100)
+      # Convert to ActiveRecord relation and keep review data preloaded for quarter summaries
+      @user_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                                .where(id: deduplicated_details.map(&:id))
+                                .limit(100)
       @employee_detail = nil
     end
   end
@@ -631,7 +635,7 @@ class UserDetailsController < ApplicationController
                   message: sms_result[:success] ? "SMS sent successfully" : sms_result[:error]
                 }
 
-                mark_sms_as_sent(employee_detail.id, quarter)
+                mark_sms_as_sent(employee_detail.id, quarter) if sms_result[:success]
               end
             end
           end
@@ -1384,17 +1388,20 @@ class UserDetailsController < ApplicationController
       # Get L1 manager's mobile number (not the employee's mobile number)
       l1_code = employee_detail.l1_code
       return { success: false, error: "L1 code not found for employee" } unless l1_code.present?
+      normalized_l1_code = l1_code.to_s.strip
 
       # Find the L1 manager's employee detail record
-      l1_manager = EmployeeDetail.find_by("employee_code LIKE ?", l1_code.strip + "%")
-      return { success: false, error: "L1 manager not found with code: #{l1_code}" } unless l1_manager.present?
+      l1_manager = EmployeeDetail.find_by(employee_code: normalized_l1_code) ||
+                   EmployeeDetail.find_by("employee_code LIKE ?", normalized_l1_code + "%")
+      return { success: false, error: "L1 manager not found with code: #{normalized_l1_code}" } unless l1_manager.present?
 
       l1_mobile = l1_manager.mobile_number
       return { success: false, error: "L1 manager mobile number not found" } unless l1_mobile.present?
 
       # Clean and validate mobile number
       l1_mobile = l1_mobile.to_s.strip.gsub(/\D/, "")
-      return { success: false, error: "Invalid mobile number format" } if l1_mobile.length < 10
+      l1_mobile = l1_mobile[-10, 10] if l1_mobile.length > 10
+      return { success: false, error: "Invalid mobile number format" } unless l1_mobile.length == 10
 
       # Prepare the message exactly as per the working API example
       message = "Emp-Code: #{employee_detail.employee_code}, Emp-Name: #{employee_detail.employee_name} has submitted his #{quarter} Qtr KRA MIS. Please review and approve in the system. Ploughman Agro Private Limited"
@@ -1414,11 +1421,16 @@ class UserDetailsController < ApplicationController
       # Build the API URL
       api_url = "https://sms.yoursmsbox.com/api/sendhttp.php"
 
-
       # Send SMS using HTTParty (which is already in Gemfile)
       require "httparty"
-      response = HTTParty.get(api_url, query: params)
-
+      Rails.logger.info(
+        "Sending SMS to L1 manager: employee_code=#{employee_detail.employee_code}, " \
+        "employee_name=#{employee_detail.employee_name}, quarter=#{quarter}, " \
+        "l1_code=#{normalized_l1_code}, l1_manager_id=#{l1_manager.id}, " \
+        "l1_manager_name=#{l1_manager.employee_name}, l1_mobile=#{l1_mobile}"
+      )
+      response = HTTParty.get(api_url, query: params, timeout: 15)
+      Rails.logger.info "SMS API response: HTTP #{response.code} - #{response.body}"
 
       if response.success?
         # Parse the JSON response to check if SMS was actually sent
@@ -1429,22 +1441,26 @@ class UserDetailsController < ApplicationController
               success: true,
               message: "SMS sent successfully",
               message_id: response_data["Message-Id"],
+              target_mobile: l1_mobile,
+              target_name: l1_manager.employee_name,
               response: response_data
             }
           else
             Rails.logger.error "SMS API returned error: #{response_data}"
             {
               success: false,
-              error: "SMS API error: #{response_data['Description'] || response_data['Status']}"
+              error: "SMS API error: #{response_data['Description'] || response_data['Status']}",
+              target_mobile: l1_mobile,
+              target_name: l1_manager.employee_name
             }
           end
         rescue JSON::ParserError => e
           Rails.logger.error "Failed to parse SMS API response: #{e.message}"
-          { success: false, error: "Invalid SMS API response format" }
+          { success: false, error: "Invalid SMS API response format: #{response.body}", target_mobile: l1_mobile, target_name: l1_manager.employee_name }
         end
       else
         Rails.logger.error "SMS API HTTP error: #{response.code} - #{response.body}"
-        { success: false, error: "SMS API HTTP error: #{response.code}" }
+        { success: false, error: "SMS API HTTP error: #{response.code} - #{response.body}", target_mobile: l1_mobile, target_name: l1_manager.employee_name }
       end
 
     rescue => e
@@ -1494,12 +1510,13 @@ class UserDetailsController < ApplicationController
   def mark_sms_as_sent(employee_detail_id, quarter)
     # Mark SMS as sent in database to prevent duplicates
     # Use employee_detail_id to track per employee, not per activity
-    SmsLog.create!(
+    sms_log = SmsLog.find_or_initialize_by(
       employee_detail_id: employee_detail_id,
-      quarter: quarter,
-      sent: true,
-      sent_at: Time.current
+      quarter: quarter
     )
+    sms_log.sent = true
+    sms_log.sent_at ||= Time.current
+    sms_log.save!
   rescue => e
     Rails.logger.error "Failed to mark SMS as sent: #{e.message}"
   end

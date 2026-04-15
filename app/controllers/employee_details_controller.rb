@@ -338,18 +338,21 @@ class EmployeeDetailsController < ApplicationController
       # Pass action_type parameter to indicate this is an approval action
       params[:action_type] = "approve"
       result = process_quarterly_l1_approval
+      sms_results = result[:success] ? send_l1_approval_sms_to_l2(@employee_detail, result[:approved_quarters]) : []
+      sms_message = build_l2_sms_message(sms_results)
 
       if result[:success]
         if request.xhr? || params[:action_type].present?
           render json: {
             success: true,
             count: result[:count],
-            message: "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1",
-            updated_status: "l1_approved"
+            message: [ "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1", sms_message ].compact.join(" "),
+            updated_status: "l1_approved",
+            sms_results: sms_results
           }
         else
           redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
-                      notice: "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1"
+                      notice: [ "✅ Successfully approved #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1", sms_message ].compact.join(" ")
         end
       else
         if request.xhr? || params[:action_type].present?
@@ -828,6 +831,137 @@ end
     current_user.email == employee_detail.l2_employer_name
   end
 
+  def send_l1_approval_sms_to_l2(employee_detail, quarters)
+    Array(quarters).compact_blank.uniq.map do |quarter|
+      sms_result = send_sms_to_l2(employee_detail, quarter)
+      {
+        quarter: quarter,
+        success: sms_result[:success],
+        message: sms_result[:success] ? "L2 SMS sent successfully" : sms_result[:error]
+      }
+    end
+  end
+
+  def build_l2_sms_message(sms_results)
+    return nil if sms_results.blank?
+
+    success_count = sms_results.count { |result| result[:success] }
+    failure_count = sms_results.size - success_count
+    message_parts = []
+
+    if success_count.positive?
+      message_parts << "📱 L2 SMS sent for #{success_count} quarter(s)."
+    end
+
+    if failure_count.positive?
+      message_parts << "⚠️ L2 SMS failed for #{failure_count} quarter(s)."
+    end
+
+    message_parts.join(" ")
+  end
+
+  def send_sms_to_l2(employee_detail, quarter)
+    l2_manager = find_l2_manager_for(employee_detail)
+    return { success: false, error: "L2 manager not found for employee" } unless l2_manager.present?
+
+    l2_mobile = normalize_mobile_number(l2_manager.mobile_number)
+    return { success: false, error: "L2 manager mobile number not found" } unless l2_mobile.present?
+
+    quarter_label = quarter_label_for_sms(quarter)
+    message = "Emp-Code: #{employee_detail.employee_code}, Emp-Name: #{employee_detail.employee_name} #{quarter_label} Qtr KRA MIS has been approved by L1. Please review and approve in the system. Ploughman Agro Private Limited"
+
+    params = {
+      authkey: "37317061706c39353312",
+      mobiles: l2_mobile,
+      message: message,
+      sender: "PLOAPL",
+      route: "2",
+      country: "0",
+      DLT_TE_ID: "1707175594432371766",
+      unicode: "1"
+    }
+
+    api_url = "https://sms.yoursmsbox.com/api/sendhttp.php"
+
+    require "httparty"
+    Rails.logger.info(
+      "Sending L1 approval SMS to L2 manager: employee_code=#{employee_detail.employee_code}, " \
+      "employee_name=#{employee_detail.employee_name}, quarter=#{quarter}, " \
+      "l2_manager_id=#{l2_manager.id}, l2_manager_name=#{l2_manager.employee_name}, " \
+      "l2_mobile=#{l2_mobile}"
+    )
+    response = HTTParty.get(api_url, query: params, timeout: 15)
+    Rails.logger.info "L2 SMS API response: HTTP #{response.code} - #{response.body}"
+
+    if response.success?
+      begin
+        response_data = JSON.parse(response.body)
+        if response_data["Status"] == "Success" && response_data["Code"] == "000"
+          {
+            success: true,
+            message_id: response_data["Message-Id"],
+            response: response_data
+          }
+        else
+          Rails.logger.error "L2 SMS API returned error: #{response_data}"
+          {
+            success: false,
+            error: "L2 SMS API error: #{response_data['Description'] || response_data['Status']}"
+          }
+        end
+      rescue JSON::ParserError => e
+        Rails.logger.error "Failed to parse L2 SMS API response: #{e.message}"
+        {
+          success: false,
+          error: "Invalid L2 SMS API response format: #{response.body}"
+        }
+      end
+    else
+      Rails.logger.error "L2 SMS API HTTP error: #{response.code} - #{response.body}"
+      {
+        success: false,
+        error: "L2 SMS API HTTP error: #{response.code} - #{response.body}"
+      }
+    end
+  rescue => e
+    Rails.logger.error "L2 SMS service error: #{e.message}"
+    Rails.logger.error "Backtrace: #{e.backtrace.first(5).join("\n")}"
+    { success: false, error: "L2 SMS service error: #{e.message}" }
+  end
+
+  def find_l2_manager_for(employee_detail)
+    normalized_l2_code = employee_detail.l2_code.to_s.strip
+    l2_manager = nil
+
+    if normalized_l2_code.present?
+      l2_manager = EmployeeDetail.find_by(employee_code: normalized_l2_code) ||
+                   EmployeeDetail.find_by("employee_code LIKE ?", normalized_l2_code + "%")
+    end
+
+    if l2_manager.blank? && employee_detail.l2_employer_name.present?
+      l2_manager = EmployeeDetail.find_by("LOWER(employee_email) = ?", employee_detail.l2_employer_name.to_s.strip.downcase)
+    end
+
+    l2_manager
+  end
+
+  def normalize_mobile_number(mobile_number)
+    normalized_mobile = mobile_number.to_s.strip.gsub(/\D/, "")
+    normalized_mobile = normalized_mobile[-10, 10] if normalized_mobile.length > 10
+    return nil unless normalized_mobile.length == 10
+
+    normalized_mobile
+  end
+
+  def quarter_label_for_sms(quarter)
+    {
+      "Q1" => "Q1 (APR-JUN)",
+      "Q2" => "Q2 (JUL-SEP)",
+      "Q3" => "Q3 (OCT-DEC)",
+      "Q4" => "Q4 (JAN-MAR)"
+    }[quarter] || quarter.to_s
+  end
+
   def get_quarter_months(quarter)
     case quarter
     when "Q1"
@@ -1092,6 +1226,7 @@ end
     end
 
     approved_count = 0
+    approved_quarters = []
 
     # Determine if this is an approval or return action
     action_type = params[:action_type] || "approve"
@@ -1100,7 +1235,9 @@ end
 
     if params[:selected_quarter].present?
       # FIXED: Approve/Return specific quarter as a single unit
-      quarter_months = get_quarter_months(params[:selected_quarter])
+      selected_quarter = params[:selected_quarter]
+      quarter_months = get_quarter_months(selected_quarter)
+      quarter_changed = false
 
       financial_year_user_details_for(@employee_detail).each do |detail|
         # FIXED: Process the entire quarter as one unit, not month by month
@@ -1128,8 +1265,14 @@ end
 
           # FIXED: Update ALL achievements in the quarter to the same status
           quarter_achievements.each do |achievement|
+            if is_approval
+              eligible_statuses = [ "pending", "l1_returned", "l2_returned" ]
+              next unless eligible_statuses.include?(achievement.status)
+            end
+
             old_status = achievement.status
             achievement.update!(status: new_status)
+            quarter_changed ||= is_approval && old_status != new_status
 
             # Create or update achievement remark with COMMON remarks for quarter
             remark = achievement.achievement_remark || achievement.build_achievement_remark
@@ -1144,11 +1287,14 @@ end
           Rails.logger.warn "No achievements found for quarter #{params[:selected_quarter]} in activity #{detail.activity.activity_name}"
         end
       end
+
+      approved_quarters << selected_quarter if quarter_changed
     else
       # Approve/Return all quarters
       financial_year_user_details_for(@employee_detail).each do |detail|
         get_all_quarters.each do |quarter|
           quarter_months = get_quarter_months(quarter)
+          quarter_changed = false
 
           quarter_months.each do |month|
             # FIXED: Process ALL months in the quarter, not just those with targets
@@ -1160,8 +1306,15 @@ end
             # Ensure achievement is saved and has an ID
             achievement.save! if achievement.new_record?
 
+            if is_approval
+              eligible_statuses = [ "pending", "l1_returned", "l2_returned" ]
+              next unless eligible_statuses.include?(achievement.status)
+            end
+
             # Update achievement status
+            old_status = achievement.status
             achievement.update!(status: new_status)
+            quarter_changed ||= is_approval && old_status != new_status
 
             remark = achievement.achievement_remark || achievement.build_achievement_remark
             remark.l1_remarks = params[:remarks] if params[:remarks].present?
@@ -1170,12 +1323,14 @@ end
 
             approved_count += 1
           end
+
+          approved_quarters << quarter if quarter_changed && !approved_quarters.include?(quarter)
         end
       end
     end
 
     if approved_count > 0
-      { success: true, count: approved_count }
+      { success: true, count: approved_count, approved_quarters: approved_quarters }
     else
       action_text = is_approval ? "approve" : "return"
       { success: false, message: "❌ No activities found to #{action_text} for the selected quarter" }

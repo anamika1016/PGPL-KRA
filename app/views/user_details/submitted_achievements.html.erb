@@ -15,6 +15,27 @@
     </div>
 
     <% if @user_details.any? && @user_details.any? { |detail| detail.achievements.any?(&:achievement?) } %>
+      <%
+        quarter_definitions = {
+          "Q1" => { label: "Q1 (APR-JUN)", months: %w[april may june] },
+          "Q2" => { label: "Q2 (JUL-SEP)", months: %w[july august september] },
+          "Q3" => { label: "Q3 (OCT-DEC)", months: %w[october november december] },
+          "Q4" => { label: "Q4 (JAN-MAR)", months: %w[january february march] }
+        }
+
+        quarter_modal_payloads = @user_details.group_by(&:employee_detail_id).transform_values do |employee_details|
+          quarter_definitions.transform_values do |config|
+            quarter_modal_summary_payload(employee_details, config[:months]).merge(
+              quarter: config[:label],
+              months: config[:months]
+            )
+          end
+        end
+
+        employee_quarter_statuses = quarter_modal_payloads.transform_values do |quarter_payloads|
+          quarter_payloads.transform_values { |payload| payload[:status] }
+        end
+      %>
    <!-- Update this section in your existing index.html.erb file -->
 <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 rounded-t-xl">
   <div class="flex justify-between items-center">
@@ -88,39 +109,6 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <% 
-                # Calculate quarter statuses based on ALL activities across ALL rows
-                all_q1_achievements = []
-                all_q2_achievements = []
-                all_q3_achievements = []
-                all_q4_achievements = []
-                
-                @user_details.each do |detail|
-                  achievements = detail.achievements.index_by(&:month)
-                  # Q1 (APR-JUN)
-                  ['april', 'may', 'june'].each do |month|
-                    all_q1_achievements << achievements[month] if achievements[month].present?
-                  end
-                  # Q2 (JUL-SEP)
-                  ['july', 'august', 'september'].each do |month|
-                    all_q2_achievements << achievements[month] if achievements[month].present?
-                  end
-                  # Q3 (OCT-DEC)
-                  ['october', 'november', 'december'].each do |month|
-                    all_q3_achievements << achievements[month] if achievements[month].present?
-                  end
-                  # Q4 (JAN-MAR)
-                  ['january', 'february', 'march'].each do |month|
-                    all_q4_achievements << achievements[month] if achievements[month].present?
-                  end
-                end
-
-                overall_q1_status = calculate_overall_quarter_status_from_achievements(all_q1_achievements)
-                overall_q2_status = calculate_overall_quarter_status_from_achievements(all_q2_achievements)
-                overall_q3_status = calculate_overall_quarter_status_from_achievements(all_q3_achievements)
-                overall_q4_status = calculate_overall_quarter_status_from_achievements(all_q4_achievements)
-              %>
-              
               <% @user_details.each_with_index do |detail, index| %>
                 <% existing_achievements = detail.achievements.index_by(&:month) %>
                 <% if existing_achievements.values.any? { |a| a.achievement.present? } %>
@@ -132,8 +120,7 @@
                     <!-- Q1 (APR-JUN) -->
                     <%
                       q1_months = ['april', 'may', 'june']
-                      # Use overall quarter status instead of calculating per row
-                      q1_status = overall_q1_status
+                      q1_status = employee_quarter_statuses.dig(detail.employee_detail_id, 'Q1') || 'pending'
                       
                       q1_targets = []
                       q1_achievements = []
@@ -184,6 +171,7 @@
                         data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
                         data-department="<%= detail.department.department_type %>"
                         data-detail-id="<%= detail.id %>"
+                        data-quarter-summary="<%= quarter_modal_payloads.dig(detail.employee_detail_id, 'Q1').to_json.gsub('"', '&quot;') %>"
                         data-q1-data="<%= q1_remarks.to_json.gsub('"', '&quot;') %>">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -221,8 +209,7 @@
                     <!-- Q2 (JUL-SEP) -->
                     <%
                       q2_months = ['july', 'august', 'september']
-                      # Use overall quarter status instead of calculating per row
-                      q2_status = overall_q2_status
+                      q2_status = employee_quarter_statuses.dig(detail.employee_detail_id, 'Q2') || 'pending'
                       
                       q2_targets = []
                       q2_achievements = []
@@ -273,6 +260,7 @@
                         data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
                         data-department="<%= detail.department.department_type %>"
                         data-detail-id="<%= detail.id %>"
+                        data-quarter-summary="<%= quarter_modal_payloads.dig(detail.employee_detail_id, 'Q2').to_json.gsub('"', '&quot;') %>"
                         data-q2-data="<%= q2_remarks.to_json.gsub('"', '&quot;') %>">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -310,8 +298,7 @@
                     <!-- Q3 (OCT-DEC) -->
                     <%
                       q3_months = ['october', 'november', 'december']
-                      # Use overall quarter status instead of calculating per row
-                      q3_status = overall_q3_status
+                      q3_status = employee_quarter_statuses.dig(detail.employee_detail_id, 'Q3') || 'pending'
                       
                       q3_targets = []
                       q3_achievements = []
@@ -362,6 +349,7 @@
                         data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
                         data-department="<%= detail.department.department_type %>"
                         data-detail-id="<%= detail.id %>"
+                        data-quarter-summary="<%= quarter_modal_payloads.dig(detail.employee_detail_id, 'Q3').to_json.gsub('"', '&quot;') %>"
                         data-q3-data="<%= q3_remarks.to_json.gsub('"', '&quot;') %>">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -399,8 +387,7 @@
                     <!-- Q4 (JAN-MAR) -->
                     <%
                       q4_months = ['january', 'february', 'march']
-                      # Use overall quarter status instead of calculating per row
-                      q4_status = overall_q4_status
+                      q4_status = employee_quarter_statuses.dig(detail.employee_detail_id, 'Q4') || 'pending'
                       
                       q4_targets = []
                       q4_achievements = []
@@ -451,6 +438,7 @@
                         data-employee-name="<%= detail.employee_detail&.employee_name || 'N/A' %>"
                         data-department="<%= detail.department.department_type %>"
                         data-detail-id="<%= detail.id %>"
+                        data-quarter-summary="<%= quarter_modal_payloads.dig(detail.employee_detail_id, 'Q4').to_json.gsub('"', '&quot;') %>"
                         data-q4-data="<%= q4_remarks.to_json.gsub('"', '&quot;') %>">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -604,6 +592,17 @@
             value.toString().trim().toLowerCase() !== 'nil';
         }
 
+        function parseJsonData(value) {
+          if (!hasDisplayValue(value)) return null;
+
+          try {
+            return JSON.parse(value.replace(/&quot;/g, '"'));
+          } catch (error) {
+            console.error('Unable to parse modal payload:', error, value);
+            return null;
+          }
+        }
+
         function calculateOverallQuarterStatus(statuses, quarterData) {
           if (!quarterData || quarterData.length === 0) return 'pending';
 
@@ -625,25 +624,26 @@
 
         function openModal(button) {
           const data = button.dataset;
+          const quarterSummary = parseJsonData(data.quarterSummary) || {};
           
           // Populate quarter info
-          document.getElementById('modalQuarter').textContent = data.quarter || 'N/A';
+          document.getElementById('modalQuarter').textContent = quarterSummary.quarter || data.quarter || 'N/A';
           
           // Get quarterly data based on which quarter was clicked
           let quarterData = [];
           console.log('Button dataset:', data);
           
           if (data.q3Data) {
-            quarterData = JSON.parse(data.q3Data.replace(/&quot;/g, '"'));
+            quarterData = parseJsonData(data.q3Data) || [];
             console.log('Using Q3 data, length:', quarterData.length);
           } else if (data.q4Data) {
-            quarterData = JSON.parse(data.q4Data.replace(/&quot;/g, '"'));
+            quarterData = parseJsonData(data.q4Data) || [];
             console.log('Using Q4 data, length:', quarterData.length);
           } else if (data.q1Data) {
-            quarterData = JSON.parse(data.q1Data.replace(/&quot;/g, '"'));
+            quarterData = parseJsonData(data.q1Data) || [];
             console.log('Using Q1 data, length:', quarterData.length);
           } else if (data.q2Data) {
-            quarterData = JSON.parse(data.q2Data.replace(/&quot;/g, '"'));
+            quarterData = parseJsonData(data.q2Data) || [];
             console.log('Using Q2 data, length:', quarterData.length);
           }
           
@@ -699,8 +699,10 @@
           console.log('Collected L2 Remarks:', allL2Remarks);
           console.log('Collected L2 Percentages:', allL2Percentages);
           
-          const overallQuarterStatus = calculateOverallQuarterStatus(quarterStatuses, quarterData);
-          const hasAnyAchievements = quarterData.some(monthData => hasDisplayValue(monthData.achievement));
+          const overallQuarterStatus = quarterSummary.status || calculateOverallQuarterStatus(quarterStatuses, quarterData);
+          const hasAnyAchievements = quarterSummary.has_any_achievements !== undefined ?
+            quarterSummary.has_any_achievements :
+            quarterData.some(monthData => hasDisplayValue(monthData.achievement));
           let overallL1Percentage = allL1Percentages.length > 0 ?
             (allL1Percentages.reduce((a, b) => a + b, 0) / allL1Percentages.length).toFixed(1) : null;
           let overallL2Percentage = allL2Percentages.length > 0 ?
@@ -709,16 +711,36 @@
           // Combine all L1 and L2 remarks - show unique remarks only once
           let uniqueL1Remarks = [...new Set(allL1Remarks)];
           let uniqueL2Remarks = [...new Set(allL2Remarks)];
+
+          if (hasDisplayValue(quarterSummary.l1_percentage)) {
+            overallL1Percentage = Number(quarterSummary.l1_percentage).toFixed(1);
+          }
+
+          if (hasDisplayValue(quarterSummary.l2_percentage)) {
+            overallL2Percentage = Number(quarterSummary.l2_percentage).toFixed(1);
+          }
+
+          if (Array.isArray(quarterSummary.l1_remarks) && quarterSummary.l1_remarks.length > 0) {
+            uniqueL1Remarks = quarterSummary.l1_remarks.filter(hasDisplayValue);
+          }
+
+          if (Array.isArray(quarterSummary.l2_remarks) && quarterSummary.l2_remarks.length > 0) {
+            uniqueL2Remarks = quarterSummary.l2_remarks.filter(hasDisplayValue);
+          }
           
           let overallL1Remarks = uniqueL1Remarks.length > 0 ? uniqueL1Remarks.join('; ') : 'No remarks';
           let overallL2Remarks = uniqueL2Remarks.length > 0 ? uniqueL2Remarks.join('; ') : 'No remarks';
+          const hasAnyReviewData = uniqueL1Remarks.length > 0 ||
+            uniqueL2Remarks.length > 0 ||
+            overallL1Percentage !== null ||
+            overallL2Percentage !== null;
 
-          if (!hasAnyAchievements) {
+          if (!hasAnyAchievements && !hasAnyReviewData) {
             overallL1Percentage = null;
             overallL2Percentage = null;
             overallL1Remarks = 'No achievements submitted';
             overallL2Remarks = 'No achievements submitted';
-          } else if (['pending', 'submitted'].includes(overallQuarterStatus)) {
+          } else if (['pending', 'submitted'].includes(overallQuarterStatus) && !hasAnyReviewData) {
             overallL1Percentage = null;
             overallL2Percentage = null;
             overallL1Remarks = 'Pending L1 Review';
