@@ -1,6 +1,40 @@
 class UserDetailsController < ApplicationController
   require "ostruct"
   require "set"
+  require "did_you_mean"
+
+  USER_DETAIL_IMPORT_HEADER_LABELS = {
+    "financial_year" => "Financial Year",
+    "department" => "Department",
+    "employee_name" => "Employee Name",
+    "employee_email" => "Employee Email",
+    "employee_mobile_number" => "Employee Mobile Number",
+    "employee_code" => "Employee Code",
+    "activity_name" => "Activity Name",
+    "theme_name" => "Theme Name",
+    "unit" => "Unit",
+    "l1_employer_name" => "L1 Employer Name",
+    "l1_employer_code" => "L1 Employer Code",
+    "l1_mobile_number" => "L1 Mobile Number",
+    "l2_employer_name" => "L2 Employer Name",
+    "l2_employer_code" => "L2 Employer Code",
+    "l2_mobile_number" => "L2 Mobile Number",
+    "april" => "April",
+    "may" => "May",
+    "june" => "June",
+    "july" => "July",
+    "august" => "August",
+    "september" => "September",
+    "october" => "October",
+    "november" => "November",
+    "december" => "December",
+    "january" => "January",
+    "february" => "February",
+    "march" => "March"
+  }.freeze
+  USER_DETAIL_REQUIRED_IMPORT_HEADERS = %w[employee_name department activity_name].freeze
+  USER_DETAIL_IMPORT_HEADER_SCAN_LIMIT = 10
+
   before_action :set_user_detail, only: [ :show, :edit, :update, :destroy ]
   load_and_authorize_resource except: [ :index, :new, :create, :get_user_detail, :get_activities, :bulk_create, :submit_achievements, :export, :import, :quarterly_edit_all, :update_quarterly_achievements, :test_sms, :view_sms_logs, :submitted_achievements, :export_department_activity_data, :clear_sms_tracking ]
 
@@ -1034,7 +1068,17 @@ class UserDetailsController < ApplicationController
 
     begin
       spreadsheet = Roo::Spreadsheet.open(file.tempfile.path, extension: File.extname(file.original_filename).delete("."))
-      header = spreadsheet.row(1)
+      header_location = find_user_detail_import_header_location(spreadsheet)
+      unless header_location[:found]
+        redirect_to new_user_detail_path(financial_year: requested_financial_year),
+                    alert: build_user_detail_import_header_error_message(header_location)
+        return
+      end
+
+      spreadsheet.default_sheet = header_location[:sheet_name]
+      header_row_number = header_location[:row_number]
+      raw_header = header_location[:raw_header]
+      header = raw_header.map { |value| normalize_user_detail_import_header(value) }
 
       errors = []
       success_count = 0
@@ -1042,15 +1086,16 @@ class UserDetailsController < ApplicationController
       batch_size = 100
 
       # Process in batches for better performance
-      (2..spreadsheet.last_row).each_slice(batch_size) do |rows|
+      ((header_row_number + 1)..spreadsheet.last_row).each_slice(batch_size) do |rows|
         ActiveRecord::Base.transaction do
           rows.each do |i|
             row_data = spreadsheet.row(i)
             row = {}
             header.each_with_index do |col_name, index|
-              next if col_name.nil?
-              key = col_name.to_s.strip.downcase.gsub(/\s+/, "_")
-              row[key] = row_data[index]
+              next if col_name.blank?
+
+              canonical_header = user_detail_import_alias_lookup[col_name] || col_name
+              row[canonical_header] = row_data[index]
             end
 
             if row_blank_for_user_detail_import?(row)
@@ -1105,7 +1150,13 @@ class UserDetailsController < ApplicationController
               next
             end
 
-            department = Department.find_or_create_by!(department_type: department_type)
+            row_financial_year = UserDetail.normalize_financial_year(row["financial_year"]).presence || requested_financial_year
+
+            department = Department.find_or_initialize_by(
+              department_type: department_type.to_s.strip,
+              financial_year: row_financial_year
+            )
+            department.save! if department.new_record? || department.changed?
 
             employee_attributes = {
               employee_name: employee_name.to_s.strip,
@@ -1124,21 +1175,22 @@ class UserDetailsController < ApplicationController
             employee.post = "Imported" if employee.post.blank?
             employee.save!
 
-            activity = Activity.find_or_create_by!(
+            activity = Activity.find_or_initialize_by(
               activity_name: activity_name.strip,
-              department_id: department.id
-            ) do |a|
-              a.unit = unit
-              a.weight = 1.0
-              a.theme_name = activity_theme_name.to_s.strip if activity_theme_name.present?
+              department_id: department.id,
+              financial_year: row_financial_year
+            )
+            if activity.new_record?
+              activity.unit = unit
+              activity.weight = 1.0
+              activity.theme_name = activity_theme_name.to_s.strip if activity_theme_name.present?
             end
+            activity.save! if activity.new_record? || activity.changed?
 
             # Update theme_name if provided and different
             if activity_theme_name.present? && activity.theme_name != activity_theme_name.strip
               activity.update(theme_name: activity_theme_name.strip)
             end
-
-            row_financial_year = UserDetail.normalize_financial_year(row["financial_year"]).presence || requested_financial_year
 
             begin
               user_detail = UserDetail.find_or_initialize_by(
@@ -1169,7 +1221,8 @@ class UserDetailsController < ApplicationController
           redirect_to new_user_detail_path(financial_year: requested_financial_year), alert: "Import failed. Errors:\n#{errors.first(10).join("\n")}"
         end
       elsif success_count.zero?
-        redirect_to new_user_detail_path(financial_year: requested_financial_year), alert: "Import file contains no filled data rows. Please enter data in the Excel file before uploading."
+        redirect_to new_user_detail_path(financial_year: requested_financial_year),
+                    alert: build_no_filled_data_rows_message(spreadsheet, skipped_blank_rows, header_row_number)
       else
         notice_message = "Excel file imported successfully! #{success_count} records processed."
         notice_message += " #{skipped_blank_rows} blank rows skipped." if skipped_blank_rows.positive?
@@ -1185,6 +1238,179 @@ class UserDetailsController < ApplicationController
 
 
   private
+
+  def normalize_user_detail_import_header(value)
+    value.to_s.strip.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
+  end
+
+  def user_detail_import_header_aliases
+    @user_detail_import_header_aliases ||= {
+      "financial_year" => %w[financial_year financialyear],
+      "department" => %w[department department_name departmentname department_type departmenttype],
+      "employee_name" => %w[employee_name employeename name],
+      "employee_email" => %w[employee_email employeeemail email],
+      "employee_mobile_number" => %w[
+        employee_mobile_number employeemobilenumber employee_mobile employee_mobile_no
+        employeemobile employeemobileno mobile_number mobilenumber mobile_no mobileno mobile
+      ],
+      "employee_code" => %w[employee_code employeecode emp_code empcode],
+      "activity_name" => %w[activity_name activityname],
+      "theme_name" => %w[theme_name themename theme activity_theme activitytheme],
+      "unit" => %w[unit],
+      "l1_employer_name" => %w[l1_employer_name l1employername l1_name l1name],
+      "l1_employer_code" => %w[l1_employer_code l1employercode l1_code l1code],
+      "l1_mobile_number" => %w[l1_mobile_number l1mobilenumber l1_mobile l1_mobile_no l1mobile l1mobileno],
+      "l2_employer_name" => %w[l2_employer_name l2employername l2_name l2name],
+      "l2_employer_code" => %w[l2_employer_code l2employercode l2_code l2code],
+      "l2_mobile_number" => %w[l2_mobile_number l2mobilenumber l2_mobile l2_mobile_no l2mobile l2mobileno],
+      "april" => %w[april],
+      "may" => %w[may],
+      "june" => %w[june],
+      "july" => %w[july],
+      "august" => %w[august],
+      "september" => %w[september],
+      "october" => %w[october],
+      "november" => %w[november],
+      "december" => %w[december],
+      "january" => %w[january],
+      "february" => %w[february],
+      "march" => %w[march]
+    }.freeze
+  end
+
+  def user_detail_import_alias_lookup
+    @user_detail_import_alias_lookup ||= user_detail_import_header_aliases.each_with_object({}) do |(canonical, aliases), lookup|
+      aliases.each { |header_alias| lookup[header_alias] = canonical }
+    end
+  end
+
+  def validate_user_detail_import_headers(raw_header)
+    normalized_to_original = raw_header.each_with_object({}) do |value, lookup|
+      normalized_header = normalize_user_detail_import_header(value)
+      next if normalized_header.blank?
+
+      lookup[normalized_header] ||= value.to_s.strip
+    end
+
+    canonical_headers = normalized_to_original.keys.filter_map { |header| user_detail_import_alias_lookup[header] }.uniq
+    missing_required = USER_DETAIL_REQUIRED_IMPORT_HEADERS.reject { |header| canonical_headers.include?(header) }
+    unknown_headers = normalized_to_original.keys.reject { |header| user_detail_import_alias_lookup.key?(header) }
+
+    {
+      missing_required: missing_required,
+      unknown_headers: unknown_headers,
+      normalized_to_original: normalized_to_original,
+      recognized_headers: canonical_headers,
+      matched_required_count: USER_DETAIL_REQUIRED_IMPORT_HEADERS.count { |header| canonical_headers.include?(header) }
+    }
+  end
+
+  def find_user_detail_import_header_location(spreadsheet)
+    original_sheet = spreadsheet.default_sheet
+    sheet_names = spreadsheet.sheets.presence || [ original_sheet ].compact
+    best_candidate = nil
+
+    sheet_names.each do |sheet_name|
+      spreadsheet.default_sheet = sheet_name
+      max_row = [ spreadsheet.last_row.to_i, USER_DETAIL_IMPORT_HEADER_SCAN_LIMIT ].min
+      next if max_row.zero?
+
+      (1..max_row).each do |row_number|
+        raw_header = spreadsheet.row(row_number)
+        validation = validate_user_detail_import_headers(raw_header)
+        candidate = {
+          found: validation[:missing_required].empty?,
+          sheet_name: sheet_name,
+          row_number: row_number,
+          raw_header: raw_header,
+          validation: validation
+        }
+
+        return candidate if candidate[:found]
+
+        best_candidate = candidate if better_user_detail_import_header_candidate?(candidate, best_candidate)
+      end
+    end
+
+    best_candidate || {
+      found: false,
+      sheet_name: original_sheet,
+      row_number: 1,
+      raw_header: [],
+      validation: validate_user_detail_import_headers([])
+    }
+  ensure
+    spreadsheet.default_sheet = original_sheet if original_sheet.present?
+  end
+
+  def better_user_detail_import_header_candidate?(candidate, current_best)
+    return true if current_best.nil?
+
+    candidate_score = [
+      candidate[:validation][:matched_required_count],
+      candidate[:validation][:recognized_headers].size,
+      -candidate[:row_number]
+    ]
+    current_best_score = [
+      current_best[:validation][:matched_required_count],
+      current_best[:validation][:recognized_headers].size,
+      -current_best[:row_number]
+    ]
+
+    candidate_score > current_best_score
+  end
+
+  def build_user_detail_import_header_error_message(header_location)
+    validation = header_location[:validation]
+    missing_columns = validation[:missing_required].map { |header| USER_DETAIL_IMPORT_HEADER_LABELS.fetch(header, header.humanize) }
+
+    message_lines = [
+      "Excel header issue. Checked sheet '#{header_location[:sheet_name]}' row #{header_location[:row_number]}.",
+      "Missing required column(s): #{missing_columns.join(', ')}."
+    ]
+
+    if validation[:recognized_headers].any?
+      recognized_columns = validation[:recognized_headers].map { |header| USER_DETAIL_IMPORT_HEADER_LABELS.fetch(header, header.humanize) }
+      message_lines << "Recognized column(s): #{recognized_columns.join(', ')}."
+    else
+      message_lines << "Possible issue: actual header row top 10 rows me nahi mili, ya first visible data kisi aur sheet/row me hai."
+    end
+
+    suggestions = validation[:unknown_headers].filter_map do |header|
+      original_header = validation[:normalized_to_original][header]
+      suggested_header = suggested_user_detail_import_header_label(header)
+      next if suggested_header.blank?
+
+      "'#{original_header}' ko '#{suggested_header}' likhiye"
+    end
+
+    if suggestions.any?
+      message_lines << "Possible wrong column name(s): #{suggestions.join(', ')}."
+    else
+      expected_headers = USER_DETAIL_REQUIRED_IMPORT_HEADERS.map { |header| USER_DETAIL_IMPORT_HEADER_LABELS.fetch(header, header.humanize) }
+      message_lines << "Expected required columns: #{expected_headers.join(', ')}."
+    end
+
+    message_lines.join(" ")
+  end
+
+  def suggested_user_detail_import_header_label(normalized_header)
+    candidate = DidYouMean::SpellChecker.new(dictionary: user_detail_import_alias_lookup.keys).correct(normalized_header).first
+    canonical_header = user_detail_import_alias_lookup[candidate]
+    USER_DETAIL_IMPORT_HEADER_LABELS[canonical_header]
+  end
+
+  def build_no_filled_data_rows_message(spreadsheet, skipped_blank_rows, header_row_number)
+    total_data_rows = [ spreadsheet.last_row.to_i - header_row_number, 0 ].max
+
+    if total_data_rows.zero?
+      "Excel file me sirf header row hai. Header ke baad next row se data add kijiye."
+    elsif skipped_blank_rows.positive?
+      "Sabhi #{skipped_blank_rows} data row blank mile. Please check ki data first sheet me ho, row 2 se start ho, aur cells me actual values hon."
+    else
+      "Import file contains no filled data rows. Please enter data in the Excel file before uploading."
+    end
+  end
 
   def extract_employee_mobile_number(row)
     prioritized_keys = %w[
