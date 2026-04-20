@@ -16,7 +16,8 @@ class ApplicationController < ActionController::Base
 
   def has_l1_responsibilities?
     return true if current_user.hod?
-    EmployeeDetail.exists?(l1_code: current_user.employee_code)
+    EmployeeDetail.exists?(l1_code: current_user.employee_code) ||
+    EmployeeDetail.exists?(l1_employer_name: current_user.email)
   end
 
   def has_l2_responsibilities?

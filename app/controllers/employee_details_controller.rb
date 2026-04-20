@@ -262,7 +262,7 @@ class EmployeeDetailsController < ApplicationController
       # PERFORMANCE FIX: Optimize includes to preload all necessary associations
       @employee_details = EmployeeDetail
                             .where(status: [ "pending", "l1_returned", "l1_approved", "l2_returned", "l2_approved" ])
-                            .where(l1_code: current_user.employee_code)
+                            .where("l1_code = ? OR l1_employer_name = ?", current_user.employee_code, current_user.email)
                             .includes(
                               user_details: [
                                 :activity,
