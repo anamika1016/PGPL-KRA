@@ -499,7 +499,7 @@
         <label for="l2_remarks" class="block font-semibold mb-1">L2 Remarks</label>
         <textarea id="l2_remarks" name="l2_remarks" rows="3" class="w-full border border-gray-300 rounded-md p-2" required></textarea>
       </div>
-      <div class="mb-4">
+      <div class="mb-4" id="l2PercentageFieldWrapper">
         <label for="l2_percentage" class="block font-semibold mb-1">L2 Percentage</label>
         <input type="number" id="l2_percentage" name="l2_percentage" step="0.1" min="0" max="100" class="w-full border border-gray-300 rounded-md p-2" required>
       </div>
@@ -580,9 +580,17 @@
     // Clear form
     const remarksField = document.getElementById('l2_remarks');
     const percentageField = document.getElementById('l2_percentage');
+    const percentageFieldWrapper = document.getElementById('l2PercentageFieldWrapper');
     
     if (remarksField) remarksField.value = '';
-    if (percentageField) percentageField.value = '';
+    if (percentageField) {
+      percentageField.value = '';
+      const requiresPercentage = actionType === "l2_approve";
+      percentageField.required = requiresPercentage;
+    }
+    if (percentageFieldWrapper) {
+      percentageFieldWrapper.style.display = actionType === "l2_approve" ? 'block' : 'none';
+    }
     
     console.log('Modal should now be visible');
     console.log('Modal classes:', modal.className);

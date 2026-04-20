@@ -7,18 +7,15 @@
     </div>
 
     <div class="forgot-password-form-wrap">
-      <% if resource.errors.any? %>
+      <% password_resource = resource || resource_class.new %>
+      <% password_error_message = flash.now[:alert].presence || flash[:alert].presence || password_resource.errors.full_messages.first %>
+      <% if password_error_message.present? %>
         <div class="forgot-password-alert" role="alert">
-          <strong>Please check the form:</strong>
-          <ul>
-            <% resource.errors.full_messages.each do |msg| %>
-              <li><%= msg %></li>
-            <% end %>
-          </ul>
+          <%= password_error_message %>
         </div>
       <% end %>
 
-      <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post, data: { turbo: false }, class: "forgot-password-form" }) do |f| %>
+      <%= form_for(password_resource, as: resource_name, url: password_path(resource_name), html: { method: :post, data: { turbo: false }, class: "forgot-password-form" }) do |f| %>
         <div class="forgot-password-field">
           <%= f.label :email, "Registered Email", class: "forgot-password-label" %>
           <%= f.email_field :email,

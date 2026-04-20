@@ -540,7 +540,7 @@
         <label for="remarks" class="block font-semibold mb-1">Remarks</label>
         <textarea id="remarks" name="remarks" rows="3" class="w-full border border-gray-300 rounded-md p-2" required></textarea>
       </div>
-      <div class="mb-4">
+      <div class="mb-4" id="percentageFieldWrapper">
         <label for="percentage" class="block font-semibold mb-1">Percentage</label>
         <input type="number" id="percentage" name="percentage" step="0.1" min="0" max="100" class="w-full border border-gray-300 rounded-md p-2" required>
       </div>
@@ -628,9 +628,17 @@
     // Clear form
     const remarksField = document.getElementById('remarks');
     const percentageField = document.getElementById('percentage');
+    const percentageFieldWrapper = document.getElementById('percentageFieldWrapper');
     
     if (remarksField) remarksField.value = '';
-    if (percentageField) percentageField.value = '';
+    if (percentageField) {
+      percentageField.value = '';
+      const requiresPercentage = actionType === "approve";
+      percentageField.required = requiresPercentage;
+    }
+    if (percentageFieldWrapper) {
+      percentageFieldWrapper.style.display = actionType === "approve" ? 'block' : 'none';
+    }
     
     console.log('Modal should now be visible');
     console.log('Modal classes:', modal.className);

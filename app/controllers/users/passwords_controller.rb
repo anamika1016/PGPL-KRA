@@ -6,6 +6,8 @@ class Users::PasswordsController < Devise::PasswordsController
       token = set_reset_password_token(resource)
       redirect_to edit_user_password_path(reset_password_token: token)
     else
+      self.resource = resource_class.new(email: resource_params[:email])
+      resource.errors.add(:email, "not found")
       flash.now[:alert] = "Email not found"
       render :new
     end
