@@ -133,4 +133,77 @@ class EmployeeDetailsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Deepak Singh", @response.body
   end
+
+  test "l2 view shows employees when linked employee detail code is the active match" do
+    l2_user = User.create!(
+      email: "sharad.mishra@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      role: "employee",
+      employee_code: "STALE-L2"
+    )
+
+    EmployeeDetail.create!(
+      employee_id: "EMP-002",
+      employee_name: "Sharad Mishra",
+      employee_email: l2_user.email,
+      employee_code: "PGPL-002",
+      l1_code: "PGPL-001",
+      l1_employer_name: "l1@example.com",
+      l2_code: "PGPL-999",
+      l2_employer_name: "boss@example.com",
+      post: "Manager",
+      department: "Project",
+      status: "pending",
+      user: l2_user
+    )
+
+    managed_employee = EmployeeDetail.create!(
+      employee_id: "EMP-004-L2",
+      employee_name: "Deepak Singh",
+      employee_email: "deepak.l2@example.com",
+      employee_code: "PGPL-004",
+      l1_code: "PGPL-008",
+      l1_employer_name: "dheer@example.com",
+      l2_code: "PGPL-002",
+      l2_employer_name: l2_user.email,
+      post: "Executive",
+      department: "Project",
+      status: "l1_approved"
+    )
+
+    department = Department.create!(
+      department_type: "Project L2",
+      financial_year: "2026-27"
+    )
+
+    activity = Activity.create!(
+      activity_name: "Project Review",
+      department: department,
+      financial_year: "2026-27",
+      unit: "Nos",
+      weight: 1.0
+    )
+
+    user_detail = UserDetail.create!(
+      department: department,
+      activity: activity,
+      employee_detail: managed_employee,
+      financial_year: "2026-27"
+    )
+
+    Achievement.create!(
+      user_detail: user_detail,
+      month: "april",
+      achievement: "10",
+      status: "l1_approved"
+    )
+
+    sign_in l2_user
+
+    get l2_employee_details_path(financial_year: "2026-27")
+
+    assert_response :success
+    assert_match "Deepak Singh", @response.body
+  end
 end

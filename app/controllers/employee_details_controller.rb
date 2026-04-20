@@ -497,9 +497,11 @@ def l2
   else
     # L2 managers can only see their assigned employees with L1+ approved achievements
     # PERFORMANCE FIX: Optimize includes to preload all necessary associations
-    employee_details = EmployeeDetail.where("l2_code = ? OR l2_employer_name = ?",
-                                           current_user.employee_code,
-                                           current_user.email)
+    employee_details = EmployeeDetail.where(
+      "LOWER(BTRIM(COALESCE(l2_code, ''))) IN (?) OR LOWER(BTRIM(COALESCE(l2_employer_name, ''))) = ?",
+      normalized_current_employee_codes,
+      normalized_current_user_email
+    )
                                    .includes(
                                      user_details: [
                                        :activity,

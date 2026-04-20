@@ -225,7 +225,7 @@
           <% end %>
 
           <!-- L2 Employee Details - Show if user has L2 responsibilities -->
-          <% if current_user.hod? || EmployeeDetail.exists?(l2_code: current_user.employee_code) || EmployeeDetail.exists?(l2_employer_name: current_user.email) %>
+          <% if has_l2_responsibilities? %>
             <li class="hs-accordion" id="users-accordion">
               <%= link_to l2_employee_details_path, class: "flex items-center gap-x-3.5 py-2 px-2.5 #{'bg-emerald-50 text-emerald-800 border border-emerald-100 shadow-sm' if current_page?(l2_employee_details_path)} text-base text-gray-800 rounded-lg" do %>
                 <svg class="shrink-0 size-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
