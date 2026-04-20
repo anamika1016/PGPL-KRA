@@ -2,38 +2,38 @@
 <div class="min-h-screen bg-gray-50 content-wrapper">
   <div class="w-full px-4 py-6">
     <!-- Header Section -->
-    <div class="bg-white border border-gray-200 rounded-xl shadow-lg mb-8">
-      <div class="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-6 py-4 rounded-t-xl">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-lg mb-8 page-shell">
+      <div class="bg-gradient-to-r from-slate-700 via-slate-800 to-emerald-900 text-white px-6 py-5 rounded-t-2xl page-hero">
         <div class="flex justify-between items-center">
-          <h1 class="text-3xl font-bold flex items-center">
+          <h1 class="text-3xl font-bold flex items-center page-title">
             <i class="fas fa-edit me-3 text-2xl"></i>
             Quarter Wise Edit Details
           </h1>
-          <%= link_to user_details_path(financial_year: selected_financial_year), class: "bg-white bg-opacity-90 hover:bg-opacity-100 text-black px-4 py-2 rounded-lg transition-all duration-200 flex items-center" do %>
+          <%= link_to user_details_path(financial_year: selected_financial_year), class: "back-link bg-white bg-opacity-90 hover:bg-opacity-100 text-black px-4 py-2 rounded-lg transition-all duration-200 flex items-center" do %>
             <i class="fas fa-arrow-left me-2"></i>Back to List
           <% end %>
         </div>
       </div>
       
       <div class="p-6">
-        <div class="text-gray-600 mb-4">
+        <div class="text-gray-600 mb-4 intro-copy">
           <p class="mb-4">Select a quarter to edit quarter-wise achievements and remarks for all activities in <strong><%= selected_financial_year %></strong>.</p>
         </div>
 
         <!-- Quarter and Month Filter Dropdowns -->
-        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <div class="flex flex-wrap items-center gap-4">
+        <div class="filter-shell bg-gray-50 p-4 rounded-xl border border-gray-200">
+          <div class="flex flex-wrap items-center gap-4 filter-row">
             <%= form_with url: quarterly_edit_all_user_details_path, method: :get, local: true, class: "flex flex-wrap items-center gap-4" do |form| %>
-              <label class="text-sm font-medium text-gray-700">Financial Year:</label>
+              <label class="text-sm font-medium text-gray-700 filter-label">Financial Year:</label>
               <%= form.select :financial_year,
                   options_for_select(available_financial_years, selected_financial_year),
                   {},
-                  class: "bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent min-w-[180px] text-gray-700",
+                  class: "filter-select bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent min-w-[180px] text-gray-700",
                   onchange: "this.form.submit();" %>
             <% end %>
 
-            <label class="text-sm font-medium text-gray-700">Choose Quarter to Edit:</label>
-            <select id="quarterFilter" class="bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent min-w-[200px] text-gray-700">
+            <label class="text-sm font-medium text-gray-700 filter-label">Choose Quarter to Edit:</label>
+            <select id="quarterFilter" class="filter-select bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent min-w-[200px] text-gray-700">
               <option value="" selected disabled>Select Quarter</option>
               <option value="Q1">Q1 (April, May, June)</option>
               <option value="Q2">Q2 (July, August, September)</option>
@@ -41,7 +41,7 @@
               <option value="Q4">Q4 (January, February, March)</option>
             </select>
 
-            <div class="ml-4">
+            <div class="ml-4 quarter-note">
               <span id="selectedQuarterInfo" class="text-sm text-gray-600 hidden"></span>
             </div>
           </div>
@@ -50,7 +50,7 @@
     </div>
 
     <!-- No Quarter Selected Message -->
-    <div id="selectQuarterMessage" class="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center mb-6">
+    <div id="selectQuarterMessage" class="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center mb-6 empty-state-panel">
       <i class="fas fa-hand-point-up text-4xl text-gray-500 mb-4"></i>
       <h3 class="text-lg font-semibold text-gray-800 mb-2">Please Select a Quarter</h3>
       <p class="text-gray-600">Choose a quarter from the dropdown above to edit achievements and remarks for all activities.</p>
@@ -63,7 +63,7 @@
         <%= hidden_field_tag :financial_year, selected_financial_year %>
         
         <!-- Quarter Header -->
-        <div id="quarterHeader" class="bg-white border border-gray-200 rounded-xl shadow-lg mb-6 hidden">
+        <div id="quarterHeader" class="bg-white border border-gray-200 rounded-2xl shadow-lg mb-6 hidden quarter-banner">
           <div id="quarterHeaderContent" class="bg-gray-600 text-white px-6 py-4 rounded-t-xl">
             <div class="flex justify-between items-center">
               <h2 class="text-2xl font-bold">Quarter Wise Edit Details</h2>
@@ -74,7 +74,7 @@
 
         <!-- Activities Table -->
         <div id="activitiesList" class="w-full hidden">
-          <div class="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden data-panel">
             <% all_quarters = {
               'Q1' => ['april', 'may', 'june'],
               'Q2' => ['july', 'august', 'september'],
@@ -82,7 +82,7 @@
               'Q4' => ['january', 'february', 'march']
             } %>
 
-            <div class="table-wrapper overflow-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div class="table-wrapper overflow-auto bg-white rounded-xl border border-gray-200 shadow-sm">
               <table class="quarterly-table w-full min-w-full" id="quarterlyActivityTable">
                 <thead class="bg-gray-800">
                   <tr>
@@ -127,14 +127,14 @@
                           <% target_value = detail.respond_to?(month.to_sym) ? detail.send(month.to_sym) : "" %>
                           <% existing_achievement = existing_achievements[month] %>
                           <td class="px-3 py-3 text-sm text-gray-800 text-center border-r border-gray-200 bg-gray-50 target-cell">
-                            <span class="<%= target_value.present? ? 'text-gray-800 font-semibold' : 'text-gray-400' %>">
+                            <span class="target-badge <%= target_value.present? ? 'target-badge--filled text-gray-800 font-semibold' : 'target-badge--empty text-gray-400' %>">
                               <%= target_value.present? ? target_value : '-' %>
                             </span>
                           </td>
                           <td class="px-3 py-3 text-sm text-center border-r border-gray-200 achievement-cell">
                             <%= text_field_tag "achievements[#{detail.id}][#{month}][achievement]",
                                                existing_achievement&.achievement,
-                                               class: "achievement-input w-full",
+                                               class: "achievement-input data-entry-input w-full",
                                                placeholder: "Achievement",
                                                disabled: !target_value.present?,
                                                data: {
@@ -147,7 +147,7 @@
                           <td class="px-3 py-3 text-sm text-center border-r border-gray-200 remarks-cell">
                             <%= text_area_tag "achievements[#{detail.id}][#{month}][employee_remarks]",
                                               existing_achievement&.employee_remarks,
-                                              class: "remarks-textarea w-full",
+                                              class: "remarks-textarea data-entry-input w-full",
                                               rows: 2,
                                               placeholder: "Remarks",
                                               disabled: !target_value.present? %>
@@ -163,7 +163,7 @@
         </div>
 
         <!-- Submit Section -->
-        <div id="submitSection" class="bg-white border border-gray-200 rounded-xl shadow-lg p-6 hidden mt-6">
+        <div id="submitSection" class="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 hidden mt-6 submit-panel">
           <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <%= submit_tag "Update All Achievements", 
                           class: "bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center transform hover:scale-105 shadow-lg",
@@ -182,7 +182,7 @@
 
     <% else %>
       <!-- No Data State -->
-      <div class="bg-white border border-gray-200 rounded-xl shadow-lg p-12 text-center">
+      <div class="bg-white border border-gray-200 rounded-2xl shadow-lg p-12 text-center">
         <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
         <h3 class="text-xl font-semibold text-gray-800 mb-2">No Activities Found</h3>
         <p class="text-gray-600 mb-6">There are no user details available for quarterly editing.</p>
@@ -194,6 +194,64 @@
 </div>
 
 <style>
+  .page-shell {
+    overflow: hidden;
+  }
+
+  .page-hero {
+    position: relative;
+  }
+
+  .page-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at top right, rgba(148, 230, 181, 0.22), transparent 22%),
+      linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    pointer-events: none;
+  }
+
+  .page-title,
+  .back-link {
+    position: relative;
+    z-index: 1;
+  }
+
+  .intro-copy p {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .filter-shell {
+    background: linear-gradient(180deg, #f8fbfd 0%, #f3f7fb 100%);
+  }
+
+  .filter-label {
+    letter-spacing: 0.02em;
+  }
+
+  .filter-select {
+    min-height: 46px;
+    font-weight: 600;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  }
+
+  .quarter-note span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.55rem 0.95rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    font-weight: 600;
+  }
+
+  .empty-state-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  }
+
   .quarter-row,
   .quarter-block-header,
   .quarter-month-header,
@@ -226,6 +284,7 @@
   .table-wrapper {
     overflow-x: auto;
     background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    padding: 0.35rem;
   }
 
   .quarterly-table {
@@ -284,25 +343,55 @@
     background: linear-gradient(180deg, #f8fdff 0%, #eef8ff 100%) !important;
   }
 
+  .target-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 72px;
+    padding: 0.75rem 0.5rem;
+    border-radius: 16px;
+    border: 1px dashed #d7dee8;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .target-badge--filled {
+    background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+    border-style: solid;
+  }
+
+  .target-badge--empty {
+    background: #f8fafc;
+  }
+
   .achievement-input,
   .remarks-textarea {
     transition: all 0.25s ease;
-    border-radius: 12px;
+    border-radius: 16px;
     border: 1px solid #cbd5e1;
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     font-weight: 500;
     width: 100%;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
   }
 
   .achievement-input {
-    min-height: 42px;
-    padding: 0.65rem 0.85rem;
+    min-height: 72px;
+    height: 72px;
+    padding: 0.8rem 0.9rem;
   }
 
   .remarks-textarea {
-    min-height: 42px;
-    padding: 0.65rem 0.85rem;
+    min-height: 72px;
+    height: 72px;
+    padding: 0.8rem 0.9rem;
     resize: none;
+  }
+
+  .data-entry-input {
+    font-size: 0.92rem;
+    line-height: 1.4;
   }
 
   .achievement-input:focus,
@@ -326,7 +415,7 @@
   }
 
   #quarterHeaderContent {
-    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #334155 52%, #166534 100%);
   }
 
   #submitSection {
@@ -428,6 +517,22 @@
 
   .border-gray-300 {
     border-color: #d1d5db;
+  }
+
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 1.8rem;
+    }
+
+    .filter-row {
+      align-items: stretch;
+    }
+
+    .filter-select,
+    .quarter-note,
+    .quarter-note span {
+      width: 100%;
+    }
   }
 </style>
 
