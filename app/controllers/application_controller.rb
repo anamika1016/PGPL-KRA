@@ -16,14 +16,24 @@ class ApplicationController < ActionController::Base
 
   def has_l1_responsibilities?
     return true if current_user.hod?
-    EmployeeDetail.exists?(l1_code: current_user.employee_code) ||
-    EmployeeDetail.exists?(l1_employer_name: current_user.email)
+    employee_detail_scope_for_current_user.exists?(
+      [
+        "LOWER(BTRIM(COALESCE(l1_code, ''))) IN (?) OR LOWER(BTRIM(COALESCE(l1_employer_name, ''))) = ?",
+        normalized_current_employee_codes,
+        normalized_current_user_email
+      ]
+    )
   end
 
   def has_l2_responsibilities?
     return true if current_user.hod?
-    EmployeeDetail.exists?(l2_code: current_user.employee_code) ||
-    EmployeeDetail.exists?(l2_employer_name: current_user.email)
+    employee_detail_scope_for_current_user.exists?(
+      [
+        "LOWER(BTRIM(COALESCE(l2_code, ''))) IN (?) OR LOWER(BTRIM(COALESCE(l2_employer_name, ''))) = ?",
+        normalized_current_employee_codes,
+        normalized_current_user_email
+      ]
+    )
   end
 
   def selected_financial_year
@@ -35,6 +45,34 @@ class ApplicationController < ActionController::Base
     UserDetail.available_financial_years
   end
 
+  def current_employee_detail_record
+    @current_employee_detail_record ||= current_user.employee_detail ||
+      EmployeeDetail.find_by("LOWER(BTRIM(COALESCE(employee_email, ''))) = ?", normalized_current_user_email)
+  end
+
+  def normalized_current_employee_codes
+    @normalized_current_employee_codes ||= [
+      current_user.employee_code,
+      current_employee_detail_record&.employee_code
+    ].filter_map { |code| normalize_lookup_value(code) }.uniq
+  end
+
+  def normalized_current_user_email
+    @normalized_current_user_email ||= normalize_lookup_value(current_user.email)
+  end
+
   helper_method :has_l1_responsibilities?, :has_l2_responsibilities?,
                 :selected_financial_year, :available_financial_years
+
+  private
+
+  def normalize_lookup_value(value)
+    value.to_s.strip.downcase.presence
+  end
+
+  def employee_detail_scope_for_current_user
+    return EmployeeDetail.none if normalized_current_employee_codes.empty? && normalized_current_user_email.blank?
+
+    EmployeeDetail.all
+  end
 end

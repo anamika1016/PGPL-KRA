@@ -33,6 +33,11 @@ class Users::SessionsController < Devise::SessionsController
       redirect_to new_session_path(resource_name) and return
     end
 
+    if employee_detail.present? && employee_detail.employee_code.to_s.strip.present? &&
+       !user.employee_code.to_s.strip.casecmp?(employee_detail.employee_code.to_s.strip)
+      user.update(employee_code: employee_detail.employee_code)
+    end
+
     if employee_detail.present? && employee_detail.user_id != user.id
       employee_detail.update(user: user)
     end

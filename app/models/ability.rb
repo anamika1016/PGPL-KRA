@@ -4,6 +4,9 @@ class Ability
   def initialize(user)
     return unless user.present?
 
+    normalized_email = normalize_lookup_value(user.email)
+    normalized_codes = normalized_user_codes(user)
+
     if user.hod?
       can :manage, :all  # HOD gets full access to all models
       return  # Early return for HOD to avoid duplicate permissions
@@ -17,32 +20,36 @@ class Ability
 
     # L1 Permissions - Check if user's employee_code matches any l1_code OR email matches l1_employer_name
     can :read, EmployeeDetail do |ed|
-      (ed.l1_code == user.employee_code || ed.l1_employer_name == user.email) &&
+      (normalized_codes.include?(normalize_lookup_value(ed.l1_code)) || normalize_lookup_value(ed.l1_employer_name) == normalized_email) &&
       [ "pending", "l1_returned", "l1_approved", "l2_returned", "l2_approved" ].include?(ed.status)
     end
 
     can [ :approve, :return ], EmployeeDetail do |ed|
-      (ed.l1_code == user.employee_code || ed.l1_employer_name == user.email) &&
+      (normalized_codes.include?(normalize_lookup_value(ed.l1_code)) || normalize_lookup_value(ed.l1_employer_name) == normalized_email) &&
       [ "pending", "l1_returned" ].include?(ed.status)
     end
 
     can :l1, EmployeeDetail do
       # User can access L1 view if they have any L1 assignments
-      EmployeeDetail.where("l1_code = ? OR l1_employer_name = ?", user.employee_code, user.email).exists?
+      EmployeeDetail.where(
+        "LOWER(BTRIM(COALESCE(l1_code, ''))) IN (?) OR LOWER(BTRIM(COALESCE(l1_employer_name, ''))) = ?",
+        normalized_codes,
+        normalized_email
+      ).exists?
     end
 
     # L2 Permissions - Check if user's employee_code matches any l2_code OR email matches l2_employer_name
     can :read, EmployeeDetail do |ed|
-      (ed.l2_code == user.employee_code || ed.l2_employer_name == user.email) &&
+      (normalized_codes.include?(normalize_lookup_value(ed.l2_code)) || normalize_lookup_value(ed.l2_employer_name) == normalized_email) &&
       [ "l1_approved", "l2_returned", "l2_approved" ].include?(ed.status)
     end
 
     can :show_l2, EmployeeDetail do |ed|
-      ed.l2_code == user.employee_code || ed.l2_employer_name == user.email
+      normalized_codes.include?(normalize_lookup_value(ed.l2_code)) || normalize_lookup_value(ed.l2_employer_name) == normalized_email
     end
 
     can [ :l2_approve, :l2_return ], EmployeeDetail do |ed|
-      (ed.l2_code == user.employee_code || ed.l2_employer_name == user.email) &&
+      (normalized_codes.include?(normalize_lookup_value(ed.l2_code)) || normalize_lookup_value(ed.l2_employer_name) == normalized_email) &&
       [ "l1_approved", "l2_returned" ].include?(ed.status)
     end
 
@@ -53,7 +60,11 @@ class Ability
 
     can :l2, EmployeeDetail do
       # User can access L2 view if they have any L2 assignments
-      EmployeeDetail.where("l2_code = ? OR l2_employer_name = ?", user.employee_code, user.email).exists?
+      EmployeeDetail.where(
+        "LOWER(BTRIM(COALESCE(l2_code, ''))) IN (?) OR LOWER(BTRIM(COALESCE(l2_employer_name, ''))) = ?",
+        normalized_codes,
+        normalized_email
+      ).exists?
     end
 
     # UserDetail permissions
@@ -63,5 +74,20 @@ class Ability
         ud.employee_detail&.employee_email == user.email
       end
     end
+  end
+
+  private
+
+  def normalize_lookup_value(value)
+    value.to_s.strip.downcase.presence
+  end
+
+  def normalized_user_codes(user)
+    employee_detail = user.employee_detail || EmployeeDetail.find_by("LOWER(BTRIM(COALESCE(employee_email, ''))) = ?", normalize_lookup_value(user.email))
+
+    [
+      user.employee_code,
+      employee_detail&.employee_code
+    ].filter_map { |code| normalize_lookup_value(code) }.uniq
   end
 end

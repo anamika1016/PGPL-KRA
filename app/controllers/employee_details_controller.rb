@@ -262,7 +262,11 @@ class EmployeeDetailsController < ApplicationController
       # PERFORMANCE FIX: Optimize includes to preload all necessary associations
       @employee_details = EmployeeDetail
                             .where(status: [ "pending", "l1_returned", "l1_approved", "l2_returned", "l2_approved" ])
-                            .where("l1_code = ? OR l1_employer_name = ?", current_user.employee_code, current_user.email)
+                            .where(
+                              "LOWER(BTRIM(COALESCE(l1_code, ''))) IN (?) OR LOWER(BTRIM(COALESCE(l1_employer_name, ''))) = ?",
+                              normalized_current_employee_codes,
+                              normalized_current_user_email
+                            )
                             .includes(
                               user_details: [
                                 :activity,
@@ -821,14 +825,14 @@ end
 
   def can_act_as_l1?(employee_detail)
     current_user.hod? ||
-    current_user.employee_code == employee_detail.l1_code ||
-    current_user.email == employee_detail.l1_employer_name
+    normalized_current_employee_codes.include?(normalize_lookup_value(employee_detail.l1_code)) ||
+    normalized_current_user_email == normalize_lookup_value(employee_detail.l1_employer_name)
   end
 
   def can_act_as_l2?(employee_detail)
     current_user.hod? ||
-    current_user.employee_code == employee_detail.l2_code ||
-    current_user.email == employee_detail.l2_employer_name
+    normalized_current_employee_codes.include?(normalize_lookup_value(employee_detail.l2_code)) ||
+    normalized_current_user_email == normalize_lookup_value(employee_detail.l2_employer_name)
   end
 
   def send_l1_approval_sms_to_l2(employee_detail, quarters)

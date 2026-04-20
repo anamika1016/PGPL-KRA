@@ -534,11 +534,21 @@ class HomeController < ApplicationController
   end
 
   def l1_managed_employee_details
-    EmployeeDetail.includes(:l1_pulse_assessments, user_details: [ :department, achievements: :achievement_remark ]).order(:employee_name).then { |s| (current_user.hod? || current_user.admin?) ? s : s.where("l1_code = :c OR l1_employer_name = :e", c: current_user.employee_code, e: current_user.email) }
+    EmployeeDetail.includes(:l1_pulse_assessments, user_details: [ :department, achievements: :achievement_remark ]).order(:employee_name).then do |scope|
+      if current_user.hod? || current_user.admin?
+        scope
+      else
+        scope.where(
+          "LOWER(BTRIM(COALESCE(l1_code, ''))) IN (?) OR LOWER(BTRIM(COALESCE(l1_employer_name, ''))) = ?",
+          normalized_current_employee_codes,
+          normalized_current_user_email
+        )
+      end
+    end
   end
 
   def ensure_l1_pulse_access!
-    unless current_user.hod? || current_user.admin? || EmployeeDetail.exists?(l1_code: current_user.employee_code) || EmployeeDetail.exists?(l1_employer_name: current_user.email)
+    unless current_user.hod? || current_user.admin? || has_l1_responsibilities?
       redirect_to dashboard_path, alert: "Denied."
     end
   end
