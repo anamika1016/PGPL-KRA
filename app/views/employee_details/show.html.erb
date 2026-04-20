@@ -802,8 +802,8 @@
         }
         
         // Update ONLY L1 summary immediately with form values (DO NOT update L2)
-        const percentage = document.getElementById('percentage').value;
-        const remarks = document.getElementById('remarks').value;
+        const percentage = data.percentage ?? document.getElementById('percentage').value;
+        const remarks = data.remarks ?? document.getElementById('remarks').value;
         
         console.log('Form values - Percentage:', percentage, 'Remarks:', remarks);
         

@@ -555,7 +555,15 @@ class HomeController < ApplicationController
 
   def load_admin_dashboard
     @dashboard_mode = :admin
-    @employee_rows = EmployeeDetail.includes(:l1_pulse_assessments, user_details: [ :department, achievements: :achievement_remark ]).order(:employee_name).map { |ed| build_employee_dashboard_row(ed) }
+    @employee_rows = EmployeeDetail
+      .includes(:l1_pulse_assessments, user_details: [ :department, achievements: :achievement_remark ])
+      .order(:employee_name)
+      .filter_map do |employee_detail|
+        selected_user_details = user_details_for_selected_financial_year(employee_detail.user_details)
+        next if selected_user_details.blank?
+
+        build_employee_dashboard_row(employee_detail)
+      end
   end
 
   def load_employee_dashboard

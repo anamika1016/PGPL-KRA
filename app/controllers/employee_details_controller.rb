@@ -435,7 +435,9 @@ class EmployeeDetailsController < ApplicationController
             success: true,
             count: result[:count],
             message: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1",
-            updated_status: "l1_returned"
+            updated_status: "l1_returned",
+            percentage: result[:percentage],
+            remarks: result[:remarks]
           }
         else
           redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
@@ -460,7 +462,10 @@ class EmployeeDetailsController < ApplicationController
           render json: {
             success: true,
             count: result[:count],
-            message: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
+            message: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2",
+            updated_status: "l2_returned",
+            percentage: result[:percentage],
+            remarks: result[:remarks]
           }
         else
           redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
@@ -1336,7 +1341,13 @@ end
     end
 
     if approved_count > 0
-      { success: true, count: approved_count, approved_quarters: approved_quarters }
+      {
+        success: true,
+        count: approved_count,
+        approved_quarters: approved_quarters,
+        percentage: params[:percentage],
+        remarks: params[:remarks]
+      }
     else
       action_text = is_approval ? "approve" : "return"
       { success: false, message: "❌ No activities found to #{action_text} for the selected quarter" }
@@ -1467,7 +1478,12 @@ def process_quarterly_l2_approval
   end
 
   if approved_count > 0
-    { success: true, count: approved_count }
+    {
+      success: true,
+      count: approved_count,
+      percentage: params[:l2_percentage] || params[:percentage],
+      remarks: params[:l2_remarks] || params[:remarks]
+    }
   else
     action_text = is_approval ? "approve" : "return"
     { success: false, message: "❌ No L1 approved activities found to #{action_text} for the selected quarter" }

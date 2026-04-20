@@ -727,8 +727,8 @@
         }
         
         // FIXED: Get values from form inputs (most reliable source)
-        const percentage = document.getElementById('l2_percentage').value;
-        const remarks = document.getElementById('l2_remarks').value;
+        const percentage = data.percentage ?? document.getElementById('l2_percentage').value;
+        const remarks = data.remarks ?? document.getElementById('l2_remarks').value;
         
         console.log('Form values - Percentage:', percentage, 'Remarks:', remarks);
         

@@ -10,6 +10,19 @@
           <%= @dashboard_mode == :admin ? "Monitor annual scores, pulse assessments, and performance actions for every employee from one professional workspace." : "Review your annual score, pulse assessment, quarterly remarks, and recommended actions from one clean workspace." %>
         </p>
 
+        <div class="dashboard-year-toolbar">
+          <%= form_with url: dashboard_path, method: :get, local: true, class: "dashboard-year-form" do |form| %>
+            <label for="dashboard-financial-year" class="dashboard-year-label">Financial Year</label>
+            <%= form.select :financial_year,
+                options_for_select(available_financial_years, selected_financial_year),
+                {},
+                id: "dashboard-financial-year",
+                class: "dashboard-year-select",
+                onchange: "this.form.submit();" %>
+          <% end %>
+          <span class="dashboard-year-chip">Showing FY <strong><%= selected_financial_year %></strong></span>
+        </div>
+
         <div class="hero-tags">
           <%= link_to "Annual Review", "#annual-review-section", class: "hero-tag hero-menu-tag" %>
           <% if @dashboard_mode == :admin %>
@@ -21,7 +34,7 @@
             <%= link_to "Line Manager Feedback ", "#pulse-remarks-section", class: "hero-tag hero-menu-tag" %>
           <% end %>
           <%= link_to "COMPOSITE PERFORMANCE SCORE", "#summary-box-section", class: "hero-tag hero-menu-tag" %>
-          <%= link_to "Export Excel", export_dashboard_xlsx_path(format: :xlsx), class: "hero-tag export-tag" %>
+          <%= link_to "Export Excel", export_dashboard_xlsx_path(format: :xlsx, financial_year: selected_financial_year), class: "hero-tag export-tag" %>
         </div>
       </div>
 
@@ -85,9 +98,9 @@
           <div class="box-header">
             <div>
               <h2>SECTION A: Annually / Weightage : 75%</h2>
-              <p>Sabhi users ka Q1, Q2, Q3, Q4 aur annual score sirf L1 percentage ke hisab se.</p>
+              <p>Sabhi users ka Q1, Q2, Q3, Q4 aur annual score sirf L1 percentage ke hisab se for FY <strong><%= selected_financial_year %></strong>.</p>
             </div>
-            <%= link_to "Export", export_dashboard_section_xlsx_path("annual", format: :xlsx), class: "section-export-btn" %>
+            <%= link_to "Export", export_dashboard_section_xlsx_path("annual", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn" %>
           </div>
 
           <div class="table-wrap">
@@ -123,7 +136,7 @@
       <% else %>
         <div class="empty-dashboard">
           <h2>No user data found</h2>
-          <p>Abhi kisi bhi employee ka annual data available nahi hai.</p>
+          <p>Abhi FY <strong><%= selected_financial_year %></strong> ke liye kisi bhi employee ka annual data available nahi hai.</p>
         </div>
       <% end %>
     <% else %>
@@ -150,9 +163,9 @@
           <div class="box-header">
             <div>
               <h2>SECTION A: Annually / Weightage : 75%</h2>
-              <p>Quarter-wise annual score for your dashboard.</p>
+              <p>Quarter-wise annual score for FY <strong><%= selected_financial_year %></strong>.</p>
             </div>
-            <%= link_to "Export", export_dashboard_section_xlsx_path("annual", format: :xlsx), class: "section-export-btn" %>
+            <%= link_to "Export", export_dashboard_section_xlsx_path("annual", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn" %>
           </div>
 
           <div class="employee-meta-grid">
@@ -257,14 +270,14 @@
         </div>
 
         <div class="employee-sections-grid">
-          <div class="pulse-score-card employee-pulse-card" id="pulse-score-section">
-            <div class="box-header employee-section-header">
-              <div>
-                <h2>SECTION B - PULSE CHECK / Weightage : 15%</h2>
-                <p>Pulse survey scores with raw percentage and overall category.</p>
-              </div>
-              <%= link_to "Export", export_dashboard_section_xlsx_path("pulse", format: :xlsx), class: "section-export-btn pulse-export-btn" %>
+        <div class="pulse-score-card employee-pulse-card" id="pulse-score-section">
+          <div class="box-header employee-section-header">
+            <div>
+              <h2>SECTION B - PULSE CHECK / Weightage : 15%</h2>
+              <p>Pulse survey scores shown for the employees included in FY <strong><%= selected_financial_year %></strong>.</p>
             </div>
+            <%= link_to "Export", export_dashboard_section_xlsx_path("pulse", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn pulse-export-btn" %>
+          </div>
 
             <div class="table-wrap">
               <table class="compact-metric-table employee-metric-table">
@@ -319,9 +332,9 @@
             <div class="box-header">
               <div>
                 <h2>SECTION C - LINE MANAGER FEEDBACK / Weightage : 10%</h2>
-                <p>Manager criteria scores and final remarks from the latest assessment.</p>
+                <p>Manager criteria scores and final remarks for FY <strong><%= selected_financial_year %></strong> dashboard users.</p>
               </div>
-              <%= link_to "Export", export_dashboard_section_xlsx_path("remarks", format: :xlsx), class: "section-export-btn" %>
+              <%= link_to "Export", export_dashboard_section_xlsx_path("remarks", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn" %>
             </div>
 
             <div class="table-wrap">
@@ -384,9 +397,9 @@
           <div class="box-header">
             <div>
               <h2>COMPOSITE PERFORMANCE SCORE</h2>
-              <p>KRA 75% + Pulse 15% + Line Manager Feedback 10% combined into one final score.</p>
+              <p>KRA 75% + Pulse 15% + Line Manager Feedback 10% combined into one final FY <strong><%= selected_financial_year %></strong> score.</p>
             </div>
-            <%= link_to "Export", export_dashboard_section_xlsx_path("summary", format: :xlsx), class: "section-export-btn" %>
+            <%= link_to "Export", export_dashboard_section_xlsx_path("summary", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn" %>
           </div>
 
           <div class="employee-summary-layout">
@@ -445,7 +458,7 @@
       <div class="box-header">
         <div>
           <h2>SCORE RANGE</h2>
-          <p>Final composite score band, rating, and recommended action guide.</p>
+          <p>Final composite score band, rating, and recommended action guide for FY <strong><%= selected_financial_year %></strong>.</p>
         </div>
       </div>
 
@@ -499,9 +512,9 @@
       <div class="box-header">
         <div>
           <h2>SECTION B: PULSE-360 ASSESSMENT SCORE / Weightage : 15%</h2>
-          <p>All user pulse survey scores, total score, and category in one place.</p>
+          <p>All FY <strong><%= selected_financial_year %></strong> user pulse survey scores, total score, and category in one place.</p>
         </div>
-        <%= link_to "Export", export_dashboard_section_xlsx_path("pulse", format: :xlsx), class: "section-export-btn pulse-export-btn" %>
+        <%= link_to "Export", export_dashboard_section_xlsx_path("pulse", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn pulse-export-btn" %>
       </div>
 
       <div class="table-wrap pulse-score-table-wrap">
@@ -615,9 +628,9 @@
         <div class="box-header">
           <div>
             <h2>SECTION C: LINE MANAGER FEEDBACK / Weightage : 10%</h2>
-            <p>All user manager-feedback scores and remarks shown directly by criteria.</p>
+            <p>All FY <strong><%= selected_financial_year %></strong> user manager-feedback scores and remarks shown directly by criteria.</p>
           </div>
-          <%= link_to "Export", export_dashboard_section_xlsx_path("remarks", format: :xlsx), class: "section-export-btn" %>
+          <%= link_to "Export", export_dashboard_section_xlsx_path("remarks", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn" %>
         </div>
 
         <div class="table-wrap pulse-remarks-wrap">
@@ -665,7 +678,7 @@
             <h2>LINE MANAGER FEEDBACK / 10%</h2>
             <p>Latest manager feedback remarks and score.</p>
           </div>
-          <%= link_to "Export", export_dashboard_section_xlsx_path("remarks", format: :xlsx), class: "section-export-btn" %>
+          <%= link_to "Export", export_dashboard_section_xlsx_path("remarks", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn" %>
         </div>
 
         <div class="single-remark-box">
@@ -695,9 +708,9 @@
       <div class="box-header">
         <div>
           <h2><i class="fas fa-chart-line"></i> COMPOSITE PERFORMANCE SCORE — KRA 75% + Pulse 15% + Manager Feedback 10%</h2>
-          <p>User wise weighted total based on Annually / Weightage : 75%, PULSE-360 ASSESSMENT SCORE / Weightage : 15%, and Manager Feedback / Weightage : 10%.</p>
+          <p>FY <strong><%= selected_financial_year %></strong> user wise weighted total based on Annually / Weightage : 75%, PULSE-360 ASSESSMENT SCORE / Weightage : 15%, and Manager Feedback / Weightage : 10%.</p>
         </div>
-        <%= link_to "Export", export_dashboard_section_xlsx_path("summary", format: :xlsx), class: "section-export-btn" %>
+        <%= link_to "Export", export_dashboard_section_xlsx_path("summary", format: :xlsx, financial_year: selected_financial_year), class: "section-export-btn" %>
       </div>
 
       <div class="table-wrap summary-wrap">
@@ -1897,6 +1910,51 @@
     background: #ffffff;
   }
 
+  .dashboard-year-toolbar {
+    display: flex;
+    align-items: end;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    margin: 1rem 0 1.15rem;
+  }
+
+  .dashboard-year-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .dashboard-year-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #335347;
+  }
+
+  .dashboard-year-select {
+    min-width: 180px;
+    padding: 0.78rem 2.5rem 0.78rem 0.95rem;
+    border: 1px solid #cfe0d3;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #173729;
+    font-weight: 600;
+    box-shadow: 0 10px 26px rgba(18, 56, 77, 0.08);
+  }
+
+  .dashboard-year-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.8rem 1rem;
+    border-radius: 999px;
+    background: rgba(17, 99, 58, 0.09);
+    color: #1f5f3a;
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
   .empty-dashboard {
     text-align: center;
     background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
@@ -1921,6 +1979,15 @@
 
     .welcome-panel h2 {
       font-size: 1.55rem;
+    }
+
+    .dashboard-year-toolbar {
+      align-items: stretch;
+    }
+
+    .dashboard-year-form,
+    .dashboard-year-select {
+      width: 100%;
     }
 
     .clock-shell {
