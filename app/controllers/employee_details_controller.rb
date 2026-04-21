@@ -2,6 +2,11 @@ require "roo"
 require "axlsx"
 
 class EmployeeDetailsController < ApplicationController
+  SMS_API_URL = "https://sms.yoursmsbox.com/api/sendhttp.php".freeze
+  SMS_AUTHKEY = "37317061706c39353312".freeze
+  SMS_SENDER = "PLOAPL".freeze
+  KRA_RETURN_SMS_TEMPLATE_ID = "1707177667916132293".freeze
+
   before_action :set_employee_detail, only: [ :edit, :update, :destroy ]
   load_and_authorize_resource except: [ :approve, :return, :l2_approve, :l2_return, :edit_l1, :edit_l2 ]
 
@@ -428,20 +433,24 @@ class EmployeeDetailsController < ApplicationController
       # Pass action_type parameter to indicate this is a return action
       params[:action_type] = "return"
       result = process_quarterly_l1_return
+      sms_results = result[:success] ? send_kra_return_sms_to_employee_for_quarters(@employee_detail, result[:returned_quarters], "L1") : []
+      sms_message = build_employee_return_sms_message(sms_results)
+      base_message = "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1"
 
       if result[:success]
         if request.xhr? || params[:action_type].present?
           render json: {
             success: true,
             count: result[:count],
-            message: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1",
+            message: [ base_message, sms_message ].compact_blank.join(" "),
             updated_status: "l1_returned",
             percentage: result[:percentage],
-            remarks: result[:remarks]
+            remarks: result[:remarks],
+            sms_results: sms_results
           }
         else
           redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
-                      alert: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L1"
+                      alert: [ base_message, sms_message ].compact_blank.join(" ")
         end
       else
         if request.xhr? || params[:action_type].present?
@@ -456,20 +465,24 @@ class EmployeeDetailsController < ApplicationController
       # Pass action_type parameter to indicate this is a return action
       params[:action_type] = "return"
       result = process_quarterly_l2_return
+      sms_results = result[:success] ? send_kra_return_sms_to_employee_for_quarters(@employee_detail, result[:returned_quarters], "L2") : []
+      sms_message = build_employee_return_sms_message(sms_results)
+      base_message = "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
 
       if result[:success]
         if request.xhr? || params[:action_type].present?
           render json: {
             success: true,
             count: result[:count],
-            message: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2",
+            message: [ base_message, sms_message ].compact_blank.join(" "),
             updated_status: "l2_returned",
             percentage: result[:percentage],
-            remarks: result[:remarks]
+            remarks: result[:remarks],
+            sms_results: sms_results
           }
         else
           redirect_to employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
-                      alert: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
+                      alert: [ base_message, sms_message ].compact_blank.join(" ")
         end
       else
         if request.xhr? || params[:action_type].present?
@@ -636,6 +649,9 @@ end
     # Pass action_type parameter to indicate this is a return action
     params[:action_type] = "return"
     result = process_quarterly_l2_return
+    sms_results = result[:success] ? send_kra_return_sms_to_employee_for_quarters(@employee_detail, result[:returned_quarters], "L2") : []
+    sms_message = build_employee_return_sms_message(sms_results)
+    base_message = "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
 
 
     if result[:success]
@@ -643,12 +659,13 @@ end
         render json: {
           success: true,
           count: result[:count],
-          message: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2",
-          updated_status: "l2_returned"
+          message: [ base_message, sms_message ].compact_blank.join(" "),
+          updated_status: "l2_returned",
+          sms_results: sms_results
         }
       else
         redirect_to show_l2_employee_detail_path(@employee_detail, quarter: params[:selected_quarter], financial_year: selected_financial_year),
-                    notice: "⚠️ Successfully returned #{result[:count]} activities for #{params[:selected_quarter] || 'all quarters'} by L2"
+                    notice: [ base_message, sms_message ].compact_blank.join(" ")
       end
     else
       if request.xhr? || params[:action_type].present?
@@ -871,6 +888,103 @@ end
     message_parts.join(" ")
   end
 
+  def send_kra_return_sms_to_employee_for_quarters(employee_detail, quarters, reviewer_level)
+    Array(quarters).compact_blank.uniq.map do |quarter|
+      sms_result = send_kra_return_sms_to_employee(employee_detail, quarter, reviewer_level)
+      {
+        quarter: quarter,
+        success: sms_result[:success],
+        message: sms_result[:success] ? "Employee return SMS sent successfully" : sms_result[:error]
+      }
+    end
+  end
+
+  def build_employee_return_sms_message(sms_results)
+    return nil if sms_results.blank?
+
+    success_count = sms_results.count { |result| result[:success] }
+    failure_count = sms_results.size - success_count
+    message_parts = []
+
+    message_parts << "📱 Employee SMS sent for #{success_count} quarter(s)." if success_count.positive?
+    message_parts << "⚠️ Employee SMS failed for #{failure_count} quarter(s)." if failure_count.positive?
+
+    message_parts.join(" ")
+  end
+
+  def send_kra_return_sms_to_employee(employee_detail, quarter, reviewer_level)
+    employee_mobile = normalize_mobile_number(employee_detail.mobile_number)
+    return { success: false, error: "Employee mobile number not found" } unless employee_mobile.present?
+
+    month_label = quarter_month_label_for_return_sms(quarter)
+    reviewer_label = reviewer_label_for_return_sms(employee_detail, reviewer_level)
+    message = "Emp-Code: #{employee_detail.employee_code}, your #{month_label} KRA MIS has been returned by #{reviewer_label}. Please review and resubmit. - Ploughman Agro Private Limited"
+
+    params = {
+      authkey: SMS_AUTHKEY,
+      mobiles: employee_mobile,
+      message: message,
+      sender: SMS_SENDER,
+      route: "2",
+      country: "0",
+      DLT_TE_ID: KRA_RETURN_SMS_TEMPLATE_ID,
+      unicode: "1"
+    }
+
+    require "httparty"
+    Rails.logger.info(
+      "Sending KRA return SMS to employee: employee_code=#{employee_detail.employee_code}, " \
+      "employee_name=#{employee_detail.employee_name}, quarter=#{quarter}, " \
+      "reviewer=#{reviewer_label}, employee_mobile=#{employee_mobile}"
+    )
+    response = HTTParty.get(SMS_API_URL, query: params, timeout: 15)
+    Rails.logger.info "Employee return SMS API response: HTTP #{response.code} - #{response.body}"
+
+    if response.success?
+      begin
+        response_data = JSON.parse(response.body)
+        if response_data["Status"] == "Success" && response_data["Code"] == "000"
+          {
+            success: true,
+            message: "Employee return SMS sent successfully",
+            message_id: response_data["Message-Id"],
+            target_mobile: employee_mobile,
+            target_name: employee_detail.employee_name,
+            response: response_data
+          }
+        else
+          Rails.logger.error "Employee return SMS API returned error: #{response_data}"
+          {
+            success: false,
+            error: "Employee return SMS API error: #{response_data['Description'] || response_data['Status']}",
+            target_mobile: employee_mobile,
+            target_name: employee_detail.employee_name
+          }
+        end
+      rescue JSON::ParserError => e
+        Rails.logger.error "Failed to parse employee return SMS API response: #{e.message}"
+        {
+          success: false,
+          error: "Invalid employee return SMS API response format: #{response.body}",
+          target_mobile: employee_mobile,
+          target_name: employee_detail.employee_name
+        }
+      end
+    else
+      Rails.logger.error "Employee return SMS API HTTP error: #{response.code} - #{response.body}"
+      {
+        success: false,
+        error: "Employee return SMS API HTTP error: #{response.code} - #{response.body}",
+        target_mobile: employee_mobile,
+        target_name: employee_detail.employee_name
+      }
+    end
+  rescue => e
+    Rails.logger.error "Employee return SMS service error: #{e.message}"
+    Rails.logger.error "Backtrace: #{e.backtrace.first(5).join("\n")}"
+    { success: false, error: "Employee return SMS service error: #{e.message}" }
+  end
+
   def send_sms_to_l2(employee_detail, quarter)
     l2_manager = find_l2_manager_for(employee_detail)
     return { success: false, error: "L2 manager not found for employee" } unless l2_manager.present?
@@ -879,7 +993,7 @@ end
     return { success: false, error: "L2 manager mobile number not found" } unless l2_mobile.present?
 
     quarter_label = quarter_label_for_sms(quarter)
-    message = "Emp-Code: #{employee_detail.employee_code}, Emp-Name: #{employee_detail.employee_name} #{quarter_label} Qtr KRA MIS has been approved by L1. Please review and approve in the system. Ploughman Agro Private Limited"
+    message = "Emp-Code: #{employee_detail.employee_code}, Emp-Name: #{employee_detail.employee_name} has submitted his #{quarter_label} Qtr KRA MIS. Please review and approve in the system. Ploughman Agro Private Limited"
 
     params = {
       authkey: "37317061706c39353312",
@@ -940,6 +1054,33 @@ end
     { success: false, error: "L2 SMS service error: #{e.message}" }
   end
 
+  def reviewer_label_for_return_sms(employee_detail, reviewer_level)
+    manager = reviewer_level == "L1" ? find_l1_manager_for(employee_detail) : find_l2_manager_for(employee_detail)
+    configured_name = reviewer_level == "L1" ? employee_detail.l1_employer_name : employee_detail.l2_employer_name
+    reviewer_name = manager&.employee_name.presence ||
+                    current_employee_detail_record&.employee_name.presence ||
+                    configured_name.presence ||
+                    current_user.email
+
+    [ reviewer_level, reviewer_name ].compact_blank.join(" ")
+  end
+
+  def find_l1_manager_for(employee_detail)
+    normalized_l1_code = employee_detail.l1_code.to_s.strip
+    l1_manager = nil
+
+    if normalized_l1_code.present?
+      l1_manager = EmployeeDetail.find_by(employee_code: normalized_l1_code) ||
+                   EmployeeDetail.find_by("employee_code LIKE ?", normalized_l1_code + "%")
+    end
+
+    if l1_manager.blank? && employee_detail.l1_employer_name.present?
+      l1_manager = EmployeeDetail.find_by("LOWER(employee_email) = ?", employee_detail.l1_employer_name.to_s.strip.downcase)
+    end
+
+    l1_manager
+  end
+
   def find_l2_manager_for(employee_detail)
     normalized_l2_code = employee_detail.l2_code.to_s.strip
     l2_manager = nil
@@ -962,6 +1103,15 @@ end
     return nil unless normalized_mobile.length == 10
 
     normalized_mobile
+  end
+
+  def quarter_month_label_for_return_sms(quarter)
+    {
+      "Q1" => "April, May, June",
+      "Q2" => "July, August, September",
+      "Q3" => "October, November, December",
+      "Q4" => "January, February, March"
+    }[quarter] || quarter.to_s
   end
 
   def quarter_label_for_sms(quarter)
@@ -1237,7 +1387,7 @@ end
     end
 
     approved_count = 0
-    approved_quarters = []
+    processed_quarters = []
 
     # Determine if this is an approval or return action
     action_type = params[:action_type] || "approve"
@@ -1283,7 +1433,7 @@ end
 
             old_status = achievement.status
             achievement.update!(status: new_status)
-            quarter_changed ||= is_approval && old_status != new_status
+            quarter_changed ||= old_status != new_status || !is_approval
 
             # Create or update achievement remark with COMMON remarks for quarter
             remark = achievement.achievement_remark || achievement.build_achievement_remark
@@ -1299,7 +1449,7 @@ end
         end
       end
 
-      approved_quarters << selected_quarter if quarter_changed
+      processed_quarters << selected_quarter if quarter_changed
     else
       # Approve/Return all quarters
       financial_year_user_details_for(@employee_detail).each do |detail|
@@ -1325,7 +1475,7 @@ end
             # Update achievement status
             old_status = achievement.status
             achievement.update!(status: new_status)
-            quarter_changed ||= is_approval && old_status != new_status
+            quarter_changed ||= old_status != new_status || !is_approval
 
             remark = achievement.achievement_remark || achievement.build_achievement_remark
             remark.l1_remarks = params[:remarks] if params[:remarks].present?
@@ -1335,7 +1485,7 @@ end
             approved_count += 1
           end
 
-          approved_quarters << quarter if quarter_changed && !approved_quarters.include?(quarter)
+          processed_quarters << quarter if quarter_changed && !processed_quarters.include?(quarter)
         end
       end
     end
@@ -1344,7 +1494,8 @@ end
       {
         success: true,
         count: approved_count,
-        approved_quarters: approved_quarters,
+        approved_quarters: is_approval ? processed_quarters : [],
+        returned_quarters: is_approval ? [] : processed_quarters,
         percentage: params[:percentage],
         remarks: params[:remarks]
       }
@@ -1368,6 +1519,7 @@ def process_quarterly_l2_approval
   end
 
   approved_count = 0
+  processed_quarters = []
 
   # Determine if this is an approval or return action
   action_type = params[:action_type] || "approve"
@@ -1377,7 +1529,9 @@ def process_quarterly_l2_approval
 
   if params[:selected_quarter].present?
     # FIXED: Approve/Return specific quarter as a single unit
-    quarter_months = get_quarter_months(params[:selected_quarter])
+    selected_quarter = params[:selected_quarter]
+    quarter_months = get_quarter_months(selected_quarter)
+    quarter_changed = false
 
     financial_year_user_details_for(@employee_detail).each do |detail|
       # FIXED: Process the entire quarter as one unit, not month by month
@@ -1412,6 +1566,7 @@ def process_quarterly_l2_approval
             if eligible_statuses.include?(achievement.status)
               old_status = achievement.status
               achievement.update!(status: new_status)
+              quarter_changed ||= old_status != new_status
 
               # Create or update achievement remark with COMMON remarks for quarter
               remark = achievement.achievement_remark || achievement.build_achievement_remark
@@ -1426,6 +1581,7 @@ def process_quarterly_l2_approval
             # For return, process ALL achievements regardless of current status
             old_status = achievement.status
             achievement.update!(status: new_status)
+            quarter_changed ||= old_status != new_status || !is_approval
 
             # Create or update achievement remark with COMMON remarks for quarter
             remark = achievement.achievement_remark || achievement.build_achievement_remark
@@ -1441,11 +1597,13 @@ def process_quarterly_l2_approval
         Rails.logger.warn "No achievements found for quarter #{params[:selected_quarter]} in activity #{detail.activity.activity_name}"
       end
     end
+    processed_quarters << selected_quarter if quarter_changed
   else
     # Approve/Return all quarters
     financial_year_user_details_for(@employee_detail).each do |detail|
       get_all_quarters.each do |quarter|
         quarter_months = get_quarter_months(quarter)
+        quarter_changed = false
 
         quarter_months.each do |month|
           # FIXED: Process ALL months in the quarter, not just those with targets
@@ -1463,7 +1621,9 @@ def process_quarterly_l2_approval
 
           if eligible_statuses.include?(achievement.status)
             # Update achievement status
+            old_status = achievement.status
             achievement.update!(status: new_status)
+            quarter_changed ||= old_status != new_status || !is_approval
 
             remark = achievement.achievement_remark || achievement.build_achievement_remark
             remark.l2_remarks = params[:l2_remarks] || params[:remarks] if params[:l2_remarks].present? || params[:remarks].present?
@@ -1473,6 +1633,7 @@ def process_quarterly_l2_approval
             approved_count += 1
           end
         end
+        processed_quarters << quarter if quarter_changed && !processed_quarters.include?(quarter)
       end
     end
   end
@@ -1481,6 +1642,8 @@ def process_quarterly_l2_approval
     {
       success: true,
       count: approved_count,
+      approved_quarters: is_approval ? processed_quarters : [],
+      returned_quarters: is_approval ? [] : processed_quarters,
       percentage: params[:l2_percentage] || params[:percentage],
       remarks: params[:l2_remarks] || params[:remarks]
     }
