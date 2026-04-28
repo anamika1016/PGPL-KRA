@@ -15,11 +15,11 @@ class User < ApplicationRecord
 
   ROLES = %w[employee hod admin l1_employer l2_employer]
 
-  # Auto-strip employee_code before save
+  # Normalize employee codes so pgpl-002 and PGPL-002 behave the same everywhere.
   before_validation :sanitize_employee_code
 
   def sanitize_employee_code
-    self.employee_code = employee_code.strip if employee_code.present?
+    self.employee_code = normalize_employee_code(employee_code)
   end
 
   # Role helpers
@@ -110,5 +110,11 @@ class User < ApplicationRecord
 
   def name
     email
+  end
+
+  private
+
+  def normalize_employee_code(value)
+    value.to_s.strip.upcase.presence
   end
 end

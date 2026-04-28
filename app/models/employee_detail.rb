@@ -6,6 +6,7 @@ class EmployeeDetail < ApplicationRecord
   has_many :l1_pulse_assessments, dependent: :destroy
   has_many :user_training_assignments, dependent: :destroy
   has_many :assigned_trainings, through: :user_training_assignments, source: :training
+  before_validation :normalize_employee_codes
   after_initialize :set_default_status, if: :new_record?
   # belongs_to :department  # only if you have a departments table and department_id column
 
@@ -54,5 +55,17 @@ scope :l1_pending_records, -> { where(status: [ "pending", "returned" ]) }
 
   def set_default_status
    self.status ||= "pending"
+  end
+
+  private
+
+  def normalize_employee_codes
+    self.employee_code = normalize_code(employee_code)
+    self.l1_code = normalize_code(l1_code)
+    self.l2_code = normalize_code(l2_code)
+  end
+
+  def normalize_code(value)
+    value.to_s.strip.upcase.presence
   end
 end

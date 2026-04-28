@@ -105,6 +105,6 @@ class ApplicationController < ActionController::Base
   def employee_detail_scope_for_current_user
     return EmployeeDetail.none if normalized_current_employee_codes.empty? && normalized_current_user_email.blank?
 
-    current_employee_detail_records
+    EmployeeDetail.all
   end
 end
