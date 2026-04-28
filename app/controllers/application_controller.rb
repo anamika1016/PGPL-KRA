@@ -46,14 +46,46 @@ class ApplicationController < ActionController::Base
   end
 
   def current_employee_detail_record
-    @current_employee_detail_record ||= current_user.employee_detail ||
-      EmployeeDetail.find_by("LOWER(BTRIM(COALESCE(employee_email, ''))) = ?", normalized_current_user_email)
+    @current_employee_detail_record ||= current_employee_detail_records.order(:id).first
+  end
+
+  def current_employee_detail_records
+    @current_employee_detail_records ||= begin
+      scope = EmployeeDetail.all
+      conditions = []
+      values = []
+
+      if current_user.id.present?
+        conditions << "user_id = ?"
+        values << current_user.id
+      end
+
+      if normalized_current_employee_codes.any?
+        conditions << "LOWER(BTRIM(COALESCE(employee_code, ''))) IN (?)"
+        values << normalized_current_employee_codes
+      end
+
+      if normalized_current_user_email.present?
+        conditions << "LOWER(BTRIM(COALESCE(employee_email, ''))) = ?"
+        values << normalized_current_user_email
+      end
+
+      if conditions.any?
+        scope.where([ conditions.join(" OR "), *values ]).distinct
+      else
+        EmployeeDetail.none
+      end
+    end
+  end
+
+  def current_employee_detail_ids
+    @current_employee_detail_ids ||= current_employee_detail_records.pluck(:id)
   end
 
   def normalized_current_employee_codes
     @normalized_current_employee_codes ||= [
       current_user.employee_code,
-      current_employee_detail_record&.employee_code
+      current_user.employee_detail&.employee_code
     ].filter_map { |code| normalize_lookup_value(code) }.uniq
   end
 
@@ -73,6 +105,6 @@ class ApplicationController < ActionController::Base
   def employee_detail_scope_for_current_user
     return EmployeeDetail.none if normalized_current_employee_codes.empty? && normalized_current_user_email.blank?
 
-    EmployeeDetail.all
+    current_employee_detail_records
   end
 end

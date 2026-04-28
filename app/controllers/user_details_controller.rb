@@ -40,14 +40,14 @@ class UserDetailsController < ApplicationController
 
   def index
     if current_user.role == "employee" || current_user.role == "l1_employer" || current_user.role == "l2_employer"
-      employee_detail = EmployeeDetail.find_by(employee_email: current_user.email)
+      employee_detail_ids = current_employee_detail_ids
 
-      @user_details = if employee_detail
+      @user_details = if employee_detail_ids.any?
         # Get all user_details for this employee and deduplicate by activity
         all_details = UserDetail.includes(:department, :activity, :employee_detail)
                                .assignment_consistent
                                .for_financial_year(selected_financial_year)
-                               .where(employee_detail_id: employee_detail.id)
+                               .where(employee_detail_id: employee_detail_ids)
 
         # Deduplicate by keeping the most recent record for each activity
         deduplicated_details = all_details.group_by(&:activity_id).map do |activity_id, records|
@@ -379,12 +379,12 @@ class UserDetailsController < ApplicationController
   # FIXED: Quarterly edit all method
   def quarterly_edit_all
     if current_user.role == "employee" || current_user.role == "l1_employer" || current_user.role == "l2_employer"
-      employee_detail = EmployeeDetail.find_by(employee_email: current_user.email)
-      @user_details = if employee_detail
+      employee_detail_ids = current_employee_detail_ids
+      @user_details = if employee_detail_ids.any?
         UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
                 .assignment_consistent
                 .for_financial_year(selected_financial_year)
-                .where(employee_detail_id: employee_detail.id)
+                .where(employee_detail_id: employee_detail_ids)
                 .order("departments.department_type, activities.activity_name")
       else
         UserDetail.none
@@ -527,14 +527,15 @@ class UserDetailsController < ApplicationController
 
   def get_user_detail
     if [ "employee", "l1_employer", "l2_employer" ].include?(current_user.role)
-      @employee_detail = EmployeeDetail.find_by(employee_email: current_user.email)
+      @employee_detail = current_employee_detail_record
+      employee_detail_ids = current_employee_detail_ids
 
-      @user_details = if @employee_detail
+      @user_details = if employee_detail_ids.any?
         # Get all user_details for this employee and deduplicate by activity
         all_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
                                .assignment_consistent
                                .for_financial_year(selected_financial_year)
-                               .where(employee_detail_id: @employee_detail.id)
+                               .where(employee_detail_id: employee_detail_ids)
 
         # Deduplicate by keeping the most recent record for each activity
         deduplicated_details = all_details.group_by(&:activity_id).map do |activity_id, records|
@@ -570,14 +571,15 @@ class UserDetailsController < ApplicationController
 
   def submitted_achievements
     if [ "employee", "l1_employer", "l2_employer" ].include?(current_user.role)
-      @employee_detail = EmployeeDetail.find_by(employee_email: current_user.email)
+      @employee_detail = current_employee_detail_record
+      employee_detail_ids = current_employee_detail_ids
 
-      @user_details = if @employee_detail
+      @user_details = if employee_detail_ids.any?
         # Get all user_details for this employee and deduplicate by activity
         all_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
                                .assignment_consistent
                                .for_financial_year(selected_financial_year)
-                               .where(employee_detail_id: @employee_detail.id)
+                               .where(employee_detail_id: employee_detail_ids)
 
         # Deduplicate by keeping the most recent record for each activity
         deduplicated_details = all_details.group_by(&:activity_id).map do |activity_id, records|
@@ -585,7 +587,9 @@ class UserDetailsController < ApplicationController
         end
 
         # Convert to ActiveRecord relation and limit
-        UserDetail.where(id: deduplicated_details.map(&:id)).limit(100)
+        UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                  .where(id: deduplicated_details.map(&:id))
+                  .limit(100)
       else
         UserDetail.none
       end
@@ -602,7 +606,9 @@ class UserDetailsController < ApplicationController
       end
 
       # Convert to ActiveRecord relation and limit
-      @user_details = UserDetail.where(id: deduplicated_details.map(&:id)).limit(100)
+      @user_details = UserDetail.includes(:department, :activity, :employee_detail, achievements: :achievement_remark)
+                                .where(id: deduplicated_details.map(&:id))
+                                .limit(100)
       @employee_detail = nil
     end
   end
