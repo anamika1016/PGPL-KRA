@@ -143,10 +143,12 @@
                 <% if has_quarterly_data %>
                   <tr class="review-row <%= detail_index.even? ? 'bg-gray-50' : 'bg-white' %> hover:bg-gray-100 transition-colors duration-200">
                     <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 activity-cell">
-                      <%= detail.activity&.activity_name || 'N/A' %>
+                      <%= safe_join((detail.activity&.activity_name.presence || 'N/A').to_s.split(/\s*•\s*/).reject(&:blank?).map { |line| h(line.strip) }, tag.br) %>
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 theme-cell">
-                      <span class="theme-badge"><%= detail.display_theme_name.presence || detail.activity&.theme_name || 'N/A' %></span>
+                      <div class="table-text-lines">
+                        <%= safe_join((detail.display_theme_name.presence || detail.activity&.theme_name || 'N/A').to_s.split(/\s*[,;•]\s*/).reject(&:blank?).map { |line| h(line.strip) }, tag.br) %>
+                      </div>
                     </td>
                     <td class="px-4 py-3 text-sm text-gray-800 border-r border-gray-200 text-center">
                       <span class="unit-pill"><%= detail.display_unit || '' %></span>
@@ -177,8 +179,8 @@
                       <!-- Remarks -->
                       <td class="px-4 py-3 text-sm border-r border-gray-200 remarks-cell">
                         <% if employee_remarks.present? %>
-                          <div class="remarks-content remarks-content--filled text-xs break-words">
-                            <%= employee_remarks %>
+                          <div class="remarks-content remarks-content--filled">
+                            <%= safe_join(employee_remarks.to_s.split(/\s*[,;•]\s*/).reject(&:blank?).map { |line| h(line.strip) }, tag.br) %>
                           </div>
                         <% else %>
                           <span class="remarks-empty">No remarks</span>
@@ -1966,20 +1968,29 @@ body.modal-open {
   width: 190px;
   min-width: 170px;
   max-width: 220px;
+  text-align: left !important;
+  vertical-align: top !important;
+  white-space: normal !important;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 .theme-badge {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  max-width: 100%;
-  padding: 0.45rem 0.8rem;
-  border-radius: 999px;
-  border: 1px solid rgba(22, 101, 52, 0.14);
-  background: rgba(22, 101, 52, 0.08);
+  display: block;
+  width: 100%;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
   color: #215a3d;
-  font-weight: 700;
-  line-height: 1.35;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.table-text-lines {
+  color: #215a3d;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .unit-pill,
@@ -2046,28 +2057,36 @@ body.modal-open {
 }
 
 .remarks-cell {
-  min-width: 130px;
+  min-width: 170px;
+  max-width: 230px;
+  text-align: left !important;
+  vertical-align: top !important;
+  white-space: normal !important;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 .remarks-content {
-  width: fit-content;
-  max-width: 28rem;
-  padding: 0.58rem 0.82rem;
-  border-radius: 14px;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .remarks-content--filled {
-  border: 1px solid #cbdff3;
-  background: linear-gradient(135deg, #eef6ff 0%, #e7f0fb 100%);
+  border: 0;
+  background: transparent;
   color: #275a8a;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: none;
 }
 
 .remarks-empty {
-  padding: 0.4rem 0.72rem;
-  border-radius: 999px;
-  border: 1px dashed #d6dee6;
-  background: #f7f9fb;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
   color: #94a3b8;
   font-size: 0.73rem;
   font-weight: 700;
