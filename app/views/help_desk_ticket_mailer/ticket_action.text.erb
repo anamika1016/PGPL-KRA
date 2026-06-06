@@ -1,0 +1,64 @@
+Hello,
+
+Help desk <%= @ticket.request_label.downcase %> <%= @ticket.ticket_reference %> has been <%= @action_label.downcase %>.
+
+Ticket Details
+Department: <%= @ticket.department.department_type %>
+Status: <%= @ticket.status.to_s.humanize %>
+Type: <%= @ticket.request_label %>
+Requester: <%= @ticket.requester_name %>
+<% if @ticket.assisted_request? && @ticket.submitted_by_user.present? %>
+Submitted by: <%= @ticket.submitted_by_user.display_name %> on behalf of the requester
+<% end %>
+<% if @ticket.assigned_to_user.present? %>
+Current support owner: <%= @ticket.assigned_to_user.display_name %> (<%= @ticket.current_escalation_label %>)
+<% end %>
+<% if @ticket.responded_by_user.present? %>
+Last support action by: <%= @ticket.responded_by_user.display_name %>
+<% end %>
+<% if @ticket.closed_by_user.present? %>
+Closed by: <%= @ticket.closed_by_user.display_name %>
+<% elsif @ticket.closed? && @ticket.closed_automatically? %>
+Closed automatically because no requester action was received within the response window.
+<% end %>
+
+Subject:
+<%= @ticket.request_subject %>
+
+<% if @ticket.message.present? %>
+Request details:
+<%= @ticket.message %>
+<% end %>
+
+<% if @ticket.response_message.present? %>
+Latest support update:
+<%= @ticket.response_message %>
+<% end %>
+
+<% if @ticket.requester_remark.present? %>
+Latest requester remark:
+<%= @ticket.requester_remark %>
+<% end %>
+
+<% if @ticket.resolved? %>
+Next Action:
+<% if @ticket.final_action_mode_approve_reject? %>
+User action is pending. Please approve or reject this response within 2 days.
+<% else %>
+User action is pending. Please close or reopen this ticket within 2 days.
+<% end %>
+<% elsif @ticket.closed? %>
+Next Action:
+No further action is required for this ticket.
+<% elsif @ticket.assigned_to_user.present? %>
+Next Action:
+This ticket has been assigned to the support team. Please review the ticket and update or resolve it.
+<% else %>
+Next Action:
+Please review the ticket details and take the required action.
+<% end %>
+
+Regards,
+ASA Help Desk
+HR Portal: https://hr.asaindia.org/
+This is an automated email. Please do not reply.

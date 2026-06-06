@@ -1,0 +1,133 @@
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f7fb;margin:0;padding:24px 0;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+  <tr>
+    <td align="center" style="padding:0 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="width:100%;max-width:640px;background:#ffffff;border:1px solid #dbe3ef;border-radius:8px;overflow:hidden;">
+        <tr>
+          <td style="background:#0f4c81;color:#ffffff;padding:22px 28px;">
+            <div style="font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#cfe2f5;">ASA Help Desk</div>
+            <div style="font-size:24px;font-weight:700;margin-top:6px;line-height:1.25;">Ticket <%= @action_label %></div>
+            <div style="font-size:14px;margin-top:8px;color:#e9f3fb;">Reference: <strong><%= @ticket.ticket_reference %></strong></div>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:26px 28px 10px;">
+            <p style="margin:0 0 18px;font-size:15px;line-height:1.55;">Hello,</p>
+            <p style="margin:0 0 22px;font-size:15px;line-height:1.55;">
+              Help desk <%= @ticket.request_label.downcase %> <strong><%= @ticket.ticket_reference %></strong>
+              has been <strong><%= @action_label.downcase %></strong>.
+            </p>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;margin:0 0 22px;border:1px solid #e2e8f0;">
+              <tr>
+                <td colspan="2" style="background:#eef4fa;color:#0f3557;font-size:14px;font-weight:700;padding:11px 14px;border-bottom:1px solid #e2e8f0;">Ticket Details</td>
+              </tr>
+              <tr>
+                <td style="width:38%;font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Department</td>
+                <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;"><%= @ticket.department.department_type %></td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Status</td>
+                <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;">
+                  <span style="display:inline-block;background:#e8f5ef;color:#166534;border:1px solid #bbebd0;border-radius:14px;padding:3px 10px;font-weight:700;"><%= @ticket.status.to_s.humanize %></span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Type</td>
+                <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;"><%= @ticket.request_label %></td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Requester</td>
+                <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;"><%= @ticket.requester_name %></td>
+              </tr>
+              <% if @ticket.assisted_request? && @ticket.submitted_by_user.present? %>
+                <tr>
+                  <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Submitted By</td>
+                  <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;"><%= @ticket.submitted_by_user.display_name %> on behalf of the requester</td>
+                </tr>
+              <% end %>
+              <% if @ticket.assigned_to_user.present? %>
+                <tr>
+                  <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Current Support Owner</td>
+                  <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;"><%= @ticket.assigned_to_user.display_name %></td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Escalation Level</td>
+                  <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;"><%= @ticket.current_escalation_label %></td>
+                </tr>
+              <% end %>
+              <% if @ticket.responded_by_user.present? %>
+                <tr>
+                  <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;border-bottom:1px solid #edf2f7;">Last Support Action By</td>
+                  <td style="font-size:13px;color:#172033;padding:10px 14px;border-bottom:1px solid #edf2f7;"><%= @ticket.responded_by_user.display_name %></td>
+                </tr>
+              <% end %>
+              <% if @ticket.closed_by_user.present? %>
+                <tr>
+                  <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;">Closed By</td>
+                  <td style="font-size:13px;color:#172033;padding:10px 14px;"><%= @ticket.closed_by_user.display_name %></td>
+                </tr>
+              <% elsif @ticket.closed? && @ticket.closed_automatically? %>
+                <tr>
+                  <td style="font-size:13px;color:#5c6b7a;padding:10px 14px;">Closure</td>
+                  <td style="font-size:13px;color:#172033;padding:10px 14px;">Closed automatically because no requester action was received within the response window.</td>
+                </tr>
+              <% end %>
+            </table>
+
+            <div style="margin:0 0 18px;">
+              <div style="font-size:13px;font-weight:700;color:#0f3557;margin-bottom:6px;">Subject</div>
+              <div style="font-size:14px;line-height:1.55;color:#172033;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;"><%= @ticket.request_subject %></div>
+            </div>
+
+            <% if @ticket.message.present? %>
+              <div style="margin:0 0 18px;">
+                <div style="font-size:13px;font-weight:700;color:#0f3557;margin-bottom:6px;">Request Details</div>
+                <div style="font-size:14px;line-height:1.55;color:#172033;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;"><%= simple_format(@ticket.message, {}, wrapper_tag: "div") %></div>
+              </div>
+            <% end %>
+
+            <% if @ticket.response_message.present? %>
+              <div style="margin:0 0 18px;">
+                <div style="font-size:13px;font-weight:700;color:#0f3557;margin-bottom:6px;">Latest Support Update</div>
+                <div style="font-size:14px;line-height:1.55;color:#172033;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;"><%= simple_format(@ticket.response_message, {}, wrapper_tag: "div") %></div>
+              </div>
+            <% end %>
+
+            <% if @ticket.requester_remark.present? %>
+              <div style="margin:0 0 18px;">
+                <div style="font-size:13px;font-weight:700;color:#0f3557;margin-bottom:6px;">Latest Requester Remark</div>
+                <div style="font-size:14px;line-height:1.55;color:#172033;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:12px 14px;"><%= simple_format(@ticket.requester_remark, {}, wrapper_tag: "div") %></div>
+              </div>
+            <% end %>
+
+            <div style="margin:22px 0 4px;background:#eef4fa;border-left:4px solid #0f4c81;border-radius:4px;padding:13px 14px;color:#172033;font-size:14px;line-height:1.55;">
+              <% if @ticket.resolved? %>
+                <% if @ticket.final_action_mode_approve_reject? %>
+                  User action is pending. Please approve or reject this response within 2 days.
+                <% else %>
+                  User action is pending. Please close or reopen this ticket within 2 days.
+                <% end %>
+              <% elsif @ticket.closed? %>
+                No further action is required for this ticket.
+              <% elsif @ticket.assigned_to_user.present? %>
+                This ticket has been assigned to the support team. Please review the ticket and update or resolve it.
+              <% else %>
+                Please review the ticket details and take the required action.
+              <% end %>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:18px 28px 24px;color:#6b7280;font-size:12px;line-height:1.5;border-top:1px solid #edf2f7;">
+            Regards,<br>
+            <strong>ASA Help Desk</strong><br>
+            HR Portal: <a href="https://hr.asaindia.org/" style="color:#0f4c81;text-decoration:underline;">https://hr.asaindia.org/</a><br>
+            This is an automated email. Please do not reply.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

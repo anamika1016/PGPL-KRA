@@ -1,0 +1,33 @@
+<%
+  removed = f.object.marked_for_destruction?
+  row_classes = "helpdesk-builder-table__row"
+  row_classes << " hidden" if removed
+  level_number = f.object.position.presence || 1
+%>
+
+<div class="<%= row_classes %>" data-escalation-level-row data-removed="<%= removed %>">
+  <%= f.hidden_field :position, value: level_number, data: { escalation_position: true } %>
+  <%= f.hidden_field :_destroy, value: removed ? "1" : "0", data: { escalation_destroy: true } %>
+
+  <div class="helpdesk-builder-table__cell helpdesk-builder-table__cell--level">
+    <p class="helpdesk-cell-title">Level</p>
+    <span class="helpdesk-badge helpdesk-badge--warning" data-escalation-level-label>L<%= level_number %> Escalation</span>
+    <p class="helpdesk-context">Escalation step <%= level_number %></p>
+  </div>
+
+  <div class="helpdesk-builder-table__cell">
+    <p class="helpdesk-cell-title">Escalation User</p>
+    <%= f.select :user_id,
+                 options_for_select(manager_options, f.object.user_id),
+                 { include_blank: "Select escalation user" },
+                 class: "helpdesk-input" %>
+    <p class="helpdesk-context">Select the user responsible at this escalation stage.</p>
+  </div>
+
+  <div class="helpdesk-builder-table__cell helpdesk-builder-table__cell--action">
+    <p class="helpdesk-cell-title">Action</p>
+    <button type="button" data-escalation-remove class="helpdesk-ghost-btn">
+      Remove
+    </button>
+  </div>
+</div>

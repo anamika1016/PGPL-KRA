@@ -1,0 +1,25 @@
+<%
+  attachment_groups = [
+    [ "Request Documents", ticket.documents ],
+    [ "Support Attachments", ticket.support_documents ],
+    [ "Reopen Attachments", ticket.requester_followup_documents ]
+  ].select { |_label, attachments| attachments.attached? }
+%>
+
+<% if attachment_groups.any? %>
+  <div class="helpdesk-attachment-groups">
+    <% attachment_groups.each do |label, attachments| %>
+      <div class="helpdesk-attachment-group">
+        <p class="helpdesk-attachment-group__label"><%= label %></p>
+        <div class="helpdesk-doc-row">
+          <% attachments.each do |document| %>
+            <%= link_to "Download #{document.filename}",
+                        rails_blob_path(document, disposition: "attachment"),
+                        download: document.filename.to_s,
+                        class: "helpdesk-doc-link" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

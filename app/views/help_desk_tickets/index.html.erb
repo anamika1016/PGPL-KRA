@@ -1,0 +1,702 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "help_desk", "data-turbo-track": "reload" %>
+<% end %>
+
+<%
+  requester_name = @requester_profile&.employee_name.presence || user_display_name(current_user)
+  requester_email = current_user.email
+  requester_code = @requester_profile&.employee_code.presence || current_user.employee_code.presence || "Not available"
+  on_behalf_requested = ActiveModel::Type::Boolean.new.cast(@help_desk_ticket.on_behalf_requested)
+  selected_requester_id = @help_desk_ticket.requester_user_id.presence&.to_s
+  request_received_on_value = @help_desk_ticket.request_received_on.presence || @help_desk_ticket.request_received_at&.in_time_zone("Asia/Kolkata")&.to_date&.iso8601
+  request_received_time_value = @help_desk_ticket.request_received_time.presence || @help_desk_ticket.request_received_at&.in_time_zone("Asia/Kolkata")&.strftime("%H:%M")
+  selected_type = @help_desk_ticket.request_type
+  selected_question_master_id = @help_desk_ticket.help_desk_question_master_id.presence&.to_s
+  current_question_options = if @help_desk_ticket.department_id.present? && selected_type.present?
+    @help_desk_question_catalog.select do |question|
+      question[:department_id] == @help_desk_ticket.department_id && question[:request_type] == selected_type
+    end
+  else
+    []
+  end
+  recent_ticket_count = @recent_tickets.size
+  recent_general_tickets = @recent_tickets.count(&:ticket?)
+  recent_complaints = @recent_tickets.count(&:complaint?)
+  recent_suggestions = @recent_tickets.count(&:suggestion?)
+  recent_section_title = @can_review_help_desk_tickets ? "Current Tickets" : "Current Requests"
+  recent_section_description = @can_review_help_desk_tickets ? "Only active or pending-user-action tickets stay here. Closed history moves to Help Desk Report." : "Only your current open or user-action-pending requests stay here. Older closed records move to Help Desk Report."
+  recent_empty_title = @can_review_help_desk_tickets ? "No current tickets" : "No current requests"
+  recent_empty_description = @can_review_help_desk_tickets ? "Active tickets you raise, handle, or resolve will appear here. Closed history stays in Help Desk Report." : "Your current help desk requests will appear here. Closed history stays in Help Desk Report."
+  recent_count_label = @can_review_help_desk_tickets ? "ticket" : "request"
+%>
+
+<div class="main-content sidebar-aware-content helpdesk-page">
+  <div class="helpdesk-shell">
+    <section class="helpdesk-toolbar">
+      <div class="helpdesk-toolbar__main">
+        <span class="helpdesk-eyebrow">Support Desk</span>
+        <h1 class="helpdesk-title">Help Desk</h1>
+
+        <div class="helpdesk-badge-row helpdesk-toolbar-badges">
+          <span class="helpdesk-badge helpdesk-badge--info">Auto-filled profile</span>
+          <span class="helpdesk-badge helpdesk-badge--success">Escalation + response tickets</span>
+          <span class="helpdesk-badge helpdesk-badge--neutral">5 files, 10MB each</span>
+        </div>
+
+        <div class="helpdesk-actions helpdesk-stack-top-lg">
+          <%= link_to "Open Help Desk Report", help_desk_reports_path, class: "helpdesk-secondary-btn" %>
+          <% if @can_review_help_desk_tickets %>
+            <%= link_to "Open Assigned Queue", assigned_queue_help_desk_tickets_path, class: "helpdesk-primary-btn" %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="helpdesk-stats">
+        <div class="helpdesk-stat helpdesk-stat--sky">
+          <p class="helpdesk-stat__label">Current</p>
+          <p class="helpdesk-stat__value"><%= recent_ticket_count %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--rose">
+          <p class="helpdesk-stat__label">Tickets</p>
+          <p class="helpdesk-stat__value"><%= recent_general_tickets %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--blue">
+          <p class="helpdesk-stat__label">Complaints</p>
+          <p class="helpdesk-stat__value"><%= recent_complaints %></p>
+        </div>
+      </div>
+    </section>
+
+    <div>
+      <section class="helpdesk-card">
+        <div class="helpdesk-card__header helpdesk-card__header--split">
+          <div>
+            <h2 class="helpdesk-section-title">New Request</h2>
+          </div>
+          <span class="helpdesk-inline-note helpdesk-inline-note--accent">Logged in as <strong><%= requester_name %></strong></span>
+        </div>
+
+        <% if @help_desk_ticket.errors.any? %>
+          <div class="helpdesk-alert helpdesk-alert--danger">
+            <%= @help_desk_ticket.errors.full_messages.to_sentence %>
+          </div>
+        <% end %>
+
+        <%= form_with model: @help_desk_ticket, url: help_desk_tickets_path, local: true, html: { multipart: true } do |form| %>
+          <div class="helpdesk-form-grid">
+            <div>
+              <%= form.label :department_id, "Department", class: "helpdesk-field-label" %>
+              <%= form.select :department_id,
+                              options_from_collection_for_select(@departments, :id, :department_type, @help_desk_ticket.department_id),
+                              { include_blank: "Select department" },
+                              class: "helpdesk-input",
+                              disabled: @departments.blank? %>
+            </div>
+
+            <div>
+              <%= form.label :request_type, "Request Type", class: "helpdesk-field-label" %>
+              <%= form.select :request_type,
+                              options_for_select([ [ "Ticket", "ticket" ], [ "Complaint", "complaint" ], [ "Suggestion", "suggestion" ] ], selected_type),
+                              { include_blank: "Select request type" },
+                              class: "helpdesk-input" %>
+            </div>
+
+            <div id="help-desk-initial-escalation-wrapper" class="<%= selected_type == 'complaint' ? '' : 'hidden' %>">
+              <%= form.label :initial_escalation_position, "Send Complaint To", class: "helpdesk-field-label" %>
+              <%= form.select :initial_escalation_position,
+                              options_for_select([ [ "L1", 1 ], [ "L2", 2 ], [ "L3", 3 ] ], @help_desk_ticket.initial_escalation_position.presence || 1),
+                              {},
+                              class: "helpdesk-input" %>
+            </div>
+
+            <% if @can_create_assisted_help_desk_tickets %>
+              <div class="helpdesk-form-span">
+                <div class="helpdesk-panel helpdesk-panel--soft">
+                  <div class="helpdesk-check-row">
+                    <div>
+                      <p class="helpdesk-field-label">Submission Mode</p>
+                      <label class="helpdesk-checkbox-label" for="help_desk_ticket_on_behalf_requested">
+                        <%= form.check_box :on_behalf_requested,
+                                           {
+                                             class: "helpdesk-checkbox",
+                                             checked: on_behalf_requested
+                                           },
+                                           "1",
+                                           "0" %>
+                        Create response ticket for an oral request
+                      </label>
+                    </div>
+                    <span class="helpdesk-inline-note">Select the employee whose work was completed.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="help-desk-assisted-fields" class="helpdesk-form-span <%= 'hidden' unless on_behalf_requested %>">
+                <div class="helpdesk-panel">
+                  <div class="helpdesk-form-grid">
+                    <div>
+                      <%= form.label :requester_user_id, "Employee Name", class: "helpdesk-field-label" %>
+                      <%= form.select :requester_user_id,
+                                      options_for_select(@help_desk_requester_options, selected_requester_id),
+                                      { include_blank: "Select employee" },
+                                      class: "helpdesk-input",
+                                      required: on_behalf_requested %>
+                    </div>
+
+                    <div>
+                      <%= form.label :request_received_on, "Request Date", class: "helpdesk-field-label" %>
+                      <%= form.date_field :request_received_on,
+                                          value: request_received_on_value,
+                                          class: "helpdesk-input",
+                                          max: Date.current.iso8601,
+                                          required: on_behalf_requested %>
+                    </div>
+
+                    <div>
+                      <%= form.label :request_received_time, "Request Time", class: "helpdesk-field-label" %>
+                      <%= form.time_field :request_received_time,
+                                          value: request_received_time_value,
+                                          class: "helpdesk-input",
+                                          required: on_behalf_requested %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <div id="help-desk-question-select-wrapper" class="helpdesk-form-span <%= 'hidden' if selected_type.blank? %>">
+              <%= form.label :help_desk_question_master_id, "Common Question / Topic", class: "helpdesk-field-label" %>
+              <%= form.select :help_desk_question_master_id,
+                              options_for_select(current_question_options.map { |question| [ question[:question_text], question[:id] ] }, selected_question_master_id),
+                              { include_blank: current_question_options.any? ? "Other / Type your own topic" : "No master questions available - type your own topic below" },
+                              class: "helpdesk-input",
+                              data: {
+                                helpdesk_question_select: true,
+                                waiting_label: "Select department and request type first",
+                                other_label: "Other / Type your own topic",
+                                empty_label: "No master questions available - type your own topic below"
+                              } %>
+              <p id="help-desk-question-help" class="helpdesk-context">
+                Select a predefined topic for this department, or leave it on Other and type your own below.
+              </p>
+            </div>
+
+            <div id="help-desk-custom-question-wrapper" class="helpdesk-form-span <%= 'hidden' if selected_type.blank? || selected_question_master_id.present? %>">
+              <label id="help-desk-custom-question-label" for="help_desk_ticket_question_subject" class="helpdesk-field-label">
+                <%= selected_type == "suggestion" ? "Other Suggestion Topic" : (selected_type == "ticket" ? "Other Ticket Topic" : "Other Complaint Topic") %>
+              </label>
+              <%= form.text_field :question_subject,
+                                  class: "helpdesk-input",
+                                  placeholder: selected_type == "suggestion" ? "Type your own suggestion topic." : (selected_type == "ticket" ? "Type your own ticket topic." : "Type your own complaint topic.") %>
+            </div>
+
+            <div id="help-desk-message-wrapper" class="helpdesk-form-span <%= 'hidden' if selected_type.blank? %>">
+              <label id="help-desk-message-label" for="help_desk_ticket_message" class="helpdesk-field-label">
+                <%= selected_type == "suggestion" ? "Suggestion Details" : (selected_type == "ticket" ? "Ticket Details" : "Complaint Details") %>
+              </label>
+              <%= form.text_area :message,
+                                 rows: 5,
+                                 class: "helpdesk-textarea",
+                                 placeholder: selected_type == "suggestion" ? "Share your suggestion in a clear and practical way." : (selected_type == "ticket" ? "Describe the ticket clearly." : "Describe the issue you are facing with as much detail as possible.") %>
+            </div>
+
+            <div class="helpdesk-form-span">
+              <%= form.label :documents, "Supporting Documents", class: "helpdesk-field-label" %>
+              <div class="helpdesk-upload">
+                <%= form.file_field :documents,
+                                    multiple: true,
+                                    direct_upload: false,
+                                    class: "helpdesk-file-input" %>
+                <p class="helpdesk-muted">Maximum 5 files, 10MB each.</p>
+              </div>
+            </div>
+          </div>
+
+          <% if @departments.blank? %>
+            <div class="helpdesk-alert helpdesk-alert--info helpdesk-stack-top-lg">
+              No departments are available right now. Please ask the administrator to configure department records first.
+            </div>
+          <% end %>
+
+          <div class="helpdesk-actions">
+            <%= form.submit "Submit Request",
+                            class: "helpdesk-primary-btn",
+                            disabled: @departments.blank? %>
+          </div>
+        <% end %>
+      </section>
+
+    </div>
+
+    <section class="helpdesk-card">
+      <div class="helpdesk-card__header helpdesk-card__header--split">
+        <div>
+          <h2 class="helpdesk-section-title"><%= recent_section_title %></h2>
+          <p class="helpdesk-section-copy"><%= recent_section_description %></p>
+        </div>
+        <% if @recent_tickets.any? %>
+          <span class="helpdesk-inline-note"><%= pluralize(recent_ticket_count, recent_count_label) %></span>
+        <% end %>
+      </div>
+
+      <% if @recent_tickets.any? %>
+        <div class="helpdesk-data-table">
+          <div class="helpdesk-data-table__head">
+            <div>Ticket</div>
+            <div>Details</div>
+            <div>Status & Timeline</div>
+            <div>Action</div>
+          </div>
+
+          <% @recent_tickets.each do |ticket| %>
+            <% next unless ticket.visible_in_user_current_list_for?(current_user) %>
+            <article class="helpdesk-data-table__row">
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Ticket</p>
+                <div class="helpdesk-badge-row">
+                  <span class="helpdesk-badge"><%= ticket.ticket_reference %></span>
+                  <span class="helpdesk-badge <%= ticket.complaint? ? 'helpdesk-badge--danger' : 'helpdesk-badge--info' %>"><%= ticket.request_label %></span>
+                  <% if ticket.assisted_request? %>
+                    <span class="helpdesk-badge helpdesk-badge--neutral"><%= ticket.submission_mode_label %></span>
+                  <% end %>
+                </div>
+                <h3 class="helpdesk-ticket__title helpdesk-stack-top"><%= ticket.department.department_type %></h3>
+                <p class="helpdesk-ticket__copy"><%= ticket.current_escalation_label %></p>
+              </div>
+
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Details</p>
+                <div class="helpdesk-kv">
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Raised By</span>
+                    <span class="helpdesk-kv__value"><%= ticket.requester_name %> (<%= ticket.requester_employee_code.presence || ticket.requester_email %>)</span>
+                  </div>
+                  <% if ticket.submitted_by_user.present? && ticket.submitted_by_user_id != ticket.user_id %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label">Submitted By</span>
+                      <span class="helpdesk-kv__value"><%= user_display_name(ticket.submitted_by_user) %></span>
+                    </div>
+                  <% end %>
+                  <% if ticket.request_received_at.present? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label">Complaint Received</span>
+                      <span class="helpdesk-kv__value"><%= ticket.request_received_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                    </div>
+                  <% end %>
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Reopen Count</span>
+                    <span class="helpdesk-kv__value"><%= ticket.total_reopens %></span>
+                  </div>
+                  <% if ticket.question_subject.present? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label">Question / Topic</span>
+                      <span class="helpdesk-kv__value"><%= ticket.question_subject %></span>
+                    </div>
+                  <% end %>
+                </div>
+
+                <div class="helpdesk-ticket__message"><%= help_desk_format_text(ticket.message) %></div>
+
+                <% requester_remark_history = ticket.requester_remark_history_latest_first %>
+                <% if requester_remark_history.any? %>
+                  <div class="helpdesk-response-box helpdesk-response-box--remark">
+                    <p class="helpdesk-response-box__label">All User Remarks</p>
+                    <div class="helpdesk-thread">
+                      <% requester_remark_history.each do |requester_remark| %>
+                        <div class="helpdesk-thread__item">
+                          <div class="helpdesk-thread__meta">
+                            <span><%= requester_remark.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                            <span><%= requester_remark.user.present? ? user_display_name(requester_remark.user) : "User" %></span>
+                          </div>
+                          <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(requester_remark.message) %></div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <% support_update_history = ticket.support_update_history_latest_first %>
+                <% if support_update_history.any? %>
+                  <div class="helpdesk-response-box helpdesk-response-box--support">
+                    <p class="helpdesk-response-box__label">All Responses</p>
+                    <div class="helpdesk-thread">
+                      <% support_update_history.each do |support_update| %>
+                        <div class="helpdesk-thread__item">
+                          <div class="helpdesk-thread__meta">
+                            <span><%= support_update.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                            <span><%= support_update.user.present? ? user_display_name(support_update.user) : "Support" %></span>
+                          </div>
+                          <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(support_update.message) %></div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <%= render "help_desk_tickets/attachment_groups", ticket: ticket %>
+              </div>
+
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Status & Timeline</p>
+                <div class="helpdesk-badge-row">
+                  <span class="helpdesk-badge <%= help_desk_status_badge_tone(ticket) %>"><%= help_desk_status_label(ticket) %></span>
+                  <span class="helpdesk-badge"><%= ticket.current_escalation_label %></span>
+                  <% if ticket.assigned_to_user.present? %>
+                    <span class="helpdesk-badge helpdesk-badge--neutral">With <%= user_display_name(ticket.assigned_to_user) %></span>
+                  <% end %>
+                </div>
+
+                <div class="helpdesk-kv helpdesk-toolbar-badges">
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Created</span>
+                    <span class="helpdesk-kv__value"><%= ticket.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                  </div>
+                  <% if ticket.escalation_due_at.present? && ticket.open_for_review_status? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label"><%= ticket.overdue_for_response? ? "Overdue" : "Due" %></span>
+                      <span class="helpdesk-kv__value"><%= ticket.escalation_due_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                    </div>
+                  <% end %>
+                  <% if ticket.responded_by_user.present? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label">Last Support Update By</span>
+                      <span class="helpdesk-kv__value"><%= user_display_name(ticket.responded_by_user) %></span>
+                    </div>
+                  <% end %>
+                  <% if ticket.responded_at.present? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label">Last Support Update At</span>
+                      <span class="helpdesk-kv__value"><%= ticket.responded_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                    </div>
+                  <% end %>
+                  <% if ticket.resolved? && ticket.requester_response_due_at.present? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label">User Action Until</span>
+                      <span class="helpdesk-kv__value"><%= ticket.requester_response_due_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                    </div>
+                  <% end %>
+                  <% if ticket.resolved? && ticket.approval_pending_user.present? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label">Action Pending With</span>
+                      <span class="helpdesk-kv__value"><%= user_display_name(ticket.approval_pending_user) %></span>
+                    </div>
+                  <% end %>
+                  <% if ticket.closed? && ticket.closed_at.present? %>
+                    <div class="helpdesk-kv__row">
+                      <span class="helpdesk-kv__label"><%= ticket.closed_automatically? && ticket.final_action_mode_approve_reject? ? "Auto Approved" : (ticket.closed_automatically? ? "Auto Closed" : "Closed") %></span>
+                      <span class="helpdesk-kv__value"><%= ticket.closed_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+
+              <div class="helpdesk-data-table__cell helpdesk-data-table__cell--action">
+                <p class="helpdesk-cell-title">Action</p>
+
+                <% if ticket.resolved? && ticket.can_be_finalized_by?(current_user) %>
+                  <%
+                    approving_response_ticket = ticket.final_action_mode_approve_reject?
+                    reject_button_label = approving_response_ticket ? "Reject" : "Reopen Ticket"
+                    approve_button_label = approving_response_ticket ? "Approve" : "Close Ticket"
+                    requester_remark_label = approving_response_ticket ? "Reject Remark" : "Reopen Remark"
+                    requester_remark_placeholder = approving_response_ticket ? "Write why this response ticket should be rejected." : "Write why the issue still needs support if you want to reopen this ticket."
+                  %>
+                  <%= form_with model: ticket, url: finalize_resolution_help_desk_ticket_path(ticket), method: :patch, local: true, html: { multipart: true }, class: "helpdesk-action-panel" do |form| %>
+                    <p class="helpdesk-action-panel__title"><%= approving_response_ticket ? "Response ticket is waiting for your approval" : "Support has closed this ticket" %></p>
+                    <p class="helpdesk-action-panel__copy">
+                      <% if approving_response_ticket %>
+                        If the work is completed, approve it. If the work was not completed, reject it with a remark. If you take no action within 2 days, it will approve automatically.
+                      <% else %>
+                        If the issue is still not solved, reopen it with a remark so it goes back to support. If everything is fine, close it from your side. If you take no action within 2 days, it will close automatically.
+                      <% end %>
+                    </p>
+
+                    <div class="helpdesk-form-section">
+                      <%= form.label :requester_remark, requester_remark_label, class: "helpdesk-field-label" %>
+                      <%= form.text_area :requester_remark,
+                                         rows: 4,
+                                         class: "helpdesk-textarea",
+                                         placeholder: requester_remark_placeholder %>
+                    </div>
+
+                    <div class="helpdesk-form-section">
+                      <%= form.label :requester_followup_documents, "Reopen Attachments", class: "helpdesk-field-label" %>
+                      <%= form.file_field :requester_followup_documents,
+                                          multiple: true,
+                                          direct_upload: false,
+                                          class: "helpdesk-file-input" %>
+                      <p class="helpdesk-muted">Optional screenshot, proof, or updated file for support. Add it only when reopening or rejecting.</p>
+                    </div>
+
+                    <% if @requester_action_ticket&.id == ticket.id && ticket.errors.any? %>
+                      <p class="helpdesk-context helpdesk-error-text"><%= ticket.errors.full_messages.to_sentence %></p>
+                    <% end %>
+
+                    <div class="helpdesk-response-form__actions">
+                      <%= button_tag reject_button_label,
+                                     type: "submit",
+                                     name: "decision",
+                                     value: approving_response_ticket ? "reject" : "reopen",
+                                     class: "helpdesk-secondary-btn" %>
+                      <%= button_tag approve_button_label,
+                                     type: "submit",
+                                     name: "decision",
+                                     value: approving_response_ticket ? "approve" : "close",
+                                     class: "helpdesk-primary-btn" %>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <div class="helpdesk-action-panel">
+                    <p class="helpdesk-action-panel__title">Current State</p>
+                    <p class="helpdesk-action-panel__copy">
+                      <% if ticket.reopened? %>
+                        This ticket was sent back by the selected user and reopened for support follow-up.
+                      <% elsif ticket.resolved? && ticket.approval_pending_user.present? %>
+                        This ticket is waiting for <%= ticket.final_action_mode_approve_reject? ? "approve or reject" : "reopen or close" %> action from <strong><%= user_display_name(ticket.approval_pending_user) %></strong> after it was marked as completed.
+                      <% elsif ticket.closed? %>
+                        This ticket is closed and no further action is pending right now.
+                      <% elsif ticket.open_for_review_status? %>
+                        This ticket is still open with support. No reopen or close action is needed right now because support has kept the ticket open.
+                      <% else %>
+                        No additional action is required from your side for this ticket right now.
+                      <% end %>
+                    </p>
+                  </div>
+                <% end %>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="helpdesk-empty">
+          <h3><%= recent_empty_title %></h3>
+          <p><%= recent_empty_description %></p>
+        </div>
+      <% end %>
+    </section>
+  </div>
+</div>
+
+<script type="application/json" id="help-desk-question-catalog"><%= raw(json_escape(@help_desk_question_catalog.to_json)) %></script>
+<script type="application/json" id="help-desk-requester-directory"><%= raw(json_escape(@help_desk_requester_directory.to_json)) %></script>
+<script type="application/json" id="help-desk-default-requester"><%= raw(json_escape({ name: requester_name, employee_code: requester_code, email: requester_email }.to_json)) %></script>
+
+<script>
+  function initHelpDeskForm() {
+    const departmentSelect = document.getElementById("help_desk_ticket_department_id");
+    const requestTypeSelect = document.getElementById("help_desk_ticket_request_type");
+    const questionCatalogNode = document.getElementById("help-desk-question-catalog");
+    const requesterDirectoryNode = document.getElementById("help-desk-requester-directory");
+    const defaultRequesterNode = document.getElementById("help-desk-default-requester");
+    const questionSelectWrapper = document.getElementById("help-desk-question-select-wrapper");
+    const questionSelect = document.getElementById("help_desk_ticket_help_desk_question_master_id");
+    const questionHelp = document.getElementById("help-desk-question-help");
+    const initialEscalationWrapper = document.getElementById("help-desk-initial-escalation-wrapper");
+    const initialEscalationSelect = document.getElementById("help_desk_ticket_initial_escalation_position");
+    const customQuestionWrapper = document.getElementById("help-desk-custom-question-wrapper");
+    const customQuestionLabel = document.getElementById("help-desk-custom-question-label");
+    const customQuestionField = document.getElementById("help_desk_ticket_question_subject");
+    const messageWrapper = document.getElementById("help-desk-message-wrapper");
+    const messageLabel = document.getElementById("help-desk-message-label");
+    const messageField = document.getElementById("help_desk_ticket_message");
+    const assistedToggle = document.getElementById("help_desk_ticket_on_behalf_requested");
+    const assistedFieldsWrapper = document.getElementById("help-desk-assisted-fields");
+    const requesterSelect = document.getElementById("help_desk_ticket_requester_user_id");
+    const requestReceivedOnField = document.getElementById("help_desk_ticket_request_received_on");
+    const requestReceivedTimeField = document.getElementById("help_desk_ticket_request_received_time");
+
+    if (!departmentSelect || !requestTypeSelect || !questionSelect || requestTypeSelect.dataset.helpDeskBound === "true") {
+      return;
+    }
+
+    let questionCatalog = [];
+    let requesterDirectory = [];
+    let defaultRequester = { name: "", employee_code: "", email: "" };
+
+    try {
+      questionCatalog = JSON.parse(questionCatalogNode?.textContent || "[]");
+    } catch (error) {
+      questionCatalog = [];
+    }
+
+    try {
+      requesterDirectory = JSON.parse(requesterDirectoryNode?.textContent || "[]");
+    } catch (error) {
+      requesterDirectory = [];
+    }
+
+    try {
+      defaultRequester = JSON.parse(defaultRequesterNode?.textContent || "{}");
+    } catch (error) {
+      defaultRequester = { name: "", employee_code: "", email: "" };
+    }
+
+    const questionTypeSelected = () => ["ticket", "complaint", "suggestion"].includes(requestTypeSelect.value);
+    const detailLabelForType = () => {
+      if (requestTypeSelect.value === "suggestion") return "Suggestion Details";
+      if (requestTypeSelect.value === "ticket") return "Ticket Details";
+      return "Complaint Details";
+    };
+    const customLabelForType = () => {
+      if (requestTypeSelect.value === "suggestion") return "Other Suggestion Topic";
+      if (requestTypeSelect.value === "ticket") return "Other Ticket Topic";
+      return "Other Complaint Topic";
+    };
+    const customPlaceholderForType = () => {
+      if (requestTypeSelect.value === "suggestion") return "Type your own suggestion topic.";
+      if (requestTypeSelect.value === "ticket") return "Type your own ticket topic.";
+      return "Type your own complaint topic.";
+    };
+    const assistedModeEnabled = () => Boolean(assistedToggle && assistedToggle.checked);
+
+    const matchingQuestions = () => questionCatalog.filter((question) => {
+      return String(question.department_id) === String(departmentSelect.value) && question.request_type === requestTypeSelect.value;
+    });
+
+    const selectedRequester = () => {
+      if (!requesterSelect) {
+        return null;
+      }
+
+      return requesterDirectory.find((requester) => String(requester.id) === String(requesterSelect.value)) || null;
+    };
+
+    const syncRequesterSummary = () => {
+      const requester = assistedModeEnabled() ? selectedRequester() || defaultRequester : defaultRequester;
+      const requesterName = requester?.name || defaultRequester.name || "Not selected";
+      const requesterCode = requester?.employee_code || defaultRequester.employee_code || "Not available";
+      const requesterEmail = requester?.email || defaultRequester.email || "Not available";
+
+    };
+
+    const updateAssistedFields = () => {
+      const shouldShow = assistedModeEnabled();
+
+      if (assistedFieldsWrapper) {
+        assistedFieldsWrapper.classList.toggle("hidden", !shouldShow);
+      }
+
+      if (requesterSelect) {
+        requesterSelect.disabled = !shouldShow;
+        requesterSelect.required = shouldShow;
+      }
+
+      if (requestReceivedOnField) {
+        requestReceivedOnField.disabled = !shouldShow;
+        requestReceivedOnField.required = shouldShow;
+      }
+
+      if (requestReceivedTimeField) {
+        requestReceivedTimeField.disabled = !shouldShow;
+        requestReceivedTimeField.required = shouldShow;
+      }
+
+      syncRequesterSummary();
+    };
+
+    const updateCustomQuestionField = () => {
+      const shouldShow = questionTypeSelected() && departmentSelect.value !== "" && questionSelect.value === "";
+
+      customQuestionWrapper.classList.toggle("hidden", !shouldShow);
+      customQuestionField.disabled = !shouldShow;
+      customQuestionLabel.textContent = customLabelForType();
+      customQuestionField.placeholder = customPlaceholderForType();
+    };
+
+    const updateInitialEscalationField = () => {
+      const shouldShow = requestTypeSelect.value === "complaint";
+
+      if (initialEscalationWrapper) {
+        initialEscalationWrapper.classList.toggle("hidden", !shouldShow);
+      }
+
+      if (initialEscalationSelect) {
+        initialEscalationSelect.disabled = !shouldShow;
+      }
+    };
+
+    const updateHelpDeskMessageField = () => {
+      const selectedType = requestTypeSelect.value;
+      const isSuggestion = selectedType === "suggestion";
+      const isTicket = selectedType === "ticket";
+      const isVisible = questionTypeSelected();
+      const selectedMasterQuestion = questionSelect.value !== "";
+
+      messageWrapper.classList.toggle("hidden", !isVisible);
+
+      if (!isVisible) {
+        return;
+      }
+
+      messageLabel.textContent = selectedMasterQuestion ? "Additional Details" : detailLabelForType();
+      messageField.placeholder = selectedMasterQuestion ?
+        "Add supporting details, examples, or context for this selected topic." :
+        (isSuggestion ? "Share your suggestion in a clear and practical way." : (isTicket ? "Describe the ticket clearly." : "Describe the issue you are facing with as much detail as possible."));
+    };
+
+    const updateQuestionOptions = () => {
+      const isVisible = questionTypeSelected();
+      const currentSelection = questionSelect.value;
+
+      questionSelectWrapper.classList.toggle("hidden", !isVisible);
+
+      if (!isVisible) {
+        questionSelect.innerHTML = "";
+        questionSelect.appendChild(new Option(questionSelect.dataset.waitingLabel, ""));
+        questionSelect.disabled = true;
+        if (questionHelp) questionHelp.textContent = "Select request type first, then choose a department to load common questions.";
+        updateCustomQuestionField();
+        updateHelpDeskMessageField();
+        return;
+      }
+
+      const questions = matchingQuestions();
+      questionSelect.innerHTML = "";
+
+      const blankLabel = questions.length > 0 ? questionSelect.dataset.otherLabel : questionSelect.dataset.emptyLabel;
+      questionSelect.appendChild(new Option(blankLabel, ""));
+
+      questions.forEach((question) => {
+        questionSelect.appendChild(new Option(question.question_text, question.id));
+      });
+
+      const keepSelection = questions.some((question) => String(question.id) === String(currentSelection));
+      questionSelect.value = keepSelection ? currentSelection : "";
+      questionSelect.disabled = departmentSelect.value === "";
+
+      if (departmentSelect.value === "") {
+        questionSelect.innerHTML = "";
+        questionSelect.appendChild(new Option("Select department first", ""));
+      }
+
+      if (questionHelp) {
+        questionHelp.textContent = questions.length > 0 ?
+          "Select a predefined topic for this department, or leave it on Other and type your own below." :
+          "No predefined topic found for this selection. Type your own topic below.";
+      }
+
+      updateCustomQuestionField();
+      updateHelpDeskMessageField();
+    };
+
+    departmentSelect.addEventListener("change", updateQuestionOptions);
+    requestTypeSelect.addEventListener("change", () => {
+      updateInitialEscalationField();
+      updateQuestionOptions();
+    });
+    questionSelect.addEventListener("change", () => {
+      updateCustomQuestionField();
+      updateHelpDeskMessageField();
+    });
+    if (assistedToggle) assistedToggle.addEventListener("change", updateAssistedFields);
+    if (requesterSelect) requesterSelect.addEventListener("change", syncRequesterSummary);
+
+    requestTypeSelect.dataset.helpDeskBound = "true";
+    updateInitialEscalationField();
+    updateQuestionOptions();
+    updateAssistedFields();
+  }
+
+  document.addEventListener("DOMContentLoaded", initHelpDeskForm);
+  document.addEventListener("turbo:load", initHelpDeskForm);
+</script>

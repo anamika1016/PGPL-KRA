@@ -1,0 +1,208 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "help_desk", "data-turbo-track": "reload" %>
+<% end %>
+
+<%
+  open_count = @assigned_tickets.size
+  overdue_count = @assigned_tickets.count(&:overdue_for_response?)
+  reopened_count = @assigned_tickets.count(&:reopened?)
+%>
+
+<div class="main-content sidebar-aware-content helpdesk-page">
+  <div class="helpdesk-shell">
+    <section class="helpdesk-toolbar">
+      <div class="helpdesk-toolbar__main">
+        <span class="helpdesk-eyebrow">Assigned Work Queue</span>
+        <h1 class="helpdesk-title">Assigned Help Desk</h1>
+
+        <div class="helpdesk-badge-row helpdesk-toolbar-badges">
+          <span class="helpdesk-badge helpdesk-badge--info">Only your assigned tickets</span>
+          <span class="helpdesk-badge helpdesk-badge--warning">Open and reopened work</span>
+          <span class="helpdesk-badge helpdesk-badge--neutral">Report stays separate</span>
+        </div>
+      </div>
+
+      <div class="helpdesk-stats">
+        <div class="helpdesk-stat helpdesk-stat--sky">
+          <p class="helpdesk-stat__label">Assigned</p>
+          <p class="helpdesk-stat__value"><%= open_count %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--rose">
+          <p class="helpdesk-stat__label">Overdue</p>
+          <p class="helpdesk-stat__value"><%= overdue_count %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--emerald">
+          <p class="helpdesk-stat__label">Reopened</p>
+          <p class="helpdesk-stat__value"><%= reopened_count %></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="helpdesk-card">
+      <div class="helpdesk-card__header helpdesk-card__header--split">
+        <div>
+          <h2 class="helpdesk-section-title">Tickets To Resolve</h2>
+        </div>
+        <div class="helpdesk-response-form__actions helpdesk-toolbar-actions">
+          <%= link_to "Raise New Ticket", help_desk_tickets_path, class: "helpdesk-secondary-btn" %>
+          <%= link_to "Open Report", help_desk_reports_path, class: "helpdesk-ghost-btn" %>
+        </div>
+      </div>
+
+      <% if @assigned_tickets.any? %>
+        <div class="helpdesk-assigned-list">
+          <% @assigned_tickets.each do |ticket| %>
+            <%
+              approval_target_options = ticket.approval_candidate_users.map do |candidate|
+                candidate_role = candidate.id == ticket.user_id ? "Requester" : "Original submitter"
+                [ "#{user_display_name(candidate)} (#{candidate_role})", candidate.id ]
+              end
+              forward_department_options = @departments.reject { |department| department.id == ticket.department_id }.map { |department| [ department.department_type, department.id ] }
+              selected_approval_target_id = ticket.approval_user_id.presence || ticket.user_id
+              raised_identifier = ticket.requester_employee_code.presence || ticket.requester_email
+            %>
+
+            <article class="helpdesk-assigned-card <%= ticket.overdue_for_response? ? 'is-overdue' : '' %>">
+              <div class="helpdesk-assigned-card__summary">
+                <div class="helpdesk-badge-row">
+                  <span class="helpdesk-badge"><%= ticket.ticket_reference %></span>
+                  <span class="helpdesk-badge <%= ticket.complaint? ? 'helpdesk-badge--danger' : 'helpdesk-badge--info' %>"><%= ticket.request_label %></span>
+                  <span class="helpdesk-badge <%= ticket.overdue_for_response? ? 'helpdesk-badge--danger' : help_desk_status_badge_tone(ticket) %>"><%= ticket.overdue_for_response? ? "Overdue" : help_desk_status_label(ticket) %></span>
+                </div>
+
+                <h3 class="helpdesk-assigned-card__title"><%= ticket.request_subject %></h3>
+                <div class="helpdesk-assigned-card__meta-grid">
+                  <div class="helpdesk-person-card">
+                    <p class="helpdesk-person-card__label">Raised By Employee</p>
+                    <p class="helpdesk-person-card__name"><%= ticket.requester_name %></p>
+                    <p class="helpdesk-person-card__meta"><%= raised_identifier %></p>
+                  </div>
+                  <div class="helpdesk-person-card <%= ticket.complaint? ? 'helpdesk-person-card--complaint-target' : 'helpdesk-person-card--suggestion-target' %>">
+                    <div class="helpdesk-person-card__header">
+                      <p class="helpdesk-person-card__label"><%= ticket.request_label %> Department</p>
+                      <span class="helpdesk-person-card__pill"><%= ticket.current_escalation_label %></span>
+                    </div>
+                    <p class="helpdesk-person-card__name"><%= ticket.department.department_type %></p>
+                    <p class="helpdesk-person-card__meta">Assigned to <%= user_display_name(current_user) %></p>
+                  </div>
+                </div>
+
+                <div class="helpdesk-response-box helpdesk-response-box--plain">
+                  <p class="helpdesk-response-box__label">Issue Details</p>
+                  <div class="helpdesk-response-box__text"><%= help_desk_format_text(ticket.message) %></div>
+                </div>
+
+                <% requester_remark_history = ticket.requester_remark_history_latest_first %>
+                <% if requester_remark_history.any? %>
+                  <div class="helpdesk-response-box helpdesk-response-box--remark">
+                    <p class="helpdesk-response-box__label">All User Remarks</p>
+                    <div class="helpdesk-thread">
+                      <% requester_remark_history.each do |requester_remark| %>
+                        <div class="helpdesk-thread__item">
+                          <div class="helpdesk-thread__meta">
+                            <span><%= requester_remark.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                            <span><%= requester_remark.user.present? ? user_display_name(requester_remark.user) : "User" %></span>
+                          </div>
+                          <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(requester_remark.message) %></div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <%= render "help_desk_tickets/attachment_groups", ticket: ticket %>
+              </div>
+
+              <aside class="helpdesk-assigned-card__action">
+                <div class="helpdesk-kv">
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Created</span>
+                    <span class="helpdesk-kv__value"><%= ticket.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                  </div>
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label"><%= ticket.overdue_for_response? ? "Overdue Since" : "Respond By" %></span>
+                    <span class="helpdesk-kv__value"><%= ticket.escalation_due_at.present? ? ticket.escalation_due_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") : "Not set" %></span>
+                  </div>
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Reopen Count</span>
+                    <span class="helpdesk-kv__value"><%= ticket.total_reopens %></span>
+                  </div>
+                </div>
+
+                <%= form_with model: ticket, url: respond_help_desk_ticket_path(ticket), method: :patch, local: true, html: { multipart: true }, class: "helpdesk-action-panel helpdesk-action-panel--compact" do |form| %>
+                  <%= hidden_field_tag :return_to_assigned_queue, true %>
+                  <p class="helpdesk-action-panel__title">Support Action</p>
+
+                  <div class="helpdesk-form-section">
+                    <%= form.label :response_message, "Update / Resolution", class: "helpdesk-field-label" %>
+                    <%= form.text_area :response_message,
+                                       rows: 4,
+                                       class: "helpdesk-textarea",
+                                       placeholder: "Write the work done, fix, pending detail, or next step." %>
+                  </div>
+
+                  <div class="helpdesk-form-section">
+                    <label for="assigned-approval-user-<%= ticket.id %>" class="helpdesk-field-label">Final Action User</label>
+                    <% if approval_target_options.one? %>
+                      <%= hidden_field_tag :approval_user_id, approval_target_options.first.last %>
+                      <p class="helpdesk-context">Final action will go to <strong><%= approval_target_options.first.first %></strong>.</p>
+                    <% else %>
+                      <%= select_tag :approval_user_id,
+                                     options_for_select(approval_target_options, selected_approval_target_id),
+                                     id: "assigned-approval-user-#{ticket.id}",
+                                     class: "helpdesk-input" %>
+                    <% end %>
+                  </div>
+
+                  <div class="helpdesk-form-section">
+                    <label for="forward-department-<%= ticket.id %>" class="helpdesk-field-label">Forward To Department</label>
+                    <%= select_tag :forward_department_id,
+                                   options_for_select(forward_department_options),
+                                   include_blank: "Select department",
+                                   id: "forward-department-#{ticket.id}",
+                                   class: "helpdesk-input" %>
+                  </div>
+
+                  <div class="helpdesk-form-section">
+                    <%= form.label :support_documents, "Attach Proof / File", class: "helpdesk-field-label" %>
+                    <%= form.file_field :support_documents,
+                                        multiple: true,
+                                        direct_upload: false,
+                                        class: "helpdesk-file-input" %>
+                    <p class="helpdesk-muted">Optional. Maximum 5 files, 10MB each.</p>
+                  </div>
+
+                  <% if @assigned_ticket&.id == ticket.id && ticket.errors.any? %>
+                    <p class="helpdesk-context helpdesk-error-text"><%= ticket.errors.full_messages.to_sentence %></p>
+                  <% end %>
+
+                  <div class="helpdesk-response-form__actions">
+                    <%= button_tag "Keep Open",
+                                   type: "submit",
+                                   name: "review_decision",
+                                   value: "keep_open",
+                                   class: "helpdesk-secondary-btn" %>
+                    <%= button_tag "Forward",
+                                   type: "submit",
+                                   name: "review_decision",
+                                   value: "forward",
+                                   class: "helpdesk-secondary-btn" %>
+                    <%= button_tag "Mark Resolved",
+                                   type: "submit",
+                                   name: "review_decision",
+                                   value: "close",
+                                   class: "helpdesk-primary-btn" %>
+                  </div>
+                <% end %>
+              </aside>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="helpdesk-empty">
+          <h3>No assigned help desk tickets</h3>
+        </div>
+      <% end %>
+    </section>
+  </div>
+</div>

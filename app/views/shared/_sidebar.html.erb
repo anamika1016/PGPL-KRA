@@ -265,6 +265,81 @@
             <% end %>
           </li>
           <% end %>
+
+          <li class="hs-accordion" id="help-desk-accordion">
+            <%
+              help_desk_user_badge_count = help_desk_user_action_count
+              help_desk_assigned_badge_count = helpdesk_reviewer? ? help_desk_assigned_count : 0
+              help_desk_menu_badge_count = help_desk_user_badge_count + help_desk_assigned_badge_count
+              help_desk_menu_open = %w[help_desk_tickets help_desk_reports help_desk_question_masters helpdesk_escalation_matrices].include?(controller_name)
+            %>
+            <details <%= "open" if help_desk_menu_open %>>
+              <summary class="flex items-center gap-x-3.5 py-2 px-2.5 <%= 'bg-gray-100' if help_desk_menu_open %> text-base text-gray-800 rounded-lg">
+                <svg class="shrink-0 size-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M4 5h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-3 3-3-3H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+                  <path d="M8 10h8" />
+                  <path d="M8 14h5" />
+                </svg>
+                <span class="font-semibold text-base">Help Desk</span>
+                <% if help_desk_menu_badge_count.positive? %>
+                  <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                    <%= help_desk_notification_label(help_desk_menu_badge_count) %>
+                  </span>
+                <% end %>
+                <svg class="sidebar-menu-chevron <%= help_desk_menu_badge_count.positive? ? '' : 'ml-auto' %> h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </summary>
+
+              <ul class="sidebar-submenu flex flex-col space-y-1">
+                <li>
+                  <%= link_to help_desk_tickets_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'help_desk_tickets' && action_name != 'assigned_queue'} text-sm text-gray-800 rounded-lg" do %>
+                    <span class="font-semibold">Help Desk Ticket</span>
+                    <% if help_desk_user_badge_count.positive? %>
+                      <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white"
+                            data-helpdesk-menu-badge="<%= help_desk_user_badge_count %>">
+                        <%= help_desk_notification_label(help_desk_user_badge_count) %>
+                      </span>
+                    <% end %>
+                  <% end %>
+                </li>
+
+                <% if helpdesk_reviewer? %>
+                  <li>
+                    <%= link_to assigned_queue_help_desk_tickets_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'help_desk_tickets' && action_name == 'assigned_queue'} text-sm text-gray-800 rounded-lg" do %>
+                      <span class="font-semibold">Assigned Queue</span>
+                      <% if help_desk_assigned_badge_count.positive? %>
+                        <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                          <%= help_desk_notification_label(help_desk_assigned_badge_count) %>
+                        </span>
+                      <% end %>
+                    <% end %>
+                  </li>
+                <% end %>
+
+                <li>
+                  <%= link_to help_desk_reports_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'help_desk_reports'} text-sm text-gray-800 rounded-lg" do %>
+                    <span class="font-semibold">Help Desk Report</span>
+                  <% end %>
+                </li>
+
+                <% if current_user.hod? %>
+                  <li>
+                    <%= link_to help_desk_question_masters_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'help_desk_question_masters'} text-sm text-gray-800 rounded-lg" do %>
+                      <span class="font-semibold">Question Master</span>
+                    <% end %>
+                  </li>
+
+                  <li>
+                    <%= link_to helpdesk_escalation_matrices_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'helpdesk_escalation_matrices'} text-sm text-gray-800 rounded-lg" do %>
+                      <span class="font-semibold">Escalation Matrix</span>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            </details>
+          </li>
+
           <!-- User Profile/Settings - Show for all users -->
           <li class="hs-accordion" id="users-accordion">
             <%= link_to settings_path, class: "flex items-center gap-x-3.5 py-2 px-2.5 #{'bg-emerald-50 text-emerald-800 border border-emerald-100 shadow-sm' if current_page?(settings_path)} text-base text-gray-800 rounded-lg" do %>

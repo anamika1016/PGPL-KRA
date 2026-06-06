@@ -3,6 +3,28 @@ module ApplicationHelper
     current_user&.user_detail
   end
 
+  def user_display_name(user)
+    return "N/A" if user.blank?
+
+    user.display_name
+  end
+
+  def help_desk_user_action_count
+    return 0 if current_user.blank?
+
+    HelpDeskTicket.pending_user_action_for(current_user).count
+  end
+
+  def help_desk_assigned_count
+    return 0 if current_user.blank? || !helpdesk_reviewer?
+
+    HelpDeskTicket.open_for_review.assigned_to(current_user).count
+  end
+
+  def help_desk_notification_label(count)
+    count.to_i > 99 ? "99+" : count.to_i.to_s
+  end
+
   def asset_to_base64(asset_name)
     path = Rails.root.join("app", "assets", "images", asset_name)
     if File.exist?(path)

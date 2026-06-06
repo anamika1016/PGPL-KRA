@@ -1,11 +1,16 @@
 class Department < ApplicationRecord
   has_many :activities
   has_many :user_details
+  has_many :help_desk_tickets
+  has_many :help_desk_question_masters, dependent: :destroy
+  has_one :helpdesk_escalation_matrix, dependent: :destroy
 
   accepts_nested_attributes_for :activities, allow_destroy: true, reject_if: :all_blank
 
   validates :department_type, presence: true
   validates :financial_year, presence: true
+
+  scope :selectable_verticals, -> { order(Arel.sql("LOWER(department_type) ASC")) }
 
   before_validation :assign_default_financial_year
   before_validation :assign_financial_year_to_activities

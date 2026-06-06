@@ -124,4 +124,22 @@ Rails.application.routes.draw do
   devise_scope :user do
     delete "/users/sign_out", to: "devise/sessions#destroy"
   end
+
+
+  resources :help_desk_tickets, path: "help-desk", only: [ :index, :create ] do
+  collection do
+    get "assigned", action: :assigned_queue, as: :assigned_queue
+  end
+
+  member do
+    patch :respond
+    patch :finalize_resolution
+  end
+end
+
+resources :help_desk_reports, path: "helpdesk-report", only: [ :index ]
+resources :help_desk_question_masters, path: "helpdesk-question-master", except: [ :show, :new ] do
+  collection { post :import }
+end
+resources :helpdesk_escalation_matrices, path: "helpdesk-escalation-matrix", except: [ :show, :new ]
 end

@@ -45,6 +45,17 @@ class ApplicationController < ActionController::Base
     UserDetail.available_financial_years
   end
 
+  def helpdesk_reviewer?
+    return false if current_user.blank?
+    return true if current_user.hod?
+
+    HelpdeskEscalationLevel.where(user_id: current_user.id).exists? ||
+      HelpdeskEscalationMatrix.where(
+        "l1_user_id = :user_id OR l2_user_id = :user_id OR l3_user_id = :user_id",
+        user_id: current_user.id
+      ).exists?
+  end
+
   def current_employee_detail_record
     @current_employee_detail_record ||= current_employee_detail_records.order(:id).first
   end
@@ -93,7 +104,7 @@ class ApplicationController < ActionController::Base
     @normalized_current_user_email ||= normalize_lookup_value(current_user.email)
   end
 
-  helper_method :has_l1_responsibilities?, :has_l2_responsibilities?,
+  helper_method :has_l1_responsibilities?, :has_l2_responsibilities?, :helpdesk_reviewer?,
                 :selected_financial_year, :available_financial_years
 
   private

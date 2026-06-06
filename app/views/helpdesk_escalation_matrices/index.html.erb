@@ -1,0 +1,320 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "help_desk", "data-turbo-track": "reload" %>
+<% end %>
+
+<%
+  page_title = @helpdesk_escalation_matrix.persisted? ? "Edit Helpdesk Escalation Matrix" : "Create Helpdesk Escalation Matrix"
+  submit_label = @helpdesk_escalation_matrix.persisted? ? "Update Matrix" : "Save Matrix"
+  configured_levels_count = @helpdesk_escalation_matrices.sum { |matrix| matrix.ordered_levels.size }
+  matrix_count = @helpdesk_escalation_matrices.size
+  longest_chain_count = @helpdesk_escalation_matrices.map { |matrix| matrix.ordered_levels.size }.max.to_i
+%>
+
+<div class="main-content sidebar-aware-content helpdesk-page">
+  <div class="helpdesk-shell">
+    <section class="helpdesk-toolbar">
+      <div class="helpdesk-toolbar__main">
+        <span class="helpdesk-eyebrow">Support Matrix</span>
+        <h1 class="helpdesk-title">Helpdesk Escalation Matrix</h1>
+
+        <div class="helpdesk-badge-row helpdesk-stack-top-md">
+          <span class="helpdesk-badge helpdesk-badge--info">Dynamic escalation levels</span>
+          <span class="helpdesk-badge helpdesk-badge--success">Department wise routing</span>
+          <span class="helpdesk-badge helpdesk-badge--neutral">Edit and reorder friendly</span>
+        </div>
+      </div>
+
+      <div class="helpdesk-stats">
+        <div class="helpdesk-stat helpdesk-stat--sky">
+          <p class="helpdesk-stat__label">Departments</p>
+          <p class="helpdesk-stat__value"><%= matrix_count %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--blue">
+          <p class="helpdesk-stat__label">Levels</p>
+          <p class="helpdesk-stat__value"><%= configured_levels_count %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--emerald">
+          <p class="helpdesk-stat__label">Longest Chain</p>
+          <p class="helpdesk-stat__value"><%= longest_chain_count %></p>
+        </div>
+      </div>
+    </section>
+
+    <div class="helpdesk-main-grid">
+      <section class="helpdesk-card">
+        <div class="helpdesk-card__header">
+          <h2 class="helpdesk-section-title"><%= page_title %></h2>
+        </div>
+
+        <% if @helpdesk_escalation_matrix.errors.any? %>
+          <div class="helpdesk-alert helpdesk-alert--danger">
+            <%= @helpdesk_escalation_matrix.errors.full_messages.to_sentence %>
+          </div>
+        <% end %>
+
+        <%= form_with model: @helpdesk_escalation_matrix, local: true, data: { helpdesk_escalation_builder: true } do |form| %>
+          <div class="helpdesk-form-grid">
+            <div class="helpdesk-form-span">
+              <%= form.label :department_id, "Department / Vertical", class: "helpdesk-field-label" %>
+              <%= form.select :department_id,
+                              options_from_collection_for_select(@departments, :id, :department_type, @helpdesk_escalation_matrix.department_id),
+                              { include_blank: "Select vertical" },
+                              class: "helpdesk-input" %>
+            </div>
+
+            <div class="helpdesk-form-span">
+              <div class="helpdesk-panel helpdesk-panel--highlight">
+                <p class="helpdesk-field-label">Escalation Levels</p>
+
+                <div class="helpdesk-builder-table helpdesk-stack-top-md">
+                  <div class="helpdesk-builder-table__head">
+                    <div>Level</div>
+                    <div>Escalation User</div>
+                    <div>Action</div>
+                  </div>
+
+                  <div data-escalation-level-list>
+                    <%= form.fields_for :escalation_levels do |level_fields| %>
+                      <%= render "escalation_level_fields", f: level_fields, manager_options: @manager_options %>
+                    <% end %>
+                  </div>
+                </div>
+
+                <div class="helpdesk-actions">
+                  <button type="button" data-escalation-add class="helpdesk-secondary-btn">Add Escalation</button>
+                  <span class="helpdesk-inline-note">At least one escalation level is required for every vertical mapping.</span>
+                </div>
+
+                <template data-escalation-template>
+                  <%= form.fields_for :escalation_levels,
+                                      HelpdeskEscalationLevel.new(position: @helpdesk_escalation_matrix.ordered_levels.size + 1),
+                                      child_index: "NEW_RECORD" do |level_fields| %>
+                    <%= render "escalation_level_fields", f: level_fields, manager_options: @manager_options %>
+                  <% end %>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div class="helpdesk-actions">
+            <%= form.submit submit_label, class: "helpdesk-primary-btn" %>
+            <% if @helpdesk_escalation_matrix.persisted? %>
+              <%= link_to "Cancel", helpdesk_escalation_matrices_path, class: "helpdesk-secondary-btn" %>
+            <% end %>
+          </div>
+        <% end %>
+      </section>
+
+      <aside class="helpdesk-sidebar">
+        <section class="helpdesk-card">
+          <div class="helpdesk-card__header">
+            <h3 class="helpdesk-section-title">Quick Summary</h3>
+            <p class="helpdesk-section-copy">A compact view of the current matrix setup.</p>
+          </div>
+
+          <div class="helpdesk-summary-grid">
+            <div class="helpdesk-summary-item">
+              <p class="helpdesk-field-label">Mapped Verticals</p>
+              <p class="helpdesk-context"><strong><%= matrix_count %></strong></p>
+            </div>
+            <div class="helpdesk-summary-item">
+              <p class="helpdesk-field-label">Total Levels</p>
+              <p class="helpdesk-context"><strong><%= configured_levels_count %></strong></p>
+            </div>
+            <div class="helpdesk-summary-item">
+              <p class="helpdesk-field-label">Max Depth</p>
+              <p class="helpdesk-context"><strong><%= longest_chain_count %></strong></p>
+            </div>
+          </div>
+
+          <div class="helpdesk-panel helpdesk-panel--soft helpdesk-stack-top-md">
+            <p class="helpdesk-field-label">How It Works</p>
+            <div class="helpdesk-badge-row helpdesk-stack-top-sm">
+              <span class="helpdesk-badge">Choose Vertical</span>
+              <span class="helpdesk-badge">Assign Owners</span>
+              <span class="helpdesk-badge">Save Matrix</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="helpdesk-card">
+      <div class="helpdesk-card__header helpdesk-card__header--split">
+        <div>
+          <h2 class="helpdesk-section-title">Configured Matrix</h2>
+        </div>
+        <span class="helpdesk-inline-note"><%= pluralize(matrix_count, "matrix") %></span>
+      </div>
+
+      <% if @helpdesk_escalation_matrices.any? %>
+        <div class="helpdesk-data-table">
+          <div class="helpdesk-data-table__head helpdesk-data-table__head--matrix">
+            <div>Vertical</div>
+            <div>Escalation Chain</div>
+            <div>Coverage</div>
+            <div>Action</div>
+          </div>
+
+          <% @helpdesk_escalation_matrices.each do |matrix| %>
+            <article class="helpdesk-data-table__row helpdesk-data-table__row--matrix">
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Vertical</p>
+                <div class="helpdesk-badge-row">
+                  <span class="helpdesk-badge"><%= pluralize(matrix.ordered_levels.size, "level") %></span>
+                </div>
+                <h3 class="helpdesk-ticket__title helpdesk-stack-top-md"><%= matrix.department.department_type %></h3>
+                <p class="helpdesk-ticket__copy">Department wise escalation routing</p>
+              </div>
+
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Escalation Chain</p>
+                <div class="helpdesk-matrix-chain">
+                  <% matrix.ordered_levels.each do |level| %>
+                    <div class="helpdesk-matrix-chain__item">
+                      <span class="helpdesk-badge helpdesk-badge--warning">L<%= level.position %></span>
+                      <div>
+                        <p class="helpdesk-matrix-chain__title"><%= user_display_name(level.user) %></p>
+                        <p class="helpdesk-matrix-chain__meta"><%= level.user.employee_code.presence || level.user.email %></p>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Coverage</p>
+                <div class="helpdesk-kv">
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Start Owner</span>
+                    <span class="helpdesk-kv__value"><%= matrix.ordered_levels.first.present? ? user_display_name(matrix.ordered_levels.first.user) : "Not assigned" %></span>
+                  </div>
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Last Owner</span>
+                    <span class="helpdesk-kv__value"><%= matrix.ordered_levels.last.present? ? user_display_name(matrix.ordered_levels.last.user) : "Not assigned" %></span>
+                  </div>
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Depth</span>
+                    <span class="helpdesk-kv__value"><%= pluralize(matrix.ordered_levels.size, "level") %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="helpdesk-data-table__cell helpdesk-data-table__cell--action">
+                <p class="helpdesk-cell-title">Action</p>
+                <div class="helpdesk-action-panel">
+                  <p class="helpdesk-action-panel__title">Manage Matrix</p>
+                  <p class="helpdesk-action-panel__copy">Update owners when the escalation chain changes, or remove the matrix if it is no longer needed.</p>
+
+                  <div class="helpdesk-response-form__actions">
+                    <%= link_to "Edit", edit_helpdesk_escalation_matrix_path(matrix), class: "helpdesk-secondary-btn" %>
+                    <%= button_to "Delete",
+                                  helpdesk_escalation_matrix_path(matrix),
+                                  method: :delete,
+                                  data: { confirm: "Delete this escalation matrix?" },
+                                  form: { class: "helpdesk-inline-form" },
+                                  class: "helpdesk-danger-btn" %>
+                  </div>
+                </div>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="helpdesk-empty">
+          <h3>No escalation matrix yet</h3>
+          <p>Create the first department-wise escalation chain from the form.</p>
+        </div>
+      <% end %>
+    </section>
+  </div>
+</div>
+
+<script>
+  (function() {
+    function initializeHelpdeskEscalationBuilder() {
+      document.querySelectorAll("[data-helpdesk-escalation-builder]").forEach(function(builder) {
+        if (builder.dataset.builderInitialized === "true") return;
+
+        builder.dataset.builderInitialized = "true";
+
+        var list = builder.querySelector("[data-escalation-level-list]");
+        var template = builder.querySelector("[data-escalation-template]");
+
+        if (!list || !template) return;
+
+        function activeRows() {
+          return Array.from(list.querySelectorAll("[data-escalation-level-row]")).filter(function(row) {
+            return row.dataset.removed !== "true";
+          });
+        }
+
+        function renumberRows() {
+          var rows = activeRows();
+
+          rows.forEach(function(row, index) {
+            var levelNumber = index + 1;
+            var label = row.querySelector("[data-escalation-level-label]");
+            var positionInput = row.querySelector("[data-escalation-position]");
+
+            if (label) label.textContent = "L" + levelNumber + " Escalation";
+            if (positionInput) positionInput.value = levelNumber;
+          });
+
+          rows.forEach(function(row) {
+            var removeButton = row.querySelector("[data-escalation-remove]");
+            if (!removeButton) return;
+
+            removeButton.classList.toggle("hidden", rows.length <= 1);
+          });
+        }
+
+        builder.addEventListener("click", function(event) {
+          var addButton = event.target.closest("[data-escalation-add]");
+          if (addButton) {
+            event.preventDefault();
+
+            var uniqueId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+            var content = template.innerHTML.replace(/NEW_RECORD/g, uniqueId);
+
+            list.insertAdjacentHTML("beforeend", content);
+            renumberRows();
+
+            var rows = activeRows();
+            var lastRow = rows[rows.length - 1];
+            var lastSelect = lastRow && lastRow.querySelector("select");
+
+            if (lastSelect) lastSelect.focus();
+            return;
+          }
+
+          var removeButton = event.target.closest("[data-escalation-remove]");
+          if (!removeButton) return;
+
+          event.preventDefault();
+
+          var rows = activeRows();
+          if (rows.length <= 1) return;
+
+          var row = removeButton.closest("[data-escalation-level-row]");
+          if (!row) return;
+
+          var destroyInput = row.querySelector("[data-escalation-destroy]");
+          var selectInput = row.querySelector("select");
+
+          if (destroyInput) destroyInput.value = "1";
+          if (selectInput) selectInput.value = "";
+
+          row.dataset.removed = "true";
+          row.classList.add("hidden");
+          renumberRows();
+        });
+
+        renumberRows();
+      });
+    }
+
+    document.addEventListener("turbo:load", initializeHelpdeskEscalationBuilder);
+    document.addEventListener("DOMContentLoaded", initializeHelpdeskEscalationBuilder);
+  })();
+</script>

@@ -1,0 +1,180 @@
+wb = xlsx_package.workbook
+
+wb.styles do |styles|
+  title_style = styles.add_style(
+    b: true,
+    sz: 15,
+    fg_color: "0F172A"
+  )
+
+  meta_label_style = styles.add_style(
+    b: true,
+    fg_color: "475569"
+  )
+
+  header_style = styles.add_style(
+    b: true,
+    bg_color: "707983",
+    fg_color: "FFFFFF",
+    alignment: { horizontal: :center, vertical: :center, wrap_text: true },
+    border: { style: :thin, color: "D1D5DB" }
+  )
+
+  text_style = styles.add_style(
+    alignment: { horizontal: :left, vertical: :top, wrap_text: true },
+    border: { style: :thin, color: "D1D5DB" }
+  )
+
+  status_open_style = styles.add_style(
+    b: true,
+    fg_color: "92400E",
+    bg_color: "FEF3C7",
+    alignment: { horizontal: :center, vertical: :center },
+    border: { style: :thin, color: "D1D5DB" }
+  )
+
+  status_closed_style = styles.add_style(
+    b: true,
+    fg_color: "166534",
+    bg_color: "DCFCE7",
+    alignment: { horizontal: :center, vertical: :center },
+    border: { style: :thin, color: "D1D5DB" }
+  )
+
+  status_pending_style = styles.add_style(
+    b: true,
+    fg_color: "1D4ED8",
+    bg_color: "DBEAFE",
+    alignment: { horizontal: :center, vertical: :center },
+    border: { style: :thin, color: "D1D5DB" }
+  )
+
+  wb.add_worksheet(name: "Help Desk Report") do |sheet|
+    sheet.add_row [ "Help Desk Report" ], style: [ title_style ]
+    sheet.add_row [ "Generated At", @report_generated_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") ], style: [ meta_label_style, text_style ]
+    sheet.add_row [ "Active Filters", @active_filter_labels.any? ? @active_filter_labels.join(" | ") : "No filters applied" ], style: [ meta_label_style, text_style ]
+    sheet.add_row []
+
+    sheet.add_row [
+      "Ticket No",
+      "Request Type",
+      "Department",
+      "Topic",
+      "Request Details",
+      "Requester Name",
+      "Requester Employee Code",
+      "Requester Email",
+      "Submission Mode",
+      "Submitted By",
+      "Complaint Received At",
+      "Action User",
+      "Reopen Count",
+      "Current Owner",
+      "Status",
+      "Escalation Stage",
+      "Created At",
+      "Last Support Update By",
+      "Last Support Update At",
+      "User Action Window",
+      "Closed At",
+      "Closure Mode",
+      "Support Update",
+      "User Remark"
+    ], style: Array.new(24, header_style), height: 30
+
+    @report_tickets.each do |ticket|
+      support_update_history = ticket.support_update_history_latest_first
+      latest_support_update = ticket.latest_support_update
+      requester_remark_history = ticket.requester_remark_history_latest_first
+      support_update_text =
+        if support_update_history.any?
+          support_update_history.map do |support_update|
+            update_time = support_update.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p")
+            update_user = support_update.user.present? ? user_display_name(support_update.user) : "Support"
+            "#{update_time} - #{update_user}: #{support_update.message}"
+          end.join("\n")
+        else
+          "-"
+        end
+      requester_remark_text =
+        if requester_remark_history.any?
+          requester_remark_history.map do |requester_remark|
+            remark_time = requester_remark.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p")
+            remark_user = requester_remark.user.present? ? user_display_name(requester_remark.user) : "User"
+            "#{remark_time} - #{remark_user}: #{requester_remark.message}"
+          end.join("\n")
+        else
+          "-"
+        end
+
+      status_style =
+        if ticket.closed?
+          status_closed_style
+        elsif ticket.resolved?
+          status_pending_style
+        else
+          status_open_style
+        end
+
+      sheet.add_row [
+        ticket.ticket_reference,
+        ticket.request_label,
+        ticket.department.department_type,
+        ticket.request_subject,
+        ticket.message,
+        ticket.requester_name,
+        ticket.requester_employee_code,
+        ticket.requester_email,
+        ticket.submission_mode_label,
+        (ticket.submitted_by_user.present? ? user_display_name(ticket.submitted_by_user) : "-"),
+        (ticket.request_received_at.present? ? ticket.request_received_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") : "-"),
+        (ticket.approval_pending_user.present? ? user_display_name(ticket.approval_pending_user) : "-"),
+        ticket.total_reopens,
+        (ticket.assigned_to_user.present? ? user_display_name(ticket.assigned_to_user) : "-"),
+        help_desk_status_label(ticket),
+        ticket.current_escalation_label,
+        ticket.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p"),
+        (latest_support_update&.user.present? ? user_display_name(latest_support_update.user) : (ticket.responded_by_user.present? ? user_display_name(ticket.responded_by_user) : "-")),
+        (latest_support_update.present? ? latest_support_update.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") : (ticket.responded_at.present? ? ticket.responded_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") : "-")),
+        (ticket.requester_response_due_at.present? ? ticket.requester_response_due_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") : "-"),
+        (ticket.closed_at.present? ? ticket.closed_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") : "-"),
+        (ticket.closed? ? (ticket.closed_automatically? && ticket.final_action_mode_approve_reject? ? "Auto Approved" : (ticket.closed_automatically? ? "Auto Closed" : "Manually Closed")) : "-"),
+        support_update_text,
+        requester_remark_text
+      ], style: [
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        status_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style,
+        text_style
+      ]
+    end
+
+    sheet.column_widths 14, 14, 20, 26, 36, 20, 18, 26, 18, 20, 22, 20, 14, 20, 20, 16, 20, 22, 22, 22, 20, 18, 30, 28
+
+    sheet.sheet_view.pane do |pane|
+      pane.top_left_cell = "A5"
+      pane.state = :frozen
+      pane.y_split = 4
+    end
+  end
+end

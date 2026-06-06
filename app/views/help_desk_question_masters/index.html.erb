@@ -1,0 +1,179 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "help_desk", "data-turbo-track": "reload" %>
+<% end %>
+
+<%
+  page_title = @help_desk_question_master.persisted? ? "Edit Help Desk Question" : "Create Help Desk Question"
+  submit_label = @help_desk_question_master.persisted? ? "Update Question" : "Save Question"
+  total_questions_count = @help_desk_question_masters.size
+  active_questions_count = @help_desk_question_masters.count(&:active?)
+  department_count = @help_desk_question_masters.map(&:department_id).uniq.size
+%>
+
+<div class="main-content sidebar-aware-content helpdesk-page">
+  <div class="helpdesk-shell">
+    <section class="helpdesk-toolbar">
+      <div class="helpdesk-toolbar__main">
+        <span class="helpdesk-eyebrow">Question Master</span>
+        <h1 class="helpdesk-title">Help Desk Question Master</h1>
+      </div>
+
+      <div class="helpdesk-stats">
+        <div class="helpdesk-stat helpdesk-stat--sky">
+          <p class="helpdesk-stat__label">Questions</p>
+          <p class="helpdesk-stat__value"><%= total_questions_count %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--emerald">
+          <p class="helpdesk-stat__label">Active</p>
+          <p class="helpdesk-stat__value"><%= active_questions_count %></p>
+        </div>
+        <div class="helpdesk-stat helpdesk-stat--blue">
+          <p class="helpdesk-stat__label">Departments</p>
+          <p class="helpdesk-stat__value"><%= department_count %></p>
+        </div>
+      </div>
+    </section>
+
+    <div>
+      <section class="helpdesk-card">
+        <div class="helpdesk-card__header helpdesk-card__header--split">
+          <h2 class="helpdesk-section-title"><%= page_title %></h2>
+          <%= form_with url: import_help_desk_question_masters_path, local: true, multipart: true, class: "helpdesk-upload-form" do |form| %>
+            <%= form.file_field :file, accept: ".xlsx,.xls,.csv", class: "helpdesk-input helpdesk-file-input" %>
+            <%= form.submit "Upload Questions", class: "helpdesk-secondary-btn" %>
+          <% end %>
+        </div>
+
+        <% if @help_desk_question_master.errors.any? %>
+          <div class="helpdesk-alert helpdesk-alert--danger">
+            <%= @help_desk_question_master.errors.full_messages.to_sentence %>
+          </div>
+        <% end %>
+
+        <%= form_with model: @help_desk_question_master, local: true do |form| %>
+          <div class="helpdesk-form-grid">
+            <div>
+              <%= form.label :department_id, "Department", class: "helpdesk-field-label" %>
+              <%= form.select :department_id,
+                              options_from_collection_for_select(@departments, :id, :department_type, @help_desk_question_master.department_id),
+                              { include_blank: "Select department" },
+                              class: "helpdesk-input" %>
+            </div>
+
+            <div>
+              <%= form.label :request_type, "Request Type", class: "helpdesk-field-label" %>
+              <%= form.select :request_type,
+                              options_for_select([ [ "Ticket", "ticket" ], [ "Complaint", "complaint" ], [ "Suggestion", "suggestion" ] ], @help_desk_question_master.request_type),
+                              { include_blank: "Select request type" },
+                              class: "helpdesk-input" %>
+            </div>
+
+            <div class="helpdesk-form-span">
+              <%= form.label :question_text, "Question / Topic", class: "helpdesk-field-label" %>
+              <%= form.text_area :question_text,
+                                 rows: 4,
+                                 class: "helpdesk-textarea",
+                                 placeholder: "Example: Internet not working, Printer issue, Salary slip needed, Leave balance clarification." %>
+            </div>
+
+            <div class="helpdesk-form-span">
+              <div class="helpdesk-panel helpdesk-panel--soft">
+                <div class="helpdesk-check-row">
+                  <label class="helpdesk-checkbox-label">
+                    <%= form.check_box :active, class: "helpdesk-checkbox" %>
+                    Keep this question active in the help desk form
+                  </label>
+                  <span class="helpdesk-inline-note">Inactive questions stay in history but will not show to employees.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="helpdesk-actions">
+            <%= form.submit submit_label, class: "helpdesk-primary-btn" %>
+            <% if @help_desk_question_master.persisted? %>
+              <%= link_to "Cancel", help_desk_question_masters_path, class: "helpdesk-secondary-btn" %>
+            <% end %>
+          </div>
+        <% end %>
+      </section>
+    </div>
+
+    <section class="helpdesk-card">
+      <div class="helpdesk-card__header helpdesk-card__header--split">
+        <div>
+          <h2 class="helpdesk-section-title">Configured Questions</h2>
+        </div>
+        <span class="helpdesk-inline-note"><%= pluralize(total_questions_count, "question") %></span>
+      </div>
+
+      <% if @help_desk_question_masters.any? %>
+        <div class="helpdesk-data-table">
+          <div class="helpdesk-data-table__head helpdesk-data-table__head--question-master">
+            <div>Department</div>
+            <div>Question</div>
+            <div>Status</div>
+            <div>Action</div>
+          </div>
+
+          <% @help_desk_question_masters.each do |question_master| %>
+            <article class="helpdesk-data-table__row helpdesk-data-table__row--question-master">
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Department</p>
+                <div class="helpdesk-badge-row">
+                  <span class="helpdesk-badge <%= question_master.complaint? ? 'helpdesk-badge--danger' : 'helpdesk-badge--info' %>"><%= question_master.request_label %></span>
+                </div>
+                <h3 class="helpdesk-ticket__title helpdesk-stack-top-md"><%= question_master.department.department_type %></h3>
+              </div>
+
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Question</p>
+                <p class="helpdesk-ticket__message helpdesk-flush-top"><%= question_master.question_text %></p>
+              </div>
+
+              <div class="helpdesk-data-table__cell">
+                <p class="helpdesk-cell-title">Status</p>
+                <div class="helpdesk-badge-row">
+                  <span class="helpdesk-badge <%= question_master.active? ? 'helpdesk-badge--success' : 'helpdesk-badge--neutral' %>">
+                    <%= question_master.active? ? "Active" : "Inactive" %>
+                  </span>
+                </div>
+
+                <div class="helpdesk-kv helpdesk-stack-top-md">
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Request Type</span>
+                    <span class="helpdesk-kv__value"><%= question_master.request_label %></span>
+                  </div>
+                  <div class="helpdesk-kv__row">
+                    <span class="helpdesk-kv__label">Created</span>
+                    <span class="helpdesk-kv__value"><%= question_master.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="helpdesk-data-table__cell helpdesk-data-table__cell--action">
+                <p class="helpdesk-cell-title">Action</p>
+                <div class="helpdesk-action-panel">
+                  <div class="helpdesk-response-form__actions">
+                    <%= link_to "Edit", edit_help_desk_question_master_path(question_master), class: "helpdesk-secondary-btn" %>
+                    <%= button_to "Delete",
+                                  help_desk_question_master_path(question_master),
+                                  method: :delete,
+                                  data: { confirm: "Delete this help desk question?" },
+                                  form: { class: "helpdesk-inline-form" },
+                                  class: "helpdesk-danger-btn" %>
+                  </div>
+                </div>
+              </div>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="helpdesk-empty">
+          <h3>No questions added yet</h3>
+          <p>Create your first department-wise help desk question from the form.</p>
+        </div>
+      <% end %>
+    </section>
+  </div>
+</div>

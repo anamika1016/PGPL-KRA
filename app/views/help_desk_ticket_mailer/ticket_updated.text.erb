@@ -1,0 +1,14 @@
+Hello <%= @ticket.requester_name %>,
+
+Your help desk <%= @ticket.request_label.downcase %> is now <%= @ticket.status.to_s.humanize %> with <%= @ticket.department.department_type %>.
+
+<% if @ticket.assigned_to_user.present? %>
+Current owner: <%= @ticket.assigned_to_user.display_name %> (<%= @ticket.current_escalation_label %>).
+<% end %>
+
+<% if @ticket.response_message.present? %>
+Latest update:
+<%= @ticket.response_message %>
+<% end %>
+
+Reference: <%= @ticket.ticket_reference %>

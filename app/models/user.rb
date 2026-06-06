@@ -12,6 +12,11 @@ class User < ApplicationRecord
   has_many :user_training_assignments, dependent: :destroy
   has_many :assigned_trainings, through: :user_training_assignments, source: :training
   has_many :user_training_progresses, dependent: :destroy
+  has_many :help_desk_tickets, dependent: :restrict_with_error
+  has_many :assigned_help_desk_tickets, class_name: "HelpDeskTicket", foreign_key: :assigned_to_user_id, dependent: :nullify
+  has_many :responded_help_desk_tickets, class_name: "HelpDeskTicket", foreign_key: :responded_by_user_id, dependent: :nullify
+  has_many :submitted_help_desk_tickets, class_name: "HelpDeskTicket", foreign_key: :submitted_by_user_id, dependent: :nullify
+  has_many :approved_help_desk_tickets, class_name: "HelpDeskTicket", foreign_key: :approval_user_id, dependent: :nullify
 
   ROLES = %w[employee hod admin l1_employer l2_employer]
 
@@ -110,6 +115,16 @@ class User < ApplicationRecord
 
   def name
     email
+  end
+
+  def display_name
+    mapped_employee_detail&.employee_name.presence || employee_code.presence || email
+  end
+
+  def mapped_employee_detail
+    employee_detail ||
+      EmployeeDetail.find_by(employee_code: employee_code.to_s.strip) ||
+      EmployeeDetail.find_by("LOWER(employee_email) = ?", email.to_s.strip.downcase)
   end
 
   private

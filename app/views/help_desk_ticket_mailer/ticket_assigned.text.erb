@@ -1,0 +1,12 @@
+Hello <%= @assignee.display_name %>,
+
+A new help desk <%= @ticket.request_label.downcase %> has been assigned to you for <%= @ticket.department.department_type %>.
+
+Requester: <%= @ticket.requester_name %>
+<% if @ticket.assisted_request? && @ticket.submitted_by_user.present? %>
+Submitted by: <%= @ticket.submitted_by_user.display_name %> on behalf of the requester
+<% end %>
+Escalation level: <%= @ticket.current_escalation_label %>
+
+Message:
+<%= @ticket.message %>

@@ -1,0 +1,22 @@
+Hello,
+
+Your help desk <%= @ticket.request_label.downcase %> for <%= @ticket.department.department_type %> has been marked as completed by support and sent for user follow-up.
+Ticket No: <%= @ticket.ticket_reference %>
+
+Requester: <%= @ticket.requester_name %>
+<% if @ticket.assisted_request? && @ticket.submitted_by_user.present? %>
+Submitted by: <%= @ticket.submitted_by_user.display_name %> on behalf of the requester
+<% end %>
+Completed by: <%= @ticket.responded_by_user&.display_name || "Support Team" %>
+Action requested from: <%= @ticket.approval_pending_user&.display_name || @ticket.requester_name %>
+
+Response:
+<%= @ticket.response_message %>
+
+<% if @ticket.final_action_mode_approve_reject? %>
+If the work is completed, approve it. If the work was not completed, reject it with a remark within 2 days.
+If you take no action, the ticket will approve automatically after 2 days.
+<% else %>
+If the issue is still not solved, reopen this ticket with a remark. If everything is fine, close it from your side within 2 days.
+If you take no action, the ticket will close automatically after 2 days.
+<% end %>
