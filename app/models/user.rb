@@ -12,6 +12,7 @@ class User < ApplicationRecord
   has_many :user_training_assignments, dependent: :destroy
   has_many :assigned_trainings, through: :user_training_assignments, source: :training
   has_many :user_training_progresses, dependent: :destroy
+  has_many :employee_trainings, dependent: :restrict_with_error
   has_many :help_desk_tickets, dependent: :restrict_with_error
   has_many :assigned_help_desk_tickets, class_name: "HelpDeskTicket", foreign_key: :assigned_to_user_id, dependent: :nullify
   has_many :responded_help_desk_tickets, class_name: "HelpDeskTicket", foreign_key: :responded_by_user_id, dependent: :nullify
@@ -70,7 +71,8 @@ class User < ApplicationRecord
   end
 
   def self.provision_from_employee_detail(employee_detail)
-    return if employee_detail.blank? || employee_detail.employee_code.blank?
+    return if employee_detail.blank?
+    return if employee_detail.employee_code.blank? && employee_detail.employee_email.blank?
 
     existing_user = find_by_email_or_employee_code(
       email: employee_detail.employee_email,
@@ -101,6 +103,7 @@ class User < ApplicationRecord
     return employee_detail.employee_email if employee_detail.employee_email.present?
 
     base_local_part = employee_detail.employee_code.to_s.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
+    base_local_part = "employee_#{employee_detail.id}" if base_local_part.blank? && employee_detail.id.present?
     base_local_part = "employee" if base_local_part.blank?
     generated_email = "#{base_local_part}@papl.local"
     suffix = 1

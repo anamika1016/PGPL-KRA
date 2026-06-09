@@ -1,0 +1,219 @@
+<div class="main-content ml-64 w-auto px-8 py-10 employee-training-show-page">
+  <style>
+    .employee-training-show-page {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      box-sizing: border-box;
+      font-family: 'DM Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .employee-training-show-shell { display: grid; gap: 16px; width: 100%; }
+    .employee-training-show-head,
+    .employee-training-show-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    }
+    .employee-training-show-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .employee-training-show-head::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+      background: linear-gradient(90deg, #2563eb, #059669, #f59e0b);
+    }
+    .employee-training-eyebrow {
+      display: inline-flex;
+      padding: 6px 11px;
+      border: 1px solid #d8e2ee;
+      border-radius: 999px;
+      color: #526173;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .employee-training-show-title { margin: 10px 0 0; color: #1d5a35; font-size: clamp(24px, 2.2vw, 34px); font-weight: 800; line-height: 1.15; font-family: 'Playfair Display', Georgia, serif; }
+    .employee-training-link-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .employee-training-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .employee-training-link.primary { border-color: transparent; background: linear-gradient(135deg, #2563eb, #059669); color: #fff; box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22); }
+    .employee-training-show-card { padding: clamp(16px, 2vw, 24px); }
+    .employee-training-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 14px; }
+    .employee-training-detail-item {
+      min-width: 0;
+      padding: 14px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .employee-training-detail-item:hover { border-color: #cbd5e1; }
+    .employee-training-label { margin: 0 0 7px; color: #526173; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .employee-training-value { margin: 0; color: #0f172a; font-size: 15px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+    .employee-training-span { grid-column: 1 / -1; }
+    .employee-training-badge-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .employee-training-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #dbe4ee;
+      background: #fff;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .employee-training-badge.blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .employee-training-badge.green { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+    .employee-training-badge.amber { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .employee-training-employee-grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
+    .employee-training-employee {
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fff;
+      color: #172033;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    @keyframes trainingShowRise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 900px) {
+      .employee-training-detail-grid,
+      .employee-training-employee-grid { grid-template-columns: 1fr; }
+      .employee-training-show-head { align-items: flex-start; flex-direction: column; }
+      .employee-training-link-row,
+      .employee-training-link { width: 100%; }
+    }
+  </style>
+
+  <div class="employee-training-show-shell">
+    <% if notice.present? %>
+      <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800"><%= notice %></div>
+    <% end %>
+
+    <section class="employee-training-show-head">
+      <div>
+        <span class="employee-training-eyebrow">Training Details</span>
+        <h1 class="employee-training-show-title"><%= @employee_training.display_topic %></h1>
+      </div>
+      <div class="employee-training-link-row">
+        <%= link_to "Back to List", employee_trainings_path, class: "employee-training-link" %>
+        <%= link_to "Add Training", new_employee_training_path, class: "employee-training-link primary" %>
+      </div>
+    </section>
+
+    <section class="employee-training-show-card">
+      <div class="employee-training-detail-grid">
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">Training Date</p>
+          <p class="employee-training-value"><%= @employee_training.training_date&.strftime("%d %b %Y") %></p>
+        </div>
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">Thematic / Department</p>
+          <p class="employee-training-value"><%= @employee_training.thematic_department_name %></p>
+        </div>
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">QR ID</p>
+          <p class="employee-training-value"><%= @employee_training.qr_id %></p>
+        </div>
+
+        <div class="employee-training-detail-item employee-training-span">
+          <p class="employee-training-label">Office Type</p>
+          <div class="employee-training-badge-row">
+            <% @employee_training.office_types.each do |office_type| %>
+              <span class="employee-training-badge green"><%= office_type %></span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="employee-training-detail-item employee-training-span">
+          <p class="employee-training-label">Office Name</p>
+          <div class="employee-training-badge-row">
+            <% @employee_training.office_names.each do |office_name| %>
+              <span class="employee-training-badge blue"><%= office_name %></span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">ASA Participants</p>
+          <p class="employee-training-value"><%= @employee_training.asa_participants %></p>
+        </div>
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">Other Participants</p>
+          <p class="employee-training-value"><%= @employee_training.other_participants %></p>
+        </div>
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">Training Location</p>
+          <p class="employee-training-value"><%= @employee_training.training_location %></p>
+        </div>
+
+        <div class="employee-training-detail-item employee-training-span">
+          <p class="employee-training-label">Details</p>
+          <div class="employee-training-value"><%= simple_format(@employee_training.details) %></div>
+        </div>
+
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">Training Register</p>
+          <% if @employee_training.training_register.attached? %>
+            <%= link_to @employee_training.training_register.filename.to_s, rails_blob_path(@employee_training.training_register, disposition: "attachment"), class: "employee-training-badge amber" %>
+          <% else %>
+            <p class="employee-training-value">Not uploaded</p>
+          <% end %>
+        </div>
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">Photo Upload</p>
+          <% if @employee_training.photo_upload.attached? %>
+            <%= link_to @employee_training.photo_upload.filename.to_s, rails_blob_path(@employee_training.photo_upload, disposition: "attachment"), class: "employee-training-badge amber" %>
+          <% else %>
+            <p class="employee-training-value">Not uploaded</p>
+          <% end %>
+        </div>
+        <div class="employee-training-detail-item">
+          <p class="employee-training-label">Submitted By</p>
+          <p class="employee-training-value"><%= @employee_training.user&.display_name || @employee_training.user&.email %></p>
+        </div>
+
+        <div class="employee-training-detail-item employee-training-span">
+          <p class="employee-training-label">Selected Employees</p>
+          <% if @selected_employees.any? %>
+            <div class="employee-training-employee-grid">
+              <% @selected_employees.each do |employee| %>
+                <div class="employee-training-employee">
+                  <%= employee.employee_code %> - <%= employee.employee_name.presence || "Unnamed Employee" %>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="employee-training-value">No employees selected.</p>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

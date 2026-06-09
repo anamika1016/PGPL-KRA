@@ -45,33 +45,45 @@ class HelpdeskEscalationMatricesController < ApplicationController
   end
 
   def load_helpdesk_escalation_support_data
-    @departments = Department.selectable_verticals
+    @departments = helpdesk_selectable_departments
     @manager_options = build_manager_options
     @helpdesk_escalation_matrices = HelpdeskEscalationMatrix.includes(:department, escalation_levels: :user)
                                                             .ordered_by_department
   end
 
   def helpdesk_escalation_matrix_params
-    params.require(:helpdesk_escalation_matrix).permit(
+    permitted_params = params.require(:helpdesk_escalation_matrix).permit(
       :department_id,
       escalation_levels_attributes: [ :id, :position, :user_id, :_destroy ]
     )
+
+    trim_escalation_levels_to_l2(permitted_params)
+    permitted_params
+  end
+
+  def trim_escalation_levels_to_l2(permitted_params)
+    level_attributes = permitted_params[:escalation_levels_attributes]
+    return if level_attributes.blank?
+
+    active_index = 0
+
+    level_attributes.each_value do |attributes|
+      next if ActiveModel::Type::Boolean.new.cast(attributes[:_destroy])
+
+      active_index += 1
+      if active_index > HelpdeskEscalationMatrix::MAX_ESCALATION_LEVELS
+        attributes[:_destroy] = "1"
+        attributes[:user_id] = nil
+      end
+    end
   end
 
   def build_manager_options
-    users = User.order(:email).to_a
-    employee_details_by_code = EmployeeDetail.where(employee_code: users.map(&:employee_code).compact)
-                                             .index_by { |employee| employee.employee_code.to_s.strip }
-    employee_details_by_email = EmployeeDetail.where(employee_email: users.map(&:email))
-                                              .index_by { |employee| employee.employee_email.to_s.downcase }
+    helpdesk_employee_option_users.map do |user|
+      employee_detail = user.mapped_employee_detail
 
-    users.map do |user|
-      employee_detail = employee_details_by_code[user.employee_code.to_s.strip] ||
-                        employee_details_by_email[user.email.to_s.downcase] ||
-                        user.employee_detail
-
-      display_name = employee_detail&.employee_name.presence || user.email
-      identifier = user.employee_code.presence || user.email
+      display_name = employee_detail&.employee_name.presence || user.display_name
+      identifier = employee_detail&.employee_code.presence || user.employee_code.presence || "Not available"
 
       [ "#{display_name} (#{identifier})", user.id ]
     end.sort_by(&:first)

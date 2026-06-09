@@ -45,10 +45,23 @@
       <%= form_with(model: @employee_detail, url: employee_details_path, local: true, data: { turbo: false }) do |form| %>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <% [:employee_name, :employee_email, :mobile_number, :employee_code,
-              :l1_code, :l1_employer_name, :l2_code, :l2_employer_name,:department].each do |field| %>
+              :office_type, :office_name,
+              :l1_code, :l1_employer_name, :l2_code, :l2_employer_name,
+              :designation,:department, :position, :vertical].each do |field| %>
             <div>
-              <%= form.label field, field.to_s.titleize, class: "block text-sm font-semibold text-gray-700 mb-1" %>
-              <%= form.text_field field, class: "form-control w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500" %>
+              <% field_labels = {
+                l1_employer_name: "L1 Manager Name",
+                l2_employer_name: "L2 Manager Name"
+              } %>
+              <%= form.label field, field_labels.fetch(field, field.to_s.titleize), class: "block text-sm font-semibold text-gray-700 mb-1" %>
+              <% if field == :department %>
+                <%= form.select :department,
+                                options_for_select(@employee_department_options, @employee_detail.department),
+                                { include_blank: "Select Department" },
+                                class: "form-control w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500" %>
+              <% else %>
+                <%= form.text_field field, class: "form-control w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500" %>
+              <% end %>
             </div>
           <% end %>
         </div>
@@ -67,7 +80,7 @@
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Employee List</h2>
       <%= search_form_for @q, url: employee_details_path, method: :get, html: { class: "flex items-center space-x-2", id: "search-form" } do |f| %>
-        <%= f.search_field :employee_name_or_employee_email_or_post_or_department_cont,
+        <%= f.search_field :employee_name_or_employee_email_or_employee_code_or_mobile_number_or_office_type_or_office_name_or_l1_code_or_l1_employer_name_or_l2_code_or_l2_employer_name_or_post_or_designation_or_position_or_department_or_vertical_cont,
           placeholder: "Search anything...",
           class: "px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500",
           id: "global-search" %>
@@ -88,7 +101,12 @@
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">L1 Name</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">L2 Code</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">L2 Name</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Department</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Office Type</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Office Name</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Designation</th>
+              <th class="px-4 py-3 text-left font-medium text-grey-500 uppercase tracking-wider">Department</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Position</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Vertical</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -103,7 +121,12 @@
                 <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.l1_employer_name %></td>
                 <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.l2_code %></td>
                 <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.l2_employer_name %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.office_type %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.office_name %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.designation %></td>
                 <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.department %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.position %></td>
+                <td class="px-4 py-4 whitespace-nowrap text-gray-900"><%= emp.vertical %></td>
                 <td class="px-4 py-4 whitespace-nowrap space-x-2">
                   <%= link_to 'Edit', edit_employee_detail_path(emp), class: "text-gray-700 hover:text-gray-900 font-medium" %>
                   <%= link_to 'Delete', '#', 

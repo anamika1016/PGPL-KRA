@@ -13,7 +13,7 @@ class HelpDeskReportsController < ApplicationController
   private
 
   def load_report_context
-    @departments = Department.selectable_verticals
+    @departments = helpdesk_selectable_departments
     @report_tickets = filtered_report_tickets
     @report_generated_at = Time.current
     @active_filter_labels = build_active_filter_labels

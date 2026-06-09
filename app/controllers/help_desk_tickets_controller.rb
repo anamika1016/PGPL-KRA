@@ -14,6 +14,8 @@ class HelpDeskTicketsController < ApplicationController
       redirect_to help_desk_tickets_path, alert: "You are not authorized to access assigned help desk tickets."
       return
     end
+
+    @departments = helpdesk_selectable_departments
   end
 
   def create
@@ -134,7 +136,7 @@ class HelpDeskTicketsController < ApplicationController
 
   def load_help_desk_context
     @requester_profile = current_user.mapped_employee_detail
-    @departments = Department.selectable_verticals
+    @departments = helpdesk_selectable_departments
     @can_review_help_desk_tickets = helpdesk_reviewer?
     @help_desk_requester_directory = build_help_desk_requester_directory
     @can_create_assisted_help_desk_tickets = @help_desk_requester_directory.any?
@@ -265,6 +267,7 @@ class HelpDeskTicketsController < ApplicationController
   def build_help_desk_ticket
     ticket = current_user.help_desk_tickets.new(help_desk_ticket_params)
     ticket.submitted_by_user = current_user
+    normalize_help_desk_question_master(ticket)
 
     assisted_requested = ActiveModel::Type::Boolean.new.cast(ticket.on_behalf_requested)
     return ticket unless assisted_requested
@@ -296,19 +299,36 @@ class HelpDeskTicketsController < ApplicationController
     ticket
   end
 
+  def normalize_help_desk_question_master(ticket)
+    return if ticket.help_desk_question_master_id.blank?
+
+    selected_question = HelpDeskQuestionMaster.find_by(id: ticket.help_desk_question_master_id)
+    return ticket.help_desk_question_master_id = nil if selected_question.blank?
+    return if selected_question.department_id == ticket.department_id &&
+              selected_question.request_type == ticket.request_type &&
+              selected_question.active?
+
+    matching_question = HelpDeskQuestionMaster.active.find_by(
+      department_id: ticket.department_id,
+      request_type: ticket.request_type,
+      question_text: selected_question.question_text
+    )
+
+    ticket.help_desk_question_master = matching_question
+  end
+
   def build_help_desk_requester_directory
-    users = User.includes(:employee_detail).where.not(id: current_user.id).to_a
+    users = helpdesk_employee_option_users.reject { |user| user.id == current_user.id }
 
     users.map do |user|
       employee_profile = user.mapped_employee_detail
-      identifier = employee_profile&.employee_code.presence || user.employee_code.presence || user.email
+      identifier = employee_profile&.employee_code.presence || user.employee_code.presence || "Not available"
 
       {
         id: user.id,
         label: "#{user.display_name} (#{identifier})",
         name: user.display_name,
-        employee_code: identifier,
-        email: user.email
+        employee_code: identifier
       }
     end.sort_by { |requester| requester[:label].downcase }
   end

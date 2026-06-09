@@ -8,6 +8,7 @@ class HelpDeskTicket < ApplicationRecord
   REVIEW_OPEN_STATUSES = %w[submitted in_review reopened].freeze
   MAX_DOCUMENTS = 5
   MAX_DOCUMENT_SIZE = 10.megabytes
+  EMAIL_NOTIFICATIONS_ENABLED = false
 
   belongs_to :user
   belongs_to :department
@@ -72,6 +73,7 @@ class HelpDeskTicket < ApplicationRecord
 
   before_validation :populate_requester_details, on: :create
   before_validation :normalize_question_subject
+  before_validation :normalize_question_master_context
   before_validation :populate_question_subject_from_master
   before_validation :normalize_message
   before_validation :normalize_response_message
@@ -134,7 +136,7 @@ class HelpDeskTicket < ApplicationRecord
   def current_escalation_label
     return "Response Ticket" if assisted_request?
 
-    "L#{current_escalation_position.presence || 1} Escalation"
+    "L#{capped_escalation_position(current_escalation_position)} Escalation"
   end
 
   def approval_candidate_users
@@ -296,14 +298,22 @@ class HelpDeskTicket < ApplicationRecord
 
     while escalation_due_at.present? && escalation_due_at <= reference_time
       next_level = levels.find { |level| level.position.to_i > current_escalation_position.to_i }
-      break if next_level.blank?
+      if next_level.blank?
+        if capped_escalation_position(current_escalation_position) >= HelpdeskEscalationMatrix::MAX_ESCALATION_LEVELS
+          self.current_escalation_position = HelpdeskEscalationMatrix::MAX_ESCALATION_LEVELS
+          self.escalation_due_at = nil
+          changed = true
+        end
+
+        break
+      end
 
       next_assignment_time = escalation_due_at
 
       self.current_escalation_position = next_level.position
       self.assigned_to_user = next_level.user
       self.assigned_at = next_assignment_time
-      self.escalation_due_at = next_assignment_time + ESCALATION_RESPONSE_WINDOW
+      self.escalation_due_at = escalation_due_at_for_position(next_level.position, next_assignment_time)
       self.status = "in_review" if submitted?
       changed = true
     end
@@ -380,7 +390,7 @@ class HelpDeskTicket < ApplicationRecord
     self.status = "in_review"
     self.assigned_to_user = reviewer
     self.assigned_at = update_time
-    self.escalation_due_at = update_time + ESCALATION_RESPONSE_WINDOW
+    self.escalation_due_at = escalation_due_at_for_position(current_escalation_position, update_time)
     self.approval_user = nil
     self.final_action_mode = nil
     self.requester_response_due_at = nil
@@ -400,6 +410,7 @@ class HelpDeskTicket < ApplicationRecord
   def forward_to_department_by(reviewer:, department:, response_message:, support_documents: [])
     target_department = department
     new_response_message = response_message.to_s.strip.presence
+    source_department = self.department
 
     if target_department.blank?
       errors.add(:department, "must be selected before forwarding this ticket")
@@ -429,11 +440,12 @@ class HelpDeskTicket < ApplicationRecord
     self.responded_by_user = reviewer
     self.responded_at = update_time
     self.department = target_department
+    normalize_question_master_context
     self.status = "in_review"
     self.current_escalation_position = next_level.position
     self.assigned_to_user = next_level.user
     self.assigned_at = update_time
-    self.escalation_due_at = update_time + ESCALATION_RESPONSE_WINDOW
+    self.escalation_due_at = escalation_due_at_for_position(next_level.position, update_time)
     self.approval_user = nil
     self.final_action_mode = nil
     self.requester_response_due_at = nil
@@ -444,7 +456,17 @@ class HelpDeskTicket < ApplicationRecord
 
     saved = save
     if saved
-      record_support_update!(reviewer: reviewer, message: self.response_message, created_at: update_time)
+      record_support_update!(
+        reviewer: reviewer,
+        message: forward_support_update_message(
+          response_message: self.response_message,
+          reviewer: reviewer,
+          source_department: source_department,
+          target_department: target_department,
+          assigned_user: next_level.user
+        ),
+        created_at: update_time
+      )
       schedule_next_escalation_check!
     end
     saved
@@ -466,7 +488,7 @@ class HelpDeskTicket < ApplicationRecord
 
     assignment_time = Time.current
     return_user = responded_by_user.presence || assigned_to_user
-    return_position = current_escalation_position.presence
+    return_position = capped_escalation_position(current_escalation_position)
 
     if return_user.blank? || return_position.blank?
       first_level = configured_escalation_levels.first
@@ -479,12 +501,17 @@ class HelpDeskTicket < ApplicationRecord
       return_position = first_level.position
     end
 
+    if current_escalation_position.to_i > HelpdeskEscalationMatrix::MAX_ESCALATION_LEVELS
+      capped_level = configured_escalation_levels.find { |level| level.position.to_i == return_position.to_i }
+      return_user = capped_level.user if capped_level.present?
+    end
+
     self.status = "reopened"
     self.reopen_count = total_reopens + 1
     self.current_escalation_position = return_position
     self.assigned_to_user = return_user
     self.assigned_at = assignment_time
-    self.escalation_due_at = assisted_request? ? nil : assignment_time + ESCALATION_RESPONSE_WINDOW
+    self.escalation_due_at = assisted_request? ? nil : escalation_due_at_for_position(return_position, assignment_time)
     self.approval_user = nil
     self.final_action_mode = nil
     self.requester_response_due_at = nil
@@ -598,6 +625,18 @@ class HelpDeskTicket < ApplicationRecord
     department&.helpdesk_escalation_matrix&.ordered_levels.to_a
   end
 
+  def capped_escalation_position(position)
+    capped_position = position.to_i
+    capped_position = 1 if capped_position < 1
+    [ capped_position, HelpdeskEscalationMatrix::MAX_ESCALATION_LEVELS ].min
+  end
+
+  def escalation_due_at_for_position(position, assignment_time)
+    return nil if capped_escalation_position(position) >= HelpdeskEscalationMatrix::MAX_ESCALATION_LEVELS
+
+    assignment_time + ESCALATION_RESPONSE_WINDOW
+  end
+
   def populate_requester_details
     return unless user.present?
 
@@ -641,6 +680,32 @@ class HelpDeskTicket < ApplicationRecord
     self.question_subject = help_desk_question_master.question_text
   end
 
+  def normalize_question_master_context
+    selected_question = HelpDeskQuestionMaster.find_by(id: help_desk_question_master_id)
+    return clear_question_master_reference if selected_question.blank? && help_desk_question_master_id.present?
+    return if selected_question.blank?
+    return if selected_question.department_id == department_id &&
+              selected_question.request_type == request_type &&
+              selected_question.active?
+
+    selected_question_text = selected_question.question_text
+    matching_question = HelpDeskQuestionMaster.active.find_by(
+      department_id: department_id,
+      request_type: request_type,
+      question_text: selected_question_text
+    )
+
+    self.help_desk_question_master = matching_question
+    self.help_desk_question_master_id = matching_question&.id
+    self.question_subject ||= selected_question_text
+  end
+
+  def clear_question_master_reference
+    self.help_desk_question_master = nil
+    self.help_desk_question_master_id = nil
+    association(:help_desk_question_master).reset if association_cached?(:help_desk_question_master)
+  end
+
   def normalize_message
     self.message = message.to_s.strip.presence
   end
@@ -673,12 +738,13 @@ class HelpDeskTicket < ApplicationRecord
     self.current_escalation_position ||= selected_level.position
     self.assigned_to_user = selected_level.user
     self.assigned_at ||= assignment_time
-    self.escalation_due_at ||= assignment_time + ESCALATION_RESPONSE_WINDOW
+    self.escalation_due_at ||= escalation_due_at_for_position(selected_level.position, assignment_time)
   end
 
   def initial_escalation_level
     levels = configured_escalation_levels
     requested_position = initial_escalation_position.to_i
+    requested_position = nil unless [ 1, 2 ].include?(requested_position)
 
     levels.find { |level| level.position.to_i == requested_position } || levels.first
   end
@@ -724,19 +790,14 @@ class HelpDeskTicket < ApplicationRecord
   end
 
   def question_master_matches_request_context
-    return if help_desk_question_master.blank?
+    normalize_question_master_context
+    selected_question = HelpDeskQuestionMaster.find_by(id: help_desk_question_master_id)
+    return if selected_question.blank?
+    return if selected_question.department_id == department_id &&
+              selected_question.request_type == request_type &&
+              selected_question.active?
 
-    if department_id.present? && help_desk_question_master.department_id != department_id
-      errors.add(:help_desk_question_master_id, "must belong to the selected department")
-    end
-
-    if request_type.present? && help_desk_question_master.request_type != request_type
-      errors.add(:help_desk_question_master_id, "must match the selected request type")
-    end
-
-    return if help_desk_question_master.active?
-
-    errors.add(:help_desk_question_master_id, "is not available for selection")
+    clear_question_master_reference
   end
 
   def documents_are_allowed
@@ -798,6 +859,14 @@ class HelpDeskTicket < ApplicationRecord
       created_at: created_at,
       updated_at: created_at
     )
+  end
+
+  def forward_support_update_message(response_message:, reviewer:, source_department:, target_department:, assigned_user:)
+    source_name = source_department&.department_type || "previous department"
+    target_name = target_department&.department_type || "selected department"
+    message = response_message.to_s.strip
+
+    "Forwarded from #{source_name} to #{target_name}: #{message}"
   end
 
   def ensure_legacy_requester_remark!
@@ -863,12 +932,14 @@ class HelpDeskTicket < ApplicationRecord
   end
 
   def send_assignment_notifications
+    return unless EMAIL_NOTIFICATIONS_ENABLED
     return if assigned_to_user.blank? || assigned_to_user.email.blank?
 
     HelpDeskTicketMailer.ticket_assigned(id).deliver_later
   end
 
   def send_assignment_notifications_for_reassignment
+    return unless EMAIL_NOTIFICATIONS_ENABLED
     return if resolved? || closed?
     return unless saved_change_to_assigned_to_user_id? || saved_change_to_current_escalation_position? || (saved_change_to_status? && reopened?)
     return if assigned_to_user.blank? || assigned_to_user.email.blank?
@@ -877,6 +948,7 @@ class HelpDeskTicket < ApplicationRecord
   end
 
   def send_resolution_notifications
+    return unless EMAIL_NOTIFICATIONS_ENABLED
     return unless saved_change_to_status? && resolved?
 
     recipients = [ requester_email, submitted_by_user&.email ].compact.map(&:strip).reject(&:blank?).uniq

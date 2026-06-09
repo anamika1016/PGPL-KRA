@@ -10,8 +10,6 @@ Rails.application.routes.draw do
 
   resources :trainings do
     member do
-      post :start
-      post :finish
       patch :toggle_status
       get  :preview
       post :start_training
@@ -24,6 +22,28 @@ Rails.application.routes.draw do
     collection do
       get "monthly_certificate/:year/:month", to: "trainings#monthly_certificate", as: :monthly_certificate
       get :download_assessment_template
+    end
+  end
+
+  resources :employee_trainings, only: [ :index, :show, :new, :create ]
+
+  resources :employee_training_thematics, only: [ :index, :create, :destroy ]
+
+  resources :employee_training_topics, only: [ :index, :create, :destroy ]
+
+  resources :user_quizzes, only: [ :index, :create, :update, :destroy ] do
+    collection do
+      post :import
+      get :export
+      get :download_template
+    end
+  end
+
+  resources :quizzes do
+    collection do
+      post :import
+      get :export
+      get :download_template
     end
   end
 

@@ -136,7 +136,7 @@
               latest_support_update = ticket.latest_support_update
               requester_remark_history = ticket.requester_remark_history_latest_first
               latest_requester_remark = ticket.latest_requester_remark
-              latest_note = latest_support_update&.message.presence || latest_requester_remark&.message.presence || "No support update yet"
+              latest_note = latest_support_update.present? ? help_desk_support_update_text(ticket, latest_support_update) : (latest_requester_remark&.message.presence || "No support update yet")
               latest_note_time = latest_support_update&.created_at || latest_requester_remark&.created_at || ticket.created_at
             %>
             <details class="helpdesk-report-card">
@@ -269,7 +269,7 @@
                                 <span><%= support_update.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
                                 <span><%= support_update.user.present? ? user_display_name(support_update.user) : "Support" %></span>
                               </div>
-                              <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(support_update.message) %></div>
+                              <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(help_desk_support_update_text(ticket, support_update)) %></div>
                             </div>
                           <% end %>
                         </div>

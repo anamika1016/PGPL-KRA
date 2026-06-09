@@ -51,7 +51,7 @@ class ApplicationController < ActionController::Base
 
     HelpdeskEscalationLevel.where(user_id: current_user.id).exists? ||
       HelpdeskEscalationMatrix.where(
-        "l1_user_id = :user_id OR l2_user_id = :user_id OR l3_user_id = :user_id",
+        "l1_user_id = :user_id OR l2_user_id = :user_id",
         user_id: current_user.id
       ).exists?
   end
@@ -107,7 +107,62 @@ class ApplicationController < ActionController::Base
   helper_method :has_l1_responsibilities?, :has_l2_responsibilities?, :helpdesk_reviewer?,
                 :selected_financial_year, :available_financial_years
 
+  protected
+
+  def helpdesk_selectable_departments
+    Department
+      .where.not(department_type: [ nil, "" ])
+      .select(:id, :department_type)
+      .order(Arel.sql("LOWER(department_type) ASC"))
+  end
+
+  def helpdesk_employee_option_users
+    EmployeeDetail
+      .order(Arel.sql("LOWER(COALESCE(employee_name, '')), LOWER(COALESCE(employee_code, ''))"))
+      .filter_map { |employee_detail| helpdesk_user_for_employee_detail(employee_detail) }
+      .uniq { |user| user.id }
+  end
+
+  def helpdesk_user_for_employee_detail(employee_detail)
+    return if employee_detail.blank?
+
+    employee_detail.user ||
+      User.find_by_email_or_employee_code(
+        email: employee_detail.employee_email,
+        employee_code: employee_detail.employee_code
+      ) ||
+      User.provision_from_employee_detail(employee_detail)
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.warn "Could not provision helpdesk user for employee detail #{employee_detail.id}: #{e.message}"
+    nil
+  end
+
   private
+
+  def sync_helpdesk_departments_from_employee_details(names)
+    existing_names = Department.pluck(:department_type).map { |name| name.to_s.strip.downcase }
+    names.each do |name|
+      normalized_name = name.downcase
+      next if existing_names.include?(normalized_name)
+
+      Department.create!(department_type: name, financial_year: selected_financial_year)
+      existing_names << normalized_name
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.warn "Could not sync helpdesk department '#{name}' from employee details: #{e.message}"
+    end
+  end
+
+  def helpdesk_vertical_names
+    return [] unless EmployeeDetail.column_names.include?("vertical")
+
+    EmployeeDetail
+      .where.not(vertical: [ nil, "" ])
+      .distinct
+      .pluck(:vertical)
+      .map { |name| name.to_s.strip }
+      .reject(&:blank?)
+      .uniq { |name| name.downcase }
+  end
 
   def normalize_lookup_value(value)
     value.to_s.strip.downcase.presence

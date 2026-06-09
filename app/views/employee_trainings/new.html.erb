@@ -1,0 +1,555 @@
+<div class="main-content ml-64 w-auto px-8 py-10 employee-training-page">
+  <style>
+    .employee-training-page {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      box-sizing: border-box;
+      font-family: 'DM Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .employee-training-wrap { width: 100%; min-height: calc(100vh - 48px); margin: 0; display: flex; flex-direction: column; }
+    .employee-training-page-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 18px 20px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+      position: relative;
+      overflow: hidden;
+    }
+    .employee-training-page-head::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+      background: linear-gradient(90deg, #2563eb 0%, #059669 52%, #f59e0b 100%);
+    }
+    .employee-training-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border: 1px solid #d8e2ee;
+      border-radius: 999px;
+      color: #526173;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .employee-training-title {
+      margin: 10px 0 0;
+      color: #1d5a35;
+      font-size: clamp(24px, 2.2vw, 34px);
+      font-weight: 800;
+      line-height: 1.15;
+      font-family: 'Playfair Display', Georgia, serif;
+    }
+    .employee-training-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+      overflow: visible;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .employee-training-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+    }
+    .employee-training-section {
+      border-bottom: 1px solid #e2e8f0;
+      padding: clamp(16px, 2vw, 24px);
+      position: relative;
+    }
+    .employee-training-section:last-of-type { border-bottom: 0; }
+    .employee-training-section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #0f172a;
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0 0 18px;
+      line-height: 1.25;
+    }
+    .employee-training-section-title svg {
+      width: 34px;
+      height: 34px;
+      padding: 8px;
+      border-radius: 10px;
+      background: #eff6ff;
+      color: #2563eb;
+      flex: 0 0 auto;
+      box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+    }
+    .employee-training-section:nth-child(2) .employee-training-section-title svg { background: #ecfdf5; color: #059669; box-shadow: inset 0 0 0 1px rgba(5, 150, 105, 0.14); }
+    .employee-training-section:nth-child(3) .employee-training-section-title svg { background: #fff7ed; color: #d97706; box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.14); }
+    .employee-training-section:nth-child(4) .employee-training-section-title svg { background: #f5f3ff; color: #7c3aed; box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.14); }
+    .employee-training-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 18px 22px; }
+    .employee-training-grid.three { grid-template-columns: repeat(3, minmax(220px, 1fr)); }
+    .employee-training-field { min-width: 0; }
+    .employee-training-field label {
+      display: block;
+      color: #526173;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+    .employee-training-required { color: #ef4444; }
+    .employee-training-input,
+    .employee-training-select,
+    .employee-training-textarea { width: 100%; box-sizing: border-box; border: 1px solid #c5d3e4; border-radius: 10px; color: #0f172a; font-size: 15px; line-height: 1.4; padding: 13px 16px; outline: none; background: #fff; transition: border-color 0.18s, box-shadow 0.18s; }
+    .employee-training-input:focus,
+    .employee-training-select:focus,
+    .employee-training-textarea:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12), 0 8px 20px rgba(15, 23, 42, 0.06); transform: translateY(-1px); }
+    .employee-training-textarea { min-height: 110px; resize: vertical; }
+    .employee-training-hidden-select { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .employee-training-multi { position: relative; }
+    .employee-training-multi-trigger { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #c5d3e4; border-radius: 10px; background: #fff; color: #0f172a; padding: 13px 16px; font-size: 15px; line-height: 1.4; text-align: left; cursor: pointer; box-sizing: border-box; transition: border-color 0.18s, box-shadow 0.18s; }
+    .employee-training-multi-trigger:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12), 0 8px 20px rgba(15, 23, 42, 0.06); outline: none; }
+    .employee-training-multi-trigger svg { width: 16px; height: 16px; color: #64748b; flex: 0 0 auto; transition: transform 0.15s; }
+    .employee-training-multi.open .employee-training-multi-trigger svg { transform: rotate(180deg); }
+    .employee-training-multi-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .employee-training-multi-menu { display: none; position: absolute; z-index: 60; top: calc(100% + 8px); left: 0; right: 0; max-height: 240px; overflow-y: auto; border: 1px solid #c5d3e4; border-radius: 10px; background: #fff; box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14); padding: 8px; }
+    .employee-training-multi.open .employee-training-multi-menu { display: block; animation: employeeTrainingDropdown 0.16s ease both; }
+    .employee-training-multi-option { display: flex !important; align-items: center; gap: 9px; padding: 10px 9px; border-radius: 9px; color: #172033 !important; font-size: 13px !important; font-weight: 700 !important; letter-spacing: 0 !important; text-transform: none !important; margin: 0 !important; cursor: pointer; }
+    .employee-training-multi-option:hover { background: #f1f5f9; }
+    .employee-training-multi-option input { width: 15px; height: 15px; accent-color: #0f72df; }
+    .employee-training-upload { border: 1px solid #d8e2ef; border-radius: 12px; padding: 14px; background: #f8fafc; min-width: 0; transition: border-color 0.2s ease; }
+    .employee-training-upload:hover { border-color: #bfdbfe; }
+    .employee-training-drop { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 116px; border: 1px dashed #c5d3e4; border-radius: 12px; background: #fff; color: #172033; text-align: center; cursor: pointer; transition: border-color 0.18s, background-color 0.18s; }
+    .employee-training-drop:hover { border-color: #2563eb; background: #f8fbff; }
+    .employee-training-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .employee-training-drop svg { color: #2563eb; }
+    .employee-training-drop small { color: #334155; font-size: 12px; line-height: 1.35; }
+    .employee-list-box { border: 1px solid #d8e2ef; border-radius: 12px; padding: 14px; max-height: 240px; overflow-y: auto; background: #f8fafc; }
+    .employee-search { position: relative; width: min(320px, 100%); margin-bottom: 14px; }
+    .employee-search input { padding-right: 36px; }
+    .employee-search svg { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: #64748b; }
+    .employee-check-grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 12px 24px; }
+    .employee-check { display: flex; align-items: center; gap: 8px; color: #172033; font-size: 13px; font-weight: 700; min-width: 0; padding: 8px 10px; border-radius: 10px; background: #fff; border: 1px solid #e2e8f0; transition: border-color 0.16s ease; }
+    .employee-check:hover { border-color: #bfdbfe; }
+    .employee-check input { width: 16px; height: 16px; accent-color: #0f72df; flex: 0 0 auto; }
+    .employee-training-actions { flex: 0 0 auto; z-index: 40; display: flex; justify-content: flex-end; padding: 14px clamp(16px, 2vw, 24px); border-top: 1px solid #d8e2ee; border-radius: 0 0 16px 16px; background: #fff; }
+    .employee-training-submit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 150px; min-height: 46px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; padding: 12px 24px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(22, 163, 74, 0.18); transition: transform 0.18s, box-shadow 0.18s, filter 0.18s; }
+    .employee-training-submit:hover { transform: translateY(-1px); box-shadow: 0 16px 28px rgba(5, 150, 105, 0.24); filter: saturate(1.08); }
+    .employee-training-submit:active { transform: translateY(0); }
+    @keyframes employeeTrainingRise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes employeeTrainingDropdown {
+      from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @media (max-width: 900px) {
+      .employee-training-page { padding: 14px 12px 22px; margin-left: 0; }
+      .employee-training-wrap { min-height: calc(100vh - 36px); }
+      .employee-training-page-head { align-items: flex-start; }
+      .employee-training-grid,
+      .employee-training-grid.three,
+      .employee-check-grid { grid-template-columns: 1fr; }
+      .employee-training-section { padding: 16px; }
+      .employee-training-actions { justify-content: stretch; padding: 12px 16px; }
+      .employee-training-submit { width: 100%; }
+    }
+    @media (max-width: 560px) {
+      .employee-training-page-head { padding: 16px; border-radius: 14px; }
+      .employee-training-card { border-radius: 14px; }
+      .employee-training-section-title { font-size: 16px; }
+      .employee-training-section-title svg { width: 32px; height: 32px; }
+      .employee-training-input,
+      .employee-training-select,
+      .employee-training-textarea,
+      .employee-training-multi-trigger { font-size: 14px; padding: 12px 13px; }
+    }
+  </style>
+
+  <div class="employee-training-wrap">
+    <% if notice.present? %>
+      <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800"><%= notice %></div>
+    <% end %>
+
+    <% if @employee_training&.errors&.any? %>
+      <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+        <%= @employee_training.errors.full_messages.to_sentence %>
+      </div>
+    <% end %>
+
+    <div class="employee-training-page-head">
+      <div>
+        <span class="employee-training-eyebrow">Learning &amp; Development</span>
+        <h1 class="employee-training-title">TOT Training</h1>
+      </div>
+      <%= link_to "View Submitted Trainings", employee_trainings_path, class: "inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100" %>
+    </div>
+
+    <%= form_with url: employee_trainings_path, method: :post, local: true, html: { multipart: true, class: "employee-training-card" } do %>
+      <div class="employee-training-scroll">
+        <section class="employee-training-section">
+          <h2 class="employee-training-section-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+            Training Details
+          </h2>
+
+        <div class="employee-training-grid">
+          <div class="employee-training-field">
+            <%= label_tag :office_type do %>Office Type <span class="employee-training-required">*</span><% end %>
+            <%= select_tag "office_type[]", options_for_select(@office_type_options), multiple: true, required: true, class: "employee-training-hidden-select", data: { office_type_select: true } %>
+            <div class="employee-training-multi" data-office-type-multi>
+              <button type="button" class="employee-training-multi-trigger" data-office-type-trigger>
+                <span class="employee-training-multi-label" data-office-type-label>Select Office Type</span>
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="employee-training-multi-menu" data-office-type-menu>
+                <% @office_type_options.each do |office_type| %>
+                  <label class="employee-training-multi-option">
+                    <input type="checkbox" value="<%= office_type %>" data-office-type-checkbox>
+                    <span><%= office_type %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+          </div>
+          <div class="employee-training-field">
+            <%= label_tag :office_name do %>Office Name <span class="employee-training-required">*</span><% end %>
+            <%= select_tag "office_name[]", options_for_select(@office_options), multiple: true, required: true, class: "employee-training-hidden-select", data: { office_name_select: true } %>
+            <div class="employee-training-multi" data-office-name-multi>
+              <button type="button" class="employee-training-multi-trigger" data-office-name-trigger>
+                <span class="employee-training-multi-label" data-office-name-label>Select Office Type First</span>
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="employee-training-multi-menu" data-office-name-menu></div>
+            </div>
+          </div>
+          <div class="employee-training-field">
+            <%= label_tag :thematic_department_name do %>Thematic/Department Name <span class="employee-training-required">*</span><% end %>
+            <%= select_tag :thematic_department_name, options_for_select(@thematic_department_options), include_blank: "Select Thematic/Department", required: true, class: "employee-training-select", data: { thematic_department_select: true } %>
+          </div>
+          <div class="employee-training-field">
+            <%= label_tag :training_date do %>Training Date <span class="employee-training-required">*</span><% end %>
+            <%= date_field_tag :training_date, nil, required: true, class: "employee-training-input" %>
+          </div>
+          <div class="employee-training-field">
+            <%= label_tag :topic do %>Topic <span class="employee-training-required">*</span><% end %>
+            <%= select_tag :topic, "", include_blank: "Select Thematic/Department First", required: true, class: "employee-training-select", data: { topic_select: true } %>
+          </div>
+          <div class="employee-training-field" data-other-topic-wrap style="display:none;">
+            <%= label_tag :other_topic do %>Other Topic <span class="employee-training-required">*</span><% end %>
+            <%= text_field_tag :other_topic, nil, placeholder: "Enter topic", class: "employee-training-input", data: { other_topic_input: true } %>
+          </div>
+          <div class="employee-training-field" style="grid-column: 1 / -1;">
+            <%= label_tag :details do %>Details <span class="employee-training-required">*</span><% end %>
+            <%= text_area_tag :details, nil, placeholder: "Enter training details...", required: true, class: "employee-training-textarea" %>
+          </div>
+          <div class="employee-training-field" style="grid-column: 1 / -1;">
+            <%= label_tag :training_location do %>Training Location <span class="employee-training-required">*</span><% end %>
+            <%= text_field_tag :training_location, nil, placeholder: "Enter training location", required: true, class: "employee-training-input" %>
+          </div>
+        </div>
+        </section>
+
+        <section class="employee-training-section">
+          <h2 class="employee-training-section-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Participant Details
+          </h2>
+        <div class="employee-training-grid three">
+          <div class="employee-training-field">
+            <%= label_tag :asa_participants do %>Training Participant in ASA <span class="employee-training-required">*</span><% end %>
+            <%= number_field_tag :asa_participants, nil, min: 0, placeholder: "Enter number", required: true, class: "employee-training-input" %>
+          </div>
+          <div class="employee-training-field">
+            <%= label_tag :other_participants do %>Training Participant in Other <span class="employee-training-required">*</span><% end %>
+            <%= number_field_tag :other_participants, nil, min: 0, placeholder: "Enter number", required: true, class: "employee-training-input" %>
+          </div>
+          <div class="employee-training-field">
+            <%= label_tag :qr_id do %>QR ID <span class="employee-training-required">*</span><% end %>
+            <%= text_field_tag :qr_id, nil, placeholder: "Enter QR ID", required: true, class: "employee-training-input" %>
+          </div>
+        </div>
+        </section>
+
+        <section class="employee-training-section">
+          <h2 class="employee-training-section-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            Attachments
+          </h2>
+        <div class="employee-training-grid">
+          <div class="employee-training-upload">
+            <div class="employee-training-field">
+              <%= label_tag :training_register do %>Training Register <span class="employee-training-required">*</span><% end %>
+            </div>
+            <label class="employee-training-drop">
+              <%= file_field_tag :training_register, accept: ".pdf,.jpg,.jpeg,.png", required: true %>
+              <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+              <small>Click to upload or drag and drop<br>PDF, JPG, PNG (Max. 10MB)</small>
+            </label>
+          </div>
+          <div class="employee-training-upload">
+            <div class="employee-training-field">
+              <%= label_tag :photo_upload do %>Photo Upload <span class="employee-training-required">*</span><% end %>
+            </div>
+            <label class="employee-training-drop">
+              <%= file_field_tag :photo_upload, accept: ".jpg,.jpeg,.png", required: true %>
+              <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+              <small>Click to upload or drag and drop<br>JPG, PNG (Max. 10MB)</small>
+            </label>
+          </div>
+        </div>
+        </section>
+
+        <section class="employee-training-section">
+          <h2 class="employee-training-section-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Employee List
+          </h2>
+        <div class="employee-list-box">
+          <div class="employee-search">
+            <%= search_field_tag :employee_search, nil, placeholder: "Search employee...", class: "employee-training-input", data: { employee_training_search: true } %>
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <div class="employee-check-grid" data-employee-training-list>
+            <% @employees.each do |employee| %>
+              <label class="employee-check" data-employee-text="<%= "#{employee.employee_code} #{employee.employee_name}".downcase %>">
+                <%= check_box_tag "employee_ids[]", employee.id %>
+                <span><%= employee.employee_code %> - <%= employee.employee_name.presence || "Unnamed Employee" %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+        </section>
+      </div>
+
+      <div class="employee-training-actions">
+        <button type="submit" class="employee-training-submit">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          Submit
+        </button>
+      </div>
+    <% end %>
+  </div>
+
+  <script type="application/json" id="employee-training-office-options"><%= raw(json_escape(@office_options_by_type.to_json)) %></script>
+  <script type="application/json" id="employee-training-topic-options"><%= raw(json_escape(@topics_by_thematic_department.to_json)) %></script>
+
+  <script>
+    document.addEventListener("turbo:load", function () {
+      const searchInput = document.querySelector("[data-employee-training-search]");
+      const employeeItems = document.querySelectorAll("[data-employee-training-list] [data-employee-text]");
+      const officeTypeSelect = document.querySelector("[data-office-type-select]");
+      const officeNameSelect = document.querySelector("[data-office-name-select]");
+      const officeOptionsJson = document.getElementById("employee-training-office-options");
+      const officeTypeMulti = document.querySelector("[data-office-type-multi]");
+      const officeTypeTrigger = document.querySelector("[data-office-type-trigger]");
+      const officeTypeLabel = document.querySelector("[data-office-type-label]");
+      const officeTypeCheckboxes = document.querySelectorAll("[data-office-type-checkbox]");
+      const officeNameMulti = document.querySelector("[data-office-name-multi]");
+      const officeNameTrigger = document.querySelector("[data-office-name-trigger]");
+      const officeNameLabel = document.querySelector("[data-office-name-label]");
+      const officeNameMenu = document.querySelector("[data-office-name-menu]");
+      const thematicDepartmentSelect = document.querySelector("[data-thematic-department-select]");
+      const topicSelect = document.querySelector("[data-topic-select]");
+      const topicOptionsJson = document.getElementById("employee-training-topic-options");
+      const otherTopicWrap = document.querySelector("[data-other-topic-wrap]");
+      const otherTopicInput = document.querySelector("[data-other-topic-input]");
+
+      if (officeTypeSelect && officeNameSelect && officeOptionsJson) {
+        const officeOptionsByType = JSON.parse(officeOptionsJson.textContent || "{}");
+
+        const selectedOfficeTypes = function () {
+          return Array.from(officeTypeCheckboxes)
+            .filter(function (checkbox) { return checkbox.checked; })
+            .map(function (checkbox) { return checkbox.value; });
+        };
+
+        const syncOfficeTypeSelect = function () {
+          const selectedValues = selectedOfficeTypes();
+
+          Array.from(officeTypeSelect.options).forEach(function (option) {
+            option.selected = selectedValues.includes(option.value);
+          });
+
+          if (officeTypeLabel) {
+            if (selectedValues.length === 0) {
+              officeTypeLabel.textContent = "Select Office Type";
+            } else if (selectedValues.length <= 2) {
+              officeTypeLabel.textContent = selectedValues.join(", ");
+            } else {
+              officeTypeLabel.textContent = `${selectedValues.length} office types selected`;
+            }
+          }
+        };
+
+        const selectedOfficeNames = function () {
+          return Array.from(officeNameMenu.querySelectorAll("[data-office-name-checkbox]"))
+            .filter(function (checkbox) { return checkbox.checked; })
+            .map(function (checkbox) { return checkbox.value; });
+        };
+
+        const syncOfficeNameSelect = function () {
+          const selectedValues = selectedOfficeNames();
+
+          Array.from(officeNameSelect.options).forEach(function (option) {
+            option.selected = selectedValues.includes(option.value);
+          });
+
+          if (officeNameLabel) {
+            if (selectedValues.length === 0) {
+              officeNameLabel.textContent = selectedOfficeTypes().length > 0 ? "Select Office Name" : "Select Office Type First";
+            } else if (selectedValues.length <= 2) {
+              officeNameLabel.textContent = selectedValues.join(", ");
+            } else {
+              officeNameLabel.textContent = `${selectedValues.length} office names selected`;
+            }
+          }
+        };
+
+        const fillOfficeNames = function () {
+          const selectedTypes = selectedOfficeTypes();
+          const previouslySelected = selectedOfficeNames();
+          const officeNames = [];
+
+          selectedTypes.forEach(function (officeType) {
+            (officeOptionsByType[officeType] || []).forEach(function (officeName) {
+              if (!officeNames.includes(officeName)) officeNames.push(officeName);
+            });
+          });
+
+          officeNameSelect.innerHTML = "";
+          officeNameMenu.innerHTML = "";
+
+          officeNames.forEach(function (officeName) {
+            const option = document.createElement("option");
+            option.value = officeName;
+            option.textContent = officeName;
+            option.selected = previouslySelected.includes(officeName);
+            officeNameSelect.appendChild(option);
+
+            const label = document.createElement("label");
+            label.className = "employee-training-multi-option";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.value = officeName;
+            checkbox.checked = previouslySelected.includes(officeName);
+            checkbox.setAttribute("data-office-name-checkbox", "");
+            checkbox.addEventListener("change", syncOfficeNameSelect);
+
+            const text = document.createElement("span");
+            text.textContent = officeName;
+
+            label.appendChild(checkbox);
+            label.appendChild(text);
+            officeNameMenu.appendChild(label);
+          });
+
+          if (officeNames.length === 0) {
+            const emptyOption = document.createElement("div");
+            emptyOption.className = "employee-training-multi-option";
+            emptyOption.textContent = selectedTypes.length > 0 ? "No office names found" : "Select Office Type First";
+            officeNameMenu.appendChild(emptyOption);
+          }
+
+          syncOfficeNameSelect();
+        };
+
+        if (officeTypeTrigger && officeTypeMulti) {
+          officeTypeTrigger.addEventListener("click", function () {
+            officeTypeMulti.classList.toggle("open");
+          });
+
+          document.addEventListener("click", function (event) {
+            if (!officeTypeMulti.contains(event.target)) {
+              officeTypeMulti.classList.remove("open");
+            }
+            if (officeNameMulti && !officeNameMulti.contains(event.target)) {
+              officeNameMulti.classList.remove("open");
+            }
+          });
+        }
+
+        if (officeNameTrigger && officeNameMulti) {
+          officeNameTrigger.addEventListener("click", function () {
+            if (selectedOfficeTypes().length > 0) officeNameMulti.classList.toggle("open");
+          });
+        }
+
+        officeTypeCheckboxes.forEach(function (checkbox) {
+          checkbox.addEventListener("change", function () {
+            syncOfficeTypeSelect();
+            fillOfficeNames();
+          });
+        });
+
+        syncOfficeTypeSelect();
+        fillOfficeNames();
+      }
+
+      if (thematicDepartmentSelect && topicSelect && topicOptionsJson) {
+        const topicsByThematicDepartment = JSON.parse(topicOptionsJson.textContent || "{}");
+
+        const toggleOtherTopic = function () {
+          const showOther = topicSelect.value === "__other__";
+          if (otherTopicWrap) otherTopicWrap.style.display = showOther ? "block" : "none";
+          if (otherTopicInput) {
+            otherTopicInput.required = showOther;
+            if (!showOther) otherTopicInput.value = "";
+          }
+        };
+
+        const fillTopics = function () {
+          const selectedThematicDepartment = thematicDepartmentSelect.value;
+          const topics = topicsByThematicDepartment[selectedThematicDepartment] || [];
+
+          topicSelect.innerHTML = "";
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = selectedThematicDepartment ? "Select Topic" : "Select Thematic/Department First";
+          topicSelect.appendChild(placeholder);
+
+          topics.forEach(function (topicName) {
+            const option = document.createElement("option");
+            option.value = topicName;
+            option.textContent = topicName;
+            topicSelect.appendChild(option);
+          });
+
+          const otherOption = document.createElement("option");
+          otherOption.value = "__other__";
+          otherOption.textContent = "Other";
+          topicSelect.appendChild(otherOption);
+          toggleOtherTopic();
+        };
+
+        fillTopics();
+        thematicDepartmentSelect.addEventListener("change", fillTopics);
+        topicSelect.addEventListener("change", toggleOtherTopic);
+      }
+
+      if (searchInput && employeeItems.length > 0) {
+        searchInput.addEventListener("input", function () {
+          const query = searchInput.value.trim().toLowerCase();
+          employeeItems.forEach(function (item) {
+            item.style.display = item.dataset.employeeText.includes(query) ? "flex" : "none";
+          });
+        });
+      }
+    });
+  </script>
+</div>

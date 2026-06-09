@@ -4,7 +4,6 @@
 
 <%
   requester_name = @requester_profile&.employee_name.presence || user_display_name(current_user)
-  requester_email = current_user.email
   requester_code = @requester_profile&.employee_code.presence || current_user.employee_code.presence || "Not available"
   on_behalf_requested = ActiveModel::Type::Boolean.new.cast(@help_desk_ticket.on_behalf_requested)
   selected_requester_id = @help_desk_ticket.requester_user_id.presence&.to_s
@@ -67,7 +66,7 @@
       </div>
     </section>
 
-    <div>
+    <div class="helpdesk-main-grid">
       <section class="helpdesk-card">
         <div class="helpdesk-card__header helpdesk-card__header--split">
           <div>
@@ -85,7 +84,7 @@
         <%= form_with model: @help_desk_ticket, url: help_desk_tickets_path, local: true, html: { multipart: true } do |form| %>
           <div class="helpdesk-form-grid">
             <div>
-              <%= form.label :department_id, "Department", class: "helpdesk-field-label" %>
+              <%= form.label :department_id, "Department / Vertical", class: "helpdesk-field-label" %>
               <%= form.select :department_id,
                               options_from_collection_for_select(@departments, :id, :department_type, @help_desk_ticket.department_id),
                               { include_blank: "Select department" },
@@ -104,7 +103,7 @@
             <div id="help-desk-initial-escalation-wrapper" class="<%= selected_type == 'complaint' ? '' : 'hidden' %>">
               <%= form.label :initial_escalation_position, "Send Complaint To", class: "helpdesk-field-label" %>
               <%= form.select :initial_escalation_position,
-                              options_for_select([ [ "L1", 1 ], [ "L2", 2 ], [ "L3", 3 ] ], @help_desk_ticket.initial_escalation_position.presence || 1),
+                              options_for_select([ [ "L1", 1 ], [ "L2", 2 ] ], @help_desk_ticket.initial_escalation_position.presence || 1),
                               {},
                               class: "helpdesk-input" %>
             </div>
@@ -226,6 +225,50 @@
         <% end %>
       </section>
 
+      <aside class="helpdesk-sidebar" aria-label="Help desk summary">
+        <section class="helpdesk-card helpdesk-card--compact">
+          <div class="helpdesk-snapshot">
+            <div class="helpdesk-avatar" aria-hidden="true"><%= requester_name.to_s.first&.upcase || "U" %></div>
+            <div>
+              <p class="helpdesk-summary-title" id="help-desk-summary-name"><%= requester_name %></p>
+              <p class="helpdesk-summary-subtitle" id="help-desk-summary-code"><%= requester_code %></p>
+            </div>
+          </div>
+
+          <div class="helpdesk-summary-grid helpdesk-stack-top-lg">
+            <div class="helpdesk-summary-item">
+              <p class="helpdesk-field-label">Mode</p>
+              <p class="helpdesk-summary-value" id="help-desk-summary-mode"><%= on_behalf_requested ? "Oral request" : "Self request" %></p>
+            </div>
+            <div class="helpdesk-summary-item">
+              <p class="helpdesk-field-label">Current</p>
+              <p class="helpdesk-summary-value"><%= recent_ticket_count %></p>
+            </div>
+            <div class="helpdesk-summary-item">
+              <p class="helpdesk-field-label">Suggestions</p>
+              <p class="helpdesk-summary-value"><%= recent_suggestions %></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="helpdesk-panel helpdesk-panel--highlight">
+          <p class="helpdesk-section-title helpdesk-section-title--sm">Quick Status</p>
+          <div class="helpdesk-status-list">
+            <div class="helpdesk-status-list__item">
+              <span class="helpdesk-status-dot helpdesk-status-dot--blue"></span>
+              <span>New requests go to the first configured escalation owner.</span>
+            </div>
+            <div class="helpdesk-status-list__item">
+              <span class="helpdesk-status-dot helpdesk-status-dot--amber"></span>
+              <span>Complaints can start from L1 or L2.</span>
+            </div>
+            <div class="helpdesk-status-list__item">
+              <span class="helpdesk-status-dot helpdesk-status-dot--green"></span>
+              <span>Resolved tickets wait for requester action before closure.</span>
+            </div>
+          </div>
+        </section>
+      </aside>
     </div>
 
     <section class="helpdesk-card">
@@ -269,7 +312,7 @@
                 <div class="helpdesk-kv">
                   <div class="helpdesk-kv__row">
                     <span class="helpdesk-kv__label">Raised By</span>
-                    <span class="helpdesk-kv__value"><%= ticket.requester_name %> (<%= ticket.requester_employee_code.presence || ticket.requester_email %>)</span>
+                    <span class="helpdesk-kv__value"><%= ticket.requester_name %> (<%= ticket.requester_employee_code.presence || "Not available" %>)</span>
                   </div>
                   <% if ticket.submitted_by_user.present? && ticket.submitted_by_user_id != ticket.user_id %>
                     <div class="helpdesk-kv__row">
@@ -326,7 +369,7 @@
                             <span><%= support_update.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
                             <span><%= support_update.user.present? ? user_display_name(support_update.user) : "Support" %></span>
                           </div>
-                          <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(support_update.message) %></div>
+                          <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(help_desk_support_update_text(ticket, support_update)) %></div>
                         </div>
                       <% end %>
                     </div>
@@ -479,7 +522,7 @@
 
 <script type="application/json" id="help-desk-question-catalog"><%= raw(json_escape(@help_desk_question_catalog.to_json)) %></script>
 <script type="application/json" id="help-desk-requester-directory"><%= raw(json_escape(@help_desk_requester_directory.to_json)) %></script>
-<script type="application/json" id="help-desk-default-requester"><%= raw(json_escape({ name: requester_name, employee_code: requester_code, email: requester_email }.to_json)) %></script>
+<script type="application/json" id="help-desk-default-requester"><%= raw(json_escape({ name: requester_name, employee_code: requester_code }.to_json)) %></script>
 
 <script>
   function initHelpDeskForm() {
@@ -504,6 +547,7 @@
     const requesterSelect = document.getElementById("help_desk_ticket_requester_user_id");
     const requestReceivedOnField = document.getElementById("help_desk_ticket_request_received_on");
     const requestReceivedTimeField = document.getElementById("help_desk_ticket_request_received_time");
+    const helpDeskForm = departmentSelect?.closest("form");
 
     if (!departmentSelect || !requestTypeSelect || !questionSelect || requestTypeSelect.dataset.helpDeskBound === "true") {
       return;
@@ -511,7 +555,7 @@
 
     let questionCatalog = [];
     let requesterDirectory = [];
-    let defaultRequester = { name: "", employee_code: "", email: "" };
+    let defaultRequester = { name: "", employee_code: "" };
 
     try {
       questionCatalog = JSON.parse(questionCatalogNode?.textContent || "[]");
@@ -528,7 +572,7 @@
     try {
       defaultRequester = JSON.parse(defaultRequesterNode?.textContent || "{}");
     } catch (error) {
-      defaultRequester = { name: "", employee_code: "", email: "" };
+      defaultRequester = { name: "", employee_code: "" };
     }
 
     const questionTypeSelected = () => ["ticket", "complaint", "suggestion"].includes(requestTypeSelect.value);
@@ -553,6 +597,12 @@
       return String(question.department_id) === String(departmentSelect.value) && question.request_type === requestTypeSelect.value;
     });
 
+    const selectedQuestionMatchesContext = () => {
+      if (questionSelect.value === "") return true;
+
+      return matchingQuestions().some((question) => String(question.id) === String(questionSelect.value));
+    };
+
     const selectedRequester = () => {
       if (!requesterSelect) {
         return null;
@@ -565,8 +615,14 @@
       const requester = assistedModeEnabled() ? selectedRequester() || defaultRequester : defaultRequester;
       const requesterName = requester?.name || defaultRequester.name || "Not selected";
       const requesterCode = requester?.employee_code || defaultRequester.employee_code || "Not available";
-      const requesterEmail = requester?.email || defaultRequester.email || "Not available";
+      const requesterMode = assistedModeEnabled() ? "Oral request" : "Self request";
+      const nameNode = document.getElementById("help-desk-summary-name");
+      const codeNode = document.getElementById("help-desk-summary-code");
+      const modeNode = document.getElementById("help-desk-summary-mode");
 
+      if (nameNode) nameNode.textContent = requesterName;
+      if (codeNode) codeNode.textContent = requesterCode;
+      if (modeNode) modeNode.textContent = requesterMode;
     };
 
     const updateAssistedFields = () => {
@@ -688,6 +744,13 @@
       updateCustomQuestionField();
       updateHelpDeskMessageField();
     });
+    if (helpDeskForm) {
+      helpDeskForm.addEventListener("submit", () => {
+        if (!selectedQuestionMatchesContext()) {
+          questionSelect.value = "";
+        }
+      });
+    }
     if (assistedToggle) assistedToggle.addEventListener("change", updateAssistedFields);
     if (requesterSelect) requesterSelect.addEventListener("change", syncRequesterSummary);
 

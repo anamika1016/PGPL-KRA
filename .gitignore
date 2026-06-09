@@ -1,1 +1,8 @@
 log/*.log*
+/storage/*
+/tmp/pids/*
+/tmp/letter_opener/*
+/storage/*
+/tmp/*
+!/storage/.keep
+!/tmp/.keep

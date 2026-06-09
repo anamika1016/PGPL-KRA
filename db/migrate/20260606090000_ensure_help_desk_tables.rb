@@ -24,14 +24,12 @@ class EnsureHelpDeskTables < ActiveRecord::Migration[8.0]
       t.references :department, null: false, foreign_key: true
       t.references :l1_user, foreign_key: { to_table: :users }
       t.references :l2_user, foreign_key: { to_table: :users }
-      t.references :l3_user, foreign_key: { to_table: :users }
       t.timestamps
     end
 
     add_reference_if_missing :helpdesk_escalation_matrices, :department, null: false, foreign_key: true
     add_reference_if_missing :helpdesk_escalation_matrices, :l1_user, foreign_key: { to_table: :users }
     add_reference_if_missing :helpdesk_escalation_matrices, :l2_user, foreign_key: { to_table: :users }
-    add_reference_if_missing :helpdesk_escalation_matrices, :l3_user, foreign_key: { to_table: :users }
     add_timestamps_if_missing :helpdesk_escalation_matrices
     add_index_if_missing :helpdesk_escalation_matrices, :department_id, unique: true
   end

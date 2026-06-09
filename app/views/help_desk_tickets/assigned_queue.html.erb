@@ -59,7 +59,7 @@
               end
               forward_department_options = @departments.reject { |department| department.id == ticket.department_id }.map { |department| [ department.department_type, department.id ] }
               selected_approval_target_id = ticket.approval_user_id.presence || ticket.user_id
-              raised_identifier = ticket.requester_employee_code.presence || ticket.requester_email
+              raised_identifier = ticket.requester_employee_code.presence || "Not available"
             %>
 
             <article class="helpdesk-assigned-card <%= ticket.overdue_for_response? ? 'is-overdue' : '' %>">
@@ -104,6 +104,24 @@
                             <span><%= requester_remark.user.present? ? user_display_name(requester_remark.user) : "User" %></span>
                           </div>
                           <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(requester_remark.message) %></div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+
+                <% support_update_history = ticket.support_update_history_latest_first %>
+                <% if support_update_history.any? %>
+                  <div class="helpdesk-response-box helpdesk-response-box--support">
+                    <p class="helpdesk-response-box__label">All Responses</p>
+                    <div class="helpdesk-thread">
+                      <% support_update_history.each do |support_update| %>
+                        <div class="helpdesk-thread__item">
+                          <div class="helpdesk-thread__meta">
+                            <span><%= support_update.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p") %></span>
+                            <span><%= support_update.user.present? ? user_display_name(support_update.user) : "Support" %></span>
+                          </div>
+                          <div class="helpdesk-response-box__text helpdesk-thread__body"><%= help_desk_format_text(help_desk_support_update_text(ticket, support_update)) %></div>
                         </div>
                       <% end %>
                     </div>

@@ -88,7 +88,7 @@ class HelpDeskQuestionMastersController < ApplicationController
   end
 
   def load_help_desk_question_support_data
-    @departments = Department.selectable_verticals
+    @departments = helpdesk_selectable_departments
     @help_desk_question_masters = HelpDeskQuestionMaster.includes(:department).ordered_for_display
   end
 
@@ -105,7 +105,7 @@ class HelpDeskQuestionMastersController < ApplicationController
   def import_questions_from_file(file)
     spreadsheet = Roo::Spreadsheet.open(file.path, extension: File.extname(file.original_filename).delete_prefix("."))
     headers = spreadsheet.row(1).map { |header| import_header_key(header) }
-    departments_by_name = Department.selectable_verticals.index_by { |department| normalize_import_value(department.department_type) }
+    departments_by_name = helpdesk_selectable_departments.index_by { |department| normalize_import_value(department.department_type) }
     result = { created: 0, skipped: 0, errors: [] }
 
     if spreadsheet.last_row.to_i < 2 || headers.compact_blank.empty?

@@ -8,6 +8,7 @@ class EmployeeDetailsController < ApplicationController
   KRA_RETURN_SMS_TEMPLATE_ID = "1707177667916132293".freeze
 
   before_action :set_employee_detail, only: [ :edit, :update, :destroy ]
+  before_action :load_employee_department_options, only: [ :index, :new, :create, :edit, :update ]
   load_and_authorize_resource except: [ :approve, :return, :l2_approve, :l2_return, :edit_l1, :edit_l2 ]
 
   def index
@@ -68,21 +69,29 @@ class EmployeeDetailsController < ApplicationController
 
     workbook.add_worksheet(name: "Employees") do |sheet|
       sheet.add_row [
-        "Name", "Email", "Employee Code",
-        "L1 Code", "L2 Code", "L1 Name", "L2 Name", "Post", "Department"
+        "Name", "Email", "Mobile Number", "Employee Code",
+        "Office Type", "Office Name",
+        "L1 Code", "L1 Name", "L2 Code", "L2 Name",
+        "Post", "Designation", "Position", "Department", "Vertical"
       ]
 
       @employee_details.each do |emp|
         sheet.add_row [
           emp.employee_name,
           emp.employee_email,
+          emp.mobile_number,
           emp.employee_code,
+          emp.office_type,
+          emp.office_name,
           emp.l1_code,
-          emp.l2_code,
           emp.l1_employer_name,
+          emp.l2_code,
           emp.l2_employer_name,
           emp.post,
-          emp.department
+          emp.designation,
+          emp.position,
+          emp.department,
+          emp.vertical
         ]
       end
     end
@@ -212,14 +221,23 @@ class EmployeeDetailsController < ApplicationController
       "mobile no" => "mobile_number",
       "mobileno" => "mobile_number",
       "mobile#" => "mobile_number",
+      "officetype" => "office_type",
+      "office type" => "office_type",
+      "officename" => "office_name",
+      "office name" => "office_name",
       "l1code" => "l1_code",
       "l2code" => "l2_code",
       "l1name" => "l1_employer_name",
+      "l1managername" => "l1_employer_name",
       "l1employername" => "l1_employer_name",
       "l2name" => "l2_employer_name",
+      "l2managername" => "l2_employer_name",
       "l2employername" => "l2_employer_name",
       "post" => "post",
-      "department" => "department"
+      "designation" => "designation",
+      "position" => "position",
+      "department" => "department",
+      "vertical" => "vertical"
     }
 
     (2..spreadsheet.last_row).each do |i|
@@ -810,11 +828,23 @@ end
     @employee_detail = EmployeeDetail.find(params[:id])
   end
 
+  def load_employee_department_options
+    @employee_department_options = Department
+      .where.not(department_type: [ nil, "" ])
+      .pluck(:department_type)
+      .map { |department_type| department_type.to_s.strip }
+      .reject(&:blank?)
+      .uniq { |department_type| department_type.downcase }
+      .sort_by(&:downcase)
+  end
+
   def employee_detail_params
     params.require(:employee_detail).permit(
       :employee_id, :employee_name, :employee_email, :employee_code, :mobile_number,
+      :office_type, :office_name,
       :l1_code, :l1_employer_name, :l2_code, :l2_employer_name,
-      :post, :department, :l1_remarks, :l1_percentage, :l2_remarks, :l2_percentage
+      :post, :designation, :position, :department, :vertical,
+      :l1_remarks, :l1_percentage, :l2_remarks, :l2_percentage
     )
   end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_06_090000) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_08_092000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -120,7 +120,54 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_06_090000) do
     t.float "l2_percentage"
     t.string "mobile_number"
     t.boolean "assignments_managed", default: false
+    t.string "office_type"
+    t.string "office_name"
+    t.string "designation"
+    t.string "position"
+    t.string "vertical"
     t.index ["user_id"], name: "index_employee_details_on_user_id"
+  end
+
+  create_table "employee_training_thematics", force: :cascade do |t|
+    t.string "thematic_type", null: false
+    t.string "department_name", null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["thematic_type", "department_name"], name: "index_employee_training_thematics_on_type_and_department", unique: true
+  end
+
+  create_table "employee_training_topics", force: :cascade do |t|
+    t.string "thematic_department_name", null: false
+    t.string "name", null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["thematic_department_name", "name"], name: "index_employee_training_topics_on_thematic_and_name", unique: true
+  end
+
+  create_table "employee_trainings", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.jsonb "office_types", default: [], null: false
+    t.jsonb "office_names", default: [], null: false
+    t.string "thematic_department_name", null: false
+    t.date "training_date", null: false
+    t.string "topic", null: false
+    t.string "other_topic"
+    t.text "details", null: false
+    t.string "training_location", null: false
+    t.integer "asa_participants", default: 0, null: false
+    t.integer "other_participants", default: 0, null: false
+    t.string "qr_id", null: false
+    t.jsonb "employee_detail_ids", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_employee_trainings_on_created_at"
+    t.index ["thematic_department_name"], name: "index_employee_trainings_on_thematic_department_name"
+    t.index ["training_date"], name: "index_employee_trainings_on_training_date"
+    t.index ["user_id"], name: "index_employee_trainings_on_user_id"
   end
 
   create_table "help_desk_question_masters", force: :cascade do |t|
@@ -219,13 +266,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_06_090000) do
     t.bigint "department_id", null: false
     t.bigint "l1_user_id"
     t.bigint "l2_user_id"
-    t.bigint "l3_user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["department_id"], name: "index_helpdesk_escalation_matrices_on_department_id"
     t.index ["l1_user_id"], name: "index_helpdesk_escalation_matrices_on_l1_user_id"
     t.index ["l2_user_id"], name: "index_helpdesk_escalation_matrices_on_l2_user_id"
-    t.index ["l3_user_id"], name: "index_helpdesk_escalation_matrices_on_l3_user_id"
   end
 
   create_table "l1_pulse_assessments", force: :cascade do |t|
@@ -387,6 +432,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_06_090000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activities", "departments"
   add_foreign_key "employee_details", "users"
+  add_foreign_key "employee_trainings", "users"
   add_foreign_key "help_desk_question_masters", "departments"
   add_foreign_key "help_desk_requester_remarks", "help_desk_tickets"
   add_foreign_key "help_desk_requester_remarks", "users"
@@ -405,7 +451,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_06_090000) do
   add_foreign_key "helpdesk_escalation_matrices", "departments"
   add_foreign_key "helpdesk_escalation_matrices", "users", column: "l1_user_id"
   add_foreign_key "helpdesk_escalation_matrices", "users", column: "l2_user_id"
-  add_foreign_key "helpdesk_escalation_matrices", "users", column: "l3_user_id"
   add_foreign_key "l1_pulse_assessments", "employee_details"
   add_foreign_key "l1_pulse_assessments", "users", column: "l1_user_id"
   add_foreign_key "sms_logs", "employee_details"

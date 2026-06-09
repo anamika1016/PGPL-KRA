@@ -5,6 +5,7 @@
 <%
   page_title = @helpdesk_escalation_matrix.persisted? ? "Edit Helpdesk Escalation Matrix" : "Create Helpdesk Escalation Matrix"
   submit_label = @helpdesk_escalation_matrix.persisted? ? "Update Matrix" : "Save Matrix"
+  max_escalation_levels = HelpdeskEscalationMatrix::MAX_ESCALATION_LEVELS
   configured_levels_count = @helpdesk_escalation_matrices.sum { |matrix| matrix.ordered_levels.size }
   matrix_count = @helpdesk_escalation_matrices.size
   longest_chain_count = @helpdesk_escalation_matrices.map { |matrix| matrix.ordered_levels.size }.max.to_i
@@ -18,9 +19,9 @@
         <h1 class="helpdesk-title">Helpdesk Escalation Matrix</h1>
 
         <div class="helpdesk-badge-row helpdesk-stack-top-md">
-          <span class="helpdesk-badge helpdesk-badge--info">Dynamic escalation levels</span>
+          <span class="helpdesk-badge helpdesk-badge--info">L1 to L2 escalation only</span>
           <span class="helpdesk-badge helpdesk-badge--success">Department wise routing</span>
-          <span class="helpdesk-badge helpdesk-badge--neutral">Edit and reorder friendly</span>
+          <span class="helpdesk-badge helpdesk-badge--neutral">Two owner chain</span>
         </div>
       </div>
 
@@ -52,7 +53,7 @@
           </div>
         <% end %>
 
-        <%= form_with model: @helpdesk_escalation_matrix, local: true, data: { helpdesk_escalation_builder: true } do |form| %>
+        <%= form_with model: @helpdesk_escalation_matrix, local: true, data: { helpdesk_escalation_builder: true, max_escalation_levels: max_escalation_levels } do |form| %>
           <div class="helpdesk-form-grid">
             <div class="helpdesk-form-span">
               <%= form.label :department_id, "Department / Vertical", class: "helpdesk-field-label" %>
@@ -74,15 +75,15 @@
                   </div>
 
                   <div data-escalation-level-list>
-                    <%= form.fields_for :escalation_levels do |level_fields| %>
+                    <%= form.fields_for :escalation_levels, @helpdesk_escalation_matrix.ordered_levels do |level_fields| %>
                       <%= render "escalation_level_fields", f: level_fields, manager_options: @manager_options %>
                     <% end %>
                   </div>
                 </div>
 
                 <div class="helpdesk-actions">
-                  <button type="button" data-escalation-add class="helpdesk-secondary-btn">Add Escalation</button>
-                  <span class="helpdesk-inline-note">At least one escalation level is required for every vertical mapping.</span>
+                  <button type="button" data-escalation-add class="helpdesk-secondary-btn">Add L2</button>
+                  <span class="helpdesk-inline-note">Escalation is limited to L1 and L2 for every vertical mapping.</span>
                 </div>
 
                 <template data-escalation-template>
@@ -128,10 +129,11 @@
           </div>
 
           <div class="helpdesk-panel helpdesk-panel--soft helpdesk-stack-top-md">
-            <p class="helpdesk-field-label">How It Works</p>
+            <p class="helpdesk-field-label">Flow</p>
             <div class="helpdesk-badge-row helpdesk-stack-top-sm">
               <span class="helpdesk-badge">Choose Vertical</span>
-              <span class="helpdesk-badge">Assign Owners</span>
+              <span class="helpdesk-badge">Assign L1</span>
+              <span class="helpdesk-badge">Assign L2</span>
               <span class="helpdesk-badge">Save Matrix</span>
             </div>
           </div>
@@ -240,6 +242,7 @@
 
         var list = builder.querySelector("[data-escalation-level-list]");
         var template = builder.querySelector("[data-escalation-template]");
+        var maxLevels = parseInt(builder.dataset.maxEscalationLevels || "2", 10);
 
         if (!list || !template) return;
 
@@ -267,12 +270,20 @@
 
             removeButton.classList.toggle("hidden", rows.length <= 1);
           });
+
+          var addButton = builder.querySelector("[data-escalation-add]");
+          if (addButton) {
+            addButton.classList.toggle("hidden", rows.length >= maxLevels);
+            addButton.disabled = rows.length >= maxLevels;
+          }
         }
 
         builder.addEventListener("click", function(event) {
           var addButton = event.target.closest("[data-escalation-add]");
           if (addButton) {
             event.preventDefault();
+
+            if (activeRows().length >= maxLevels) return;
 
             var uniqueId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
             var content = template.innerHTML.replace(/NEW_RECORD/g, uniqueId);

@@ -91,7 +91,7 @@ wb.styles do |styles|
           support_update_history.map do |support_update|
             update_time = support_update.created_at.in_time_zone("Asia/Kolkata").strftime("%d %b %Y, %I:%M %p")
             update_user = support_update.user.present? ? user_display_name(support_update.user) : "Support"
-            "#{update_time} - #{update_user}: #{support_update.message}"
+            "#{update_time} - #{update_user}: #{help_desk_support_update_text(ticket, support_update)}"
           end.join("\n")
         else
           "-"

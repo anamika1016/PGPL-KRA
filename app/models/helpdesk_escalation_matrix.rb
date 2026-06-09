@@ -1,4 +1,6 @@
 class HelpdeskEscalationMatrix < ApplicationRecord
+  MAX_ESCALATION_LEVELS = 2
+
   belongs_to :department
 
   has_many :escalation_levels,
@@ -18,22 +20,31 @@ class HelpdeskEscalationMatrix < ApplicationRecord
 
   scope :ordered_by_department, -> { joins(:department).order("departments.department_type ASC") }
 
-  def build_default_escalations(minimum_levels = 3)
+  def build_default_escalations(minimum_levels = MAX_ESCALATION_LEVELS)
     return if escalation_levels.any?
 
-    minimum_levels.times do |index|
+    [ minimum_levels, MAX_ESCALATION_LEVELS ].min.times do |index|
       escalation_levels.build(position: index + 1)
     end
   end
 
   def ordered_levels
-    escalation_levels.reject(&:marked_for_destruction?).sort_by { |level| level.position.to_i }
+    escalation_levels.reject(&:marked_for_destruction?)
+                     .sort_by { |level| level.position.to_i }
+                     .first(MAX_ESCALATION_LEVELS)
   end
 
   private
 
   def normalize_escalation_levels
     active_levels = escalation_levels.reject(&:marked_for_destruction?)
+                                     .sort_by { |level| level.position.to_i }
+
+    active_levels.each_with_index do |level, index|
+      level.mark_for_destruction if index >= MAX_ESCALATION_LEVELS
+    end
+
+    active_levels = active_levels.first(MAX_ESCALATION_LEVELS)
 
     active_levels.each_with_index do |level, index|
       level.position = index + 1
@@ -62,6 +73,5 @@ class HelpdeskEscalationMatrix < ApplicationRecord
 
     self.l1_user_id = levels[0]&.user_id
     self.l2_user_id = levels[1]&.user_id if has_attribute?(:l2_user_id)
-    self.l3_user_id = levels[2]&.user_id if has_attribute?(:l3_user_id)
   end
 end
