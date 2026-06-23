@@ -1,5 +1,6 @@
 import "@hotwired/turbo-rails";
 import "controllers";
+import "guest_house";
 
 // Flash message functionality
 document.addEventListener('DOMContentLoaded', function() {

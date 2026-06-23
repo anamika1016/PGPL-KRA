@@ -1,0 +1,200 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "guest_house", "data-turbo-track": "reload" %>
+<% end %>
+
+<div class="main-content sidebar-aware-content guest-house-page">
+  <div class="guest-house-shell">
+    <section class="guest-house-toolbar">
+      <div class="guest-house-toolbar__main">
+        <span class="guest-house-eyebrow">Booking Receipt</span>
+        <h1 class="guest-house-title"><%= @booking.booking_reference_label %></h1>
+        <p class="guest-house-subtitle">Guest house booking printout and payment status.</p>
+      </div>
+      <div class="guest-house-toolbar__actions guest-house-no-print">
+        <button type="button" class="guest-house-btn" data-guest-house-print onclick="window.print();">Print</button>
+        <% if current_user.hod? %>
+          <%= button_to "Delete Booking",
+                        guest_house_booking_path(@booking),
+                        method: :delete,
+                        class: "guest-house-btn danger",
+                        form: { data: { turbo_confirm: "Delete booking #{@booking.booking_reference_label}? This cannot be undone." } } %>
+        <% end %>
+        <% back_path = (current_user.hod? || @booking.guest_house.manager_user_id == current_user.id) ? admin_guest_house_bookings_path : guest_house_bookings_path %>
+        <%= link_to "Back", back_path, class: "guest-house-btn light" %>
+      </div>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header">
+        <h2 class="guest-house-section-title">Stay Details</h2>
+        <p class="guest-house-section-copy">Booking information for check-in and front desk verification.</p>
+      </div>
+      <div class="guest-house-summary">
+        <div><span>Guest House</span><strong><%= @booking.guest_house.name %></strong></div>
+        <div><span>Status</span><strong><%= @booking.status.humanize %></strong></div>
+        <div><span>Check-in Date</span><strong><%= @booking.booking_date.strftime("%d %b %Y") %></strong></div>
+        <div><span>Room Type</span><strong><%= @booking.room_type_label %></strong></div>
+        <div><span>Booking For</span><strong><%= @booking.booking_for_label %></strong></div>
+        <div><span>Gender</span><strong><%= @booking.guest_gender_label %></strong></div>
+        <div><span>Guests / Beds</span><strong><%= @booking.external_booking? ? @booking.active_booking_guests.size : @booking.rooms_count %></strong></div>
+        <div><span>Rooms Allocated</span><strong><%= @booking.allocation_room_units %></strong></div>
+        <div><span>Beds Charged</span><strong><%= @booking.chargeable_bed_units %></strong></div>
+        <div><span>Guest</span><strong><%= @booking.requester_name %></strong></div>
+        <div><span>Check-in</span><strong><%= @booking.checkin_label %></strong></div>
+        <div><span>Check-out Date</span><strong><%= @booking.effective_checkout_date.strftime("%d %b %Y") %></strong></div>
+        <div><span>Check-out</span><strong><%= @booking.effective_checkout_time&.strftime("%I:%M %p") %></strong></div>
+        <div><span>Actual Check-out</span><strong><%= @booking.checked_out_at&.strftime("%d %b %Y · %I:%M %p") || "Pending" %></strong></div>
+        <div><span>Charge Days</span><strong><%= @booking.stay_days %></strong></div>
+        <div><span>Accepted By</span><strong><%= @booking.accepted_by&.display_name || "Pending" %></strong></div>
+        <div><span>ID Proof</span><strong><%= [@booking.id_proof_type, @booking.id_proof_number].compact_blank.join(" - ").presence || "Pending" %></strong></div>
+      </div>
+      <% if @booking.admin_remark.present? %>
+        <p class="guest-house-subtitle"><strong>Admin Remark:</strong> <%= @booking.admin_remark %></p>
+      <% end %>
+      <% if @booking.cancelled? %>
+        <p class="guest-house-subtitle"><strong>Cancelled By:</strong> <%= @booking.cancelled_by&.display_name || "Unknown" %> · <%= @booking.cancelled_at&.strftime("%d %b %Y, %I:%M %p") %></p>
+        <p class="guest-house-subtitle"><strong>Cancellation Reason:</strong> <%= @booking.cancellation_reason %></p>
+      <% end %>
+      <% if @booking.guest_house_booking_guests.present? %>
+        <div class="guest-house-guest-list">
+          <% @booking.guest_house_booking_guests.each do |guest| %>
+            <div>
+              <strong><%= guest.full_name %></strong>
+              <span><%= [ "Aadhaar #{guest.aadhaar_number}", guest.mobile_number, guest.email, guest.organization, guest.designation, guest.purpose, "Scheduled: #{guest.checkin_date.strftime('%d %b %Y')} #{guest.checkin_time.strftime('%I:%M %p')} to #{guest.checkout_date.strftime('%d %b %Y')} #{guest.checkout_time.strftime('%I:%M %p')}", "Approval: #{guest.approval_status.humanize}", ("Stay: #{guest.stay_status.humanize}" if guest.approval_accepted?), ("Actual check-in: #{guest.checked_in_at.strftime('%d %b %Y, %I:%M %p')}" if guest.checked_in_at), ("Actual checkout: #{guest.checked_out_at.strftime('%d %b %Y, %I:%M %p')}" if guest.checked_out_at), ("Rejection: #{guest.rejection_remark}" if guest.approval_rejected?) ].compact_blank.join(" · ") %></span>
+              <% if guest.billed? %>
+                <%= link_to "View / Print Individual Bill", bill_guest_house_booking_guest_path(guest), class: "guest-house-btn light guest-house-no-print" %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+      <% if @booking.checkin_remark.present? %>
+        <p class="guest-house-subtitle"><strong>Check-in Remark:</strong> <%= @booking.checkin_remark %></p>
+      <% end %>
+      <% if @booking.id_proof.attached? && (current_user.hod? || @booking.guest_house.manager_user_id == current_user.id) %>
+        <p><%= link_to "View ID Proof", url_for(@booking.id_proof), target: "_blank", rel: "noopener", class: "guest-house-btn light guest-house-no-print" %></p>
+      <% end %>
+    </section>
+
+    <% booking_admin = current_user.hod? || @booking.guest_house.manager_user_id == current_user.id %>
+    <% if @booking.user_id == current_user.id && !booking_admin && @booking.cancellable? %>
+      <section class="guest-house-panel guest-house-no-print">
+        <div class="guest-house-panel__header">
+          <h2 class="guest-house-section-title">Cancel Booking</h2>
+          <p class="guest-house-section-copy">Cancel before check-in if you or your guests cannot visit.</p>
+        </div>
+        <%= form_with model: @booking, url: cancel_guest_house_booking_path(@booking), method: :patch, local: true, class: "guest-house-approval-form" do |form| %>
+          <%= form.text_field :cancellation_reason, placeholder: "Reason for cancellation", class: "guest-house-input", required: true %>
+          <%= form.submit "Cancel Booking", class: "guest-house-btn danger", data: { turbo_confirm: "Cancel this booking? The reserved room will be released." } %>
+        <% end %>
+      </section>
+    <% end %>
+
+    <% if current_user.hod? || @booking.guest_house.manager_user_id == current_user.id %>
+      <section class="guest-house-panel guest-house-no-print">
+        <div class="guest-house-panel__header">
+          <h2 class="guest-house-section-title">Admin Process</h2>
+          <p class="guest-house-section-copy">Complete the next valid step for this booking only.</p>
+        </div>
+        <%= render "admin_booking_card", booking: @booking, facilities_by_house: @facilities_by_house, hide_view: true %>
+      </section>
+    <% end %>
+
+    <% if @booking.user_id == current_user.id && @booking.checked_out? %>
+      <section class="guest-house-panel guest-house-feedback-panel guest-house-no-print">
+        <div class="guest-house-panel__header">
+          <h2 class="guest-house-section-title">Stay Feedback</h2>
+          <p class="guest-house-section-copy">Rate your stay and share a short comment.</p>
+        </div>
+        <%= form_with model: @booking, url: submit_feedback_guest_house_booking_path(@booking), method: :patch, local: true, class: "guest-house-feedback-form" do |form| %>
+          <div class="guest-house-rating" role="radiogroup" aria-label="Stay rating">
+            <% [ [ 1, "Poor" ], [ 2, "Fair" ], [ 3, "Good" ], [ 4, "Very good" ], [ 5, "Excellent" ] ].each do |rating, label| %>
+              <label class="guest-house-rating-option">
+                <%= form.radio_button :feedback_rating, rating, required: true %>
+                <span><strong><%= rating %></strong><small><%= label %></small></span>
+              </label>
+            <% end %>
+          </div>
+          <div class="guest-house-field">
+            <%= form.label :feedback_comment, "Comment" %>
+            <%= form.text_area :feedback_comment, maxlength: 1000, rows: 3, class: "guest-house-textarea", placeholder: "Service, cleanliness or stay experience" %>
+          </div>
+          <div class="guest-house-actions">
+            <%= form.submit(@booking.feedback_submitted? ? "Update Feedback" : "Submit Feedback", class: "guest-house-btn") %>
+            <% if @booking.feedback_submitted_at.present? %>
+              <span class="guest-house-feedback-time">Last updated <%= @booking.feedback_submitted_at.strftime("%d %b %Y, %I:%M %p") %></span>
+            <% end %>
+          </div>
+        <% end %>
+      </section>
+    <% end %>
+
+    <% if @booking.user_id == current_user.id && !@booking.rejected? && !@booking.cancelled? %>
+      <section class="guest-house-panel guest-house-no-print">
+        <div class="guest-house-panel__header">
+          <h2 class="guest-house-section-title">Complaint</h2>
+          <p class="guest-house-section-copy">Raise an issue if any guest house service is not proper.</p>
+        </div>
+        <% if @booking.guest_complaint.present? %>
+          <div class="guest-house-empty">
+            <strong>Status: <%= @booking.complaint_status.humanize %></strong>
+            <p class="guest-house-subtitle"><%= @booking.guest_complaint %></p>
+          </div>
+        <% else %>
+          <%= form_with model: @booking, url: submit_complaint_guest_house_booking_path(@booking), method: :patch, local: true, class: "guest-house-grid" do |form| %>
+            <div class="guest-house-field guest-house-form-span">
+              <%= form.label :guest_complaint, "Complaint Details" %>
+              <%= form.text_area :guest_complaint, class: "guest-house-textarea", required: true, placeholder: "Write complaint details" %>
+            </div>
+            <div class="guest-house-actions guest-house-actions--end">
+              <%= form.submit "Submit Complaint", class: "guest-house-btn danger" %>
+            </div>
+          <% end %>
+        <% end %>
+      </section>
+    <% end %>
+
+    <% if @booking.self_booking? && (@booking.invoice_total.to_d.positive? || @booking.payment_generated? || @booking.payment_uploaded? || @booking.payment_paid?) %>
+      <section class="guest-house-panel">
+        <div class="guest-house-panel__header">
+          <h2 class="guest-house-section-title">Invoice & Payment</h2>
+          <p class="guest-house-section-copy">Bill is generated with 5% GST. Use print to download invoice PDF from browser.</p>
+        </div>
+        <div class="guest-house-grid guest-house-grid--center">
+          <div>
+            <div class="guest-house-summary">
+              <div><span>Bed Charge</span><strong><%= number_to_currency(@booking.room_charge_amount || 0, unit: "₹") %></strong></div>
+              <div><span>Other Services</span><strong><%= number_to_currency(@booking.other_services_amount || 0, unit: "₹") %></strong></div>
+              <div><span>GST 5%</span><strong><%= number_to_currency(@booking.gst_amount || 0, unit: "₹") %></strong></div>
+              <div><span>Total</span><strong><%= number_to_currency(@booking.invoice_total || 0, unit: "₹") %></strong></div>
+              <div><span>Payment Status</span><strong><%= @booking.payment_status.humanize %></strong></div>
+              <div><span>Transaction ID</span><strong><%= @booking.transaction_id.presence || "Pending" %></strong></div>
+            </div>
+            <% if @booking.other_services_details.present? %>
+              <p class="guest-house-subtitle"><strong>Other Services:</strong> <%= @booking.other_services_details %></p>
+            <% end %>
+            <% if @booking.payment_note.present? %>
+              <p class="guest-house-subtitle"><%= @booking.payment_note %></p>
+            <% end %>
+            <% if @booking.payment_details.present? %>
+              <p class="guest-house-subtitle"><strong>Payment Details:</strong> <%= @booking.payment_details %></p>
+            <% end %>
+            <% if @booking.payment_qr_image.attached? %>
+              <p><%= link_to "View Uploaded QR", url_for(@booking.payment_qr_image), target: "_blank", rel: "noopener", class: "guest-house-btn light guest-house-no-print" %></p>
+            <% end %>
+            <% if @booking.payment_receipt.attached? %>
+              <p><%= link_to "View Uploaded Payment Proof", url_for(@booking.payment_receipt), target: "_blank", rel: "noopener", class: "guest-house-btn light guest-house-no-print" %></p>
+            <% end %>
+            <% if @booking.payment_paid? || @booking.payment_waived? %>
+              <div class="guest-house-actions guest-house-no-print">
+                <%= link_to "View Official Receipt", receipt_guest_house_booking_path(@booking, format: :pdf), target: "_blank", rel: "noopener", class: "guest-house-btn" %>
+                <%= link_to "Download Receipt PDF", receipt_guest_house_booking_path(@booking, format: :pdf, download: 1), class: "guest-house-btn secondary" %>
+              </div>
+            <% end %>
+          </div>
+          <div><%= guest_house_payment_qr_svg(@booking) %></div>
+        </div>
+      </section>
+    <% end %>
+  </div>
+</div>

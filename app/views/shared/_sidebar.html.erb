@@ -290,7 +290,73 @@
                 <span class="font-semibold text-base">User Quiz Details</span>
               <% end %>
             </li>
-          <% end %>
+          <% end %><li>
+            <% guest_house_menu_open = %w[guest_house_bookings guest_houses guest_house_notifications].include?(controller_name) %>
+            <% guest_house_unread_count = current_user.guest_house_notifications.unread.count %>
+            <details <%= "open" if guest_house_menu_open %>>
+              <summary class="flex items-center gap-x-3.5 py-2 px-2.5 <%= 'bg-gray-100' if guest_house_menu_open %> text-base text-gray-800 rounded-lg">
+                <svg class="shrink-0 size-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M3 21h18" />
+                  <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+                  <path d="M9 8h1" />
+                  <path d="M14 8h1" />
+                  <path d="M9 12h1" />
+                  <path d="M14 12h1" />
+                  <path d="M10 21v-5h4v5" />
+                </svg>
+                <span class="font-semibold text-base">Guest House</span>
+                <% if guest_house_unread_count.positive? %>
+                  <span class="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white"><%= [ guest_house_unread_count, 99 ].min %><%= "+" if guest_house_unread_count > 99 %></span>
+                <% end %>
+                <svg class="sidebar-menu-chevron ml-auto h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </summary>
+              <ul class="sidebar-submenu flex flex-col space-y-1">
+                <li>
+                  <%= link_to guest_house_bookings_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'guest_house_bookings' && action_name.in?(%w[index create])} text-sm text-gray-800 rounded-lg" do %>
+                    <span class="font-semibold">Guest House Form</span>
+                  <% end %>
+                </li>
+                <li>
+                  <%= link_to guest_house_notifications_path, class: "flex items-center justify-between gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'guest_house_notifications'} text-sm text-gray-800 rounded-lg" do %>
+                    <span class="font-semibold">Notifications</span>
+                    <% if guest_house_unread_count.positive? %>
+                      <span class="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white"><%= [ guest_house_unread_count, 99 ].min %><%= "+" if guest_house_unread_count > 99 %></span>
+                    <% end %>
+                  <% end %>
+                </li>
+                <li>
+                  <%= link_to records_guest_house_bookings_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'guest_house_bookings' && action_name == 'records'} text-sm text-gray-800 rounded-lg" do %>
+                    <% records_label = if current_user.hod?
+                                         "All Booking Records"
+                                       elsif current_user.managed_guest_houses.exists?
+                                         "Guest House Records"
+                                       else
+                                         "My Booking Records"
+                                       end %>
+                    <span class="font-semibold"><%= records_label %></span>
+                  <% end %>
+                </li>
+                <% if current_user.hod? || current_user.managed_guest_houses.exists? %>
+                  <li>
+                    <%= link_to admin_guest_house_bookings_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'guest_house_bookings' && action_name == 'admin'} text-sm text-gray-800 rounded-lg" do %>
+                      <span class="font-semibold">Admin Bookings</span>
+                    <% end %>
+                  </li>
+                <% end %>
+                <% if current_user.hod? %>
+                  <li>
+                    <%= link_to guest_houses_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'guest_houses'} text-sm text-gray-800 rounded-lg" do %>
+                      <span class="font-semibold">Guest House Master</span>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            </details>
+          </li>
+
+
           <li class="hs-accordion" id="help-desk-accordion">
             <%
               help_desk_user_badge_count = help_desk_user_action_count

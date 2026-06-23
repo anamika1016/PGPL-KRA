@@ -1,0 +1,58 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "guest_house", "data-turbo-track": "reload" %>
+<% end %>
+
+<div class="main-content sidebar-aware-content guest-house-page">
+  <div class="guest-house-shell">
+    <section class="guest-house-toolbar">
+      <div class="guest-house-toolbar__main">
+        <span class="guest-house-eyebrow">Guest House Alerts</span>
+        <h1 class="guest-house-title">Notifications</h1>
+        <p class="guest-house-subtitle">Booking updates and actions requiring your attention.</p>
+      </div>
+      <div class="guest-house-stats">
+        <div class="guest-house-stat">
+          <span>Unread</span>
+          <strong><%= @unread_count %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Recent</span>
+          <strong><%= @notifications.size %></strong>
+        </div>
+      </div>
+      <div class="guest-house-toolbar__actions">
+        <% if @unread_count.positive? %>
+          <%= button_to "Mark All Read", mark_all_read_guest_house_notifications_path, method: :patch, class: "guest-house-btn secondary" %>
+        <% end %>
+        <%= link_to "Booking Records", records_guest_house_bookings_path, class: "guest-house-btn light" %>
+      </div>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header">
+        <h2 class="guest-house-section-title">Recent Activity</h2>
+      </div>
+
+      <% if @notifications.present? %>
+        <div class="guest-house-notification-list">
+          <% @notifications.each do |notification| %>
+            <article class="guest-house-notification <%= 'is-unread' if notification.unread? %>">
+              <span class="guest-house-notification__dot" aria-hidden="true"></span>
+              <div class="guest-house-notification__content">
+                <div class="guest-house-notification__heading">
+                  <strong><%= notification.title %></strong>
+                  <span><%= time_ago_in_words(notification.created_at) %> ago</span>
+                </div>
+                <p><%= notification.message %></p>
+                <small><%= notification.guest_house_waitlist_id.present? ? "Availability waitlist" : notification.guest_house_booking.booking_reference_label %></small>
+              </div>
+              <%= button_to "Open", open_guest_house_notification_path(notification), method: :patch, class: "guest-house-btn light" %>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="guest-house-empty">No guest house notifications yet.</div>
+      <% end %>
+    </section>
+  </div>
+</div>

@@ -162,4 +162,46 @@ resources :help_desk_question_masters, path: "helpdesk-question-master", except:
   collection { post :import }
 end
 resources :helpdesk_escalation_matrices, path: "helpdesk-escalation-matrix", except: [ :show, :new ]
+
+resources :guest_houses, path: "guest-house-master", except: [ :new, :edit ]
+  resources :guest_house_facilities, path: "guest-house-facilities", only: [ :create, :update, :destroy ]
+  resources :guest_house_notifications, path: "guest-house-notifications", only: :index do
+    member do
+      patch :open
+    end
+    collection do
+      patch :mark_all_read
+    end
+  end
+  resources :guest_house_booking_guests, path: "guest-house-occupants", only: [] do
+    member do
+      patch :accept
+      patch :reject
+      patch :check_in
+      patch :check_out
+      patch :generate_bill
+      get :bill
+      get :receipt
+      patch :upload_payment
+    end
+  end
+  resources :guest_house_bookings, path: "guest-house", only: [ :index, :create, :show, :destroy ] do
+    collection do
+      get :admin, path: "admin-bookings", as: :admin
+      get :records, path: "booking-records", as: :records
+    end
+    member do
+      patch :accept
+      patch :reject
+      patch :cancel
+      patch :check_in
+      patch :checkout
+      patch :submit_complaint
+      patch :submit_feedback
+      patch :generate_payment
+      patch :upload_payment
+      get :receipt
+    end
+  end
+
 end

@@ -1,0 +1,105 @@
+<% guest = @receipt_guest %>
+<% booking = @receipt_booking %>
+<% receipt_number = guest ? guest.payment_receipt_number : booking.payment_receipt_number %>
+<% paid_at = guest ? guest.paid_at : booking.paid_at %>
+<% room_charge = guest ? guest.room_charge_amount : booking.room_charge_amount %>
+<% services_charge = guest ? guest.other_services_amount : booking.other_services_amount %>
+<% services_details = guest ? guest.other_services_details : booking.other_services_details %>
+<% gst = guest ? guest.gst_amount : booking.gst_amount %>
+<% total = guest ? guest.total_bill_amount : booking.invoice_total %>
+<% payment_status = guest ? guest.payment_status : booking.payment_status %>
+<% transaction_id = guest ? guest.transaction_id : booking.transaction_id %>
+<% payment_details = guest ? guest.payment_details : booking.payment_details %>
+<% bill_note = guest ? guest.bill_note : booking.payment_note %>
+<% room_charge_overridden = guest ? guest.room_charge_overridden? : booking.room_charge_overridden? %>
+<style>
+  body { font-family: "DejaVu Sans", Arial, sans-serif; color: #172033; font-size: 12px; }
+  .receipt { border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
+  .header { padding: 18px 22px; border-bottom: 3px solid #2563eb; display: table; width: 100%; box-sizing: border-box; }
+  .brand, .receipt-meta { display: table-cell; vertical-align: middle; }
+  .brand img { width: 125px; max-height: 76px; object-fit: contain; }
+  .brand h1 { display: inline-block; margin: 0 0 0 14px; vertical-align: middle; font-size: 20px; }
+  .receipt-meta { text-align: right; }
+  .receipt-meta strong { display: block; font-size: 18px; color: #1d4ed8; }
+  .receipt-meta span { display: block; margin-top: 5px; }
+  .section { padding: 16px 22px; border-bottom: 1px solid #e2e8f0; }
+  .section-title { margin: 0 0 10px; color: #475569; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+  .details { width: 100%; border-collapse: collapse; }
+  .details td { width: 25%; padding: 7px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+  .label { display: block; color: #64748b; font-size: 9px; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+  .value { font-weight: bold; overflow-wrap: anywhere; }
+  .charges { width: 100%; border-collapse: collapse; }
+  .charges th { padding: 9px; color: #fff; background: #1e3a8a; text-align: left; }
+  .charges th:last-child, .charges td:last-child { text-align: right; }
+  .charges td { padding: 10px 9px; border-bottom: 1px solid #e2e8f0; }
+  .charges .total td { font-size: 15px; font-weight: bold; background: #eff6ff; border-top: 2px solid #2563eb; }
+  .status { display: inline-block; padding: 5px 10px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: bold; text-transform: uppercase; }
+  .note { margin-top: 10px; color: #475569; line-height: 1.5; white-space: pre-line; }
+  .footer { padding: 18px 22px; display: table; width: 100%; box-sizing: border-box; }
+  .footer div { display: table-cell; width: 50%; vertical-align: bottom; }
+  .footer .right { text-align: right; }
+  .computer { margin-top: 28px; color: #64748b; font-size: 10px; }
+</style>
+
+<div class="receipt">
+  <div class="header">
+    <div class="brand">
+      <img src="<%= wicked_pdf_asset_base64('asa-removebg-preview.png') %>" alt="ASA Logo">
+      <h1>ASA Guest House</h1>
+    </div>
+    <div class="receipt-meta">
+      <strong><%= payment_status == "waived" ? "PAYMENT WAIVER RECEIPT" : "PAYMENT RECEIPT" %></strong>
+      <span>Receipt No: <b><%= receipt_number %></b></span>
+      <span>Date: <b><%= paid_at&.strftime("%d %b %Y, %I:%M %p") %></b></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Booking and Guest Details</h2>
+    <table class="details">
+      <tr>
+        <td><span class="label">Booking Reference</span><span class="value"><%= booking.booking_reference_label %></span></td>
+        <td><span class="label">Guest House</span><span class="value"><%= booking.guest_house.name %></span></td>
+        <td><span class="label">Paid For</span><span class="value"><%= guest ? guest.full_name : booking.requester_name %></span></td>
+        <td><span class="label">Booking Type</span><span class="value"><%= booking.booking_for_label %></span></td>
+      </tr>
+      <tr>
+        <td><span class="label">Check-in</span><span class="value"><%= (guest&.checked_in_at || booking.checked_in_at)&.strftime("%d %b %Y, %I:%M %p") %></span></td>
+        <td><span class="label">Check-out</span><span class="value"><%= (guest&.checked_out_at || booking.checked_out_at)&.strftime("%d %b %Y, %I:%M %p") %></span></td>
+        <td><span class="label">Room Type</span><span class="value"><%= booking.room_type_label %></span></td>
+        <td><span class="label">Billable Bed-days</span><span class="value"><%= guest ? guest.charge_days : booking.chargeable_bed_days %></span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Payment Details</h2>
+    <table class="charges">
+      <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Room / bed charge</td><td>&#8377;<%= number_with_precision(room_charge, precision: 2, delimiter: ",") %></td></tr>
+        <tr><td>Facilities and other services</td><td>&#8377;<%= number_with_precision(services_charge, precision: 2, delimiter: ",") %></td></tr>
+        <tr><td>GST @ 5%</td><td>&#8377;<%= number_with_precision(gst, precision: 2, delimiter: ",") %></td></tr>
+        <tr class="total"><td><%= payment_status == "waived" ? "Total Amount Waived" : "Total Amount Received" %></td><td>&#8377;<%= number_with_precision(total, precision: 2, delimiter: ",") %></td></tr>
+      </tbody>
+    </table>
+    <% if services_details.present? %><div class="note"><b>Service details:</b> <%= services_details %></div><% end %>
+    <% if room_charge_overridden %><div class="note"><b>Admin adjustment:</b> Calculated room/bed charge was manually overridden by the Guest House administrator.</div><% end %>
+    <% if bill_note.present? %><div class="note"><b>Bill note:</b> <%= bill_note %></div><% end %>
+  </div>
+
+  <div class="section">
+    <table class="details">
+      <tr>
+        <td><span class="label">Payment Status</span><span class="status"><%= payment_status.humanize %></span></td>
+        <td><span class="label">Transaction ID</span><span class="value"><%= transaction_id.presence || "Not provided" %></span></td>
+        <td colspan="2"><span class="label">Payment Note</span><span class="value"><%= payment_details.presence || "Payment recorded by Guest House administration" %></span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    <div><b>Received by</b><br>ASA Guest House Administration<div class="computer">This is a computer-generated payment receipt.</div></div>
+    <div class="right"><b>Authorized Record</b><br><%= booking.accepted_by&.display_name || "Guest House Administrator" %></div>
+  </div>
+</div>

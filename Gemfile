@@ -27,6 +27,7 @@ gem "roo"
 gem "caxlsx_rails"
 gem "roo-xls"
 gem "httparty"
+gem "rqrcode"
 gem "wicked_pdf", "~> 2.8"
 gem "wkhtmltopdf-binary", "~> 0.12.6"
 

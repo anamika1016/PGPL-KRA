@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_08_092000) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_22_153500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -168,6 +168,201 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_08_092000) do
     t.index ["thematic_department_name"], name: "index_employee_trainings_on_thematic_department_name"
     t.index ["training_date"], name: "index_employee_trainings_on_training_date"
     t.index ["user_id"], name: "index_employee_trainings_on_user_id"
+  end
+
+  create_table "guest_house_booking_guests", force: :cascade do |t|
+    t.bigint "guest_house_booking_id", null: false
+    t.string "first_name", null: false
+    t.string "last_name", null: false
+    t.string "aadhaar_number", null: false
+    t.string "mobile_number"
+    t.string "email"
+    t.string "gender"
+    t.integer "age"
+    t.string "organization"
+    t.string "designation"
+    t.text "purpose"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.date "checkin_date", null: false
+    t.time "checkin_time", null: false
+    t.date "checkout_date", null: false
+    t.time "checkout_time", null: false
+    t.string "stay_status", default: "pending", null: false
+    t.datetime "checked_in_at"
+    t.datetime "checked_out_at"
+    t.string "id_proof_type"
+    t.string "id_proof_number"
+    t.text "checkin_remark"
+    t.text "checkout_remark"
+    t.decimal "room_charge_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "other_services_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.text "other_services_details"
+    t.decimal "gst_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "total_bill_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.text "bill_note"
+    t.datetime "billed_at"
+    t.string "payment_status", default: "pending", null: false
+    t.string "transaction_id"
+    t.text "payment_details"
+    t.string "payment_qr_token"
+    t.datetime "paid_at"
+    t.string "approval_status", default: "pending", null: false
+    t.bigint "accepted_by_id"
+    t.datetime "accepted_at"
+    t.text "approval_remark"
+    t.text "rejection_remark"
+    t.string "payment_receipt_number"
+    t.boolean "room_charge_overridden", default: false, null: false
+    t.index ["aadhaar_number"], name: "index_guest_house_booking_guests_on_aadhaar_number"
+    t.index ["accepted_by_id"], name: "index_guest_house_booking_guests_on_accepted_by_id"
+    t.index ["approval_status"], name: "index_guest_house_booking_guests_on_approval_status"
+    t.index ["guest_house_booking_id", "stay_status"], name: "index_gh_booking_guests_on_booking_status"
+    t.index ["guest_house_booking_id"], name: "index_gh_booking_guests_on_booking_id"
+    t.index ["payment_receipt_number"], name: "index_guest_house_booking_guests_on_payment_receipt_number", unique: true
+    t.index ["payment_status"], name: "index_guest_house_booking_guests_on_payment_status"
+    t.check_constraint "age IS NULL OR age > 0", name: "gh_booking_guests_age_positive"
+    t.check_constraint "approval_status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'rejected'::character varying]::text[])", name: "gh_booking_guests_approval_status_valid"
+    t.check_constraint "payment_status::text = ANY (ARRAY['pending'::character varying, 'generated'::character varying, 'uploaded'::character varying, 'paid'::character varying, 'waived'::character varying]::text[])", name: "gh_booking_guests_payment_status_valid"
+    t.check_constraint "room_charge_amount >= 0::numeric AND other_services_amount >= 0::numeric AND gst_amount >= 0::numeric AND total_bill_amount >= 0::numeric", name: "gh_booking_guests_bill_amounts_non_negative"
+    t.check_constraint "stay_status::text = ANY (ARRAY['pending'::character varying, 'checked_in'::character varying, 'checked_out'::character varying]::text[])", name: "gh_booking_guests_stay_status_valid"
+  end
+
+  create_table "guest_house_bookings", force: :cascade do |t|
+    t.bigint "guest_house_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "accepted_by_id"
+    t.string "booking_reference", null: false
+    t.date "booking_date", null: false
+    t.time "checkin_time", null: false
+    t.time "checkout_time", null: false
+    t.integer "rooms_count", default: 1, null: false
+    t.string "status", default: "pending", null: false
+    t.text "admin_remark"
+    t.datetime "accepted_at"
+    t.datetime "checked_in_at"
+    t.datetime "checked_out_at"
+    t.date "extended_checkout_date"
+    t.time "extended_checkout_time"
+    t.decimal "bill_amount", precision: 10, scale: 2
+    t.string "payment_status", default: "pending", null: false
+    t.text "payment_note"
+    t.string "payment_qr_token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.date "checkout_date", null: false
+    t.text "rejection_remark"
+    t.string "id_proof_type"
+    t.string "id_proof_number"
+    t.text "checkin_remark"
+    t.text "guest_complaint"
+    t.datetime "complaint_submitted_at"
+    t.string "complaint_status", default: "open", null: false
+    t.decimal "room_charge_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "other_services_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.text "other_services_details"
+    t.decimal "gst_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "total_bill_amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "transaction_id"
+    t.text "payment_details"
+    t.datetime "admin_reminder_sent_at"
+    t.datetime "checkin_sms_sent_at"
+    t.string "room_type", default: "sharing", null: false
+    t.string "guest_gender"
+    t.string "booking_for", default: "self", null: false
+    t.integer "feedback_rating"
+    t.text "feedback_comment"
+    t.datetime "feedback_submitted_at"
+    t.text "cancellation_reason"
+    t.datetime "cancelled_at"
+    t.bigint "cancelled_by_id"
+    t.string "payment_receipt_number"
+    t.datetime "paid_at"
+    t.boolean "room_charge_overridden", default: false, null: false
+    t.index ["accepted_by_id"], name: "index_guest_house_bookings_on_accepted_by_id"
+    t.index ["booking_for"], name: "index_guest_house_bookings_on_booking_for"
+    t.index ["booking_reference"], name: "index_guest_house_bookings_on_booking_reference", unique: true
+    t.index ["cancelled_by_id"], name: "index_guest_house_bookings_on_cancelled_by_id"
+    t.index ["guest_house_id", "booking_date", "checkout_date", "status", "room_type", "guest_gender"], name: "index_gh_bookings_on_room_allocation"
+    t.index ["guest_house_id", "booking_date", "checkout_date", "status"], name: "index_gh_bookings_on_house_date_range_status"
+    t.index ["guest_house_id", "booking_date", "status"], name: "index_gh_bookings_on_house_date_status"
+    t.index ["guest_house_id"], name: "index_guest_house_bookings_on_guest_house_id"
+    t.index ["payment_receipt_number"], name: "index_guest_house_bookings_on_payment_receipt_number", unique: true
+    t.index ["user_id"], name: "index_guest_house_bookings_on_user_id"
+    t.check_constraint "feedback_rating IS NULL OR feedback_rating >= 1 AND feedback_rating <= 5", name: "guest_house_booking_feedback_rating_range"
+    t.check_constraint "room_charge_amount >= 0::numeric AND other_services_amount >= 0::numeric AND gst_amount >= 0::numeric AND total_bill_amount >= 0::numeric", name: "guest_house_booking_amounts_non_negative"
+    t.check_constraint "rooms_count > 0", name: "guest_house_bookings_rooms_positive"
+  end
+
+  create_table "guest_house_facilities", force: :cascade do |t|
+    t.bigint "guest_house_id", null: false
+    t.string "name", null: false
+    t.decimal "rate", precision: 10, scale: 2, default: "0.0", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["guest_house_id", "name"], name: "index_guest_house_facilities_on_guest_house_id_and_name", unique: true
+    t.index ["guest_house_id"], name: "index_guest_house_facilities_on_guest_house_id"
+    t.check_constraint "rate >= 0::numeric", name: "guest_house_facilities_rate_non_negative"
+  end
+
+  create_table "guest_house_notifications", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "guest_house_booking_id", null: false
+    t.bigint "actor_id"
+    t.string "event_type", null: false
+    t.string "title", null: false
+    t.text "message", null: false
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "guest_house_waitlist_id"
+    t.index ["actor_id"], name: "index_guest_house_notifications_on_actor_id"
+    t.index ["guest_house_booking_id"], name: "index_guest_house_notifications_on_guest_house_booking_id"
+    t.index ["guest_house_waitlist_id"], name: "index_guest_house_notifications_on_guest_house_waitlist_id"
+    t.index ["user_id", "read_at", "created_at"], name: "index_gh_notifications_on_user_read_created"
+    t.index ["user_id"], name: "index_guest_house_notifications_on_user_id"
+  end
+
+  create_table "guest_house_waitlists", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "guest_house_id", null: false
+    t.date "booking_date", null: false
+    t.time "checkin_time", null: false
+    t.date "checkout_date", null: false
+    t.time "checkout_time", null: false
+    t.integer "rooms_count", null: false
+    t.string "room_type", null: false
+    t.string "guest_gender", null: false
+    t.string "booking_for", null: false
+    t.jsonb "occupant_gender_counts", default: {}, null: false
+    t.string "status", default: "waiting", null: false
+    t.datetime "notified_at"
+    t.datetime "fulfilled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["guest_house_id", "status", "booking_date"], name: "index_gh_waitlists_on_house_status_date"
+    t.index ["guest_house_id"], name: "index_guest_house_waitlists_on_guest_house_id"
+    t.index ["user_id", "guest_house_id", "booking_date", "checkin_time", "checkout_date", "checkout_time", "room_type", "booking_for"], name: "index_gh_waitlists_on_request"
+    t.index ["user_id"], name: "index_guest_house_waitlists_on_user_id"
+    t.check_constraint "status::text = ANY (ARRAY['waiting'::character varying, 'notified'::character varying, 'fulfilled'::character varying, 'expired'::character varying]::text[])", name: "gh_waitlists_status_valid"
+  end
+
+  create_table "guest_houses", force: :cascade do |t|
+    t.string "name", null: false
+    t.integer "total_rooms", default: 1, null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "manager_user_id"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "room_charge_per_day", precision: 10, scale: 2, default: "0.0", null: false
+    t.text "facility_rates"
+    t.index "lower((name)::text)", name: "index_guest_houses_on_lower_name", unique: true
+    t.index ["created_by_id"], name: "index_guest_houses_on_created_by_id"
+    t.index ["manager_user_id"], name: "index_guest_houses_on_manager_user_id"
+    t.check_constraint "room_charge_per_day >= 0::numeric", name: "guest_houses_room_charge_non_negative"
+    t.check_constraint "total_rooms > 0", name: "guest_houses_total_rooms_positive"
   end
 
   create_table "help_desk_question_masters", force: :cascade do |t|
@@ -433,6 +628,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_08_092000) do
   add_foreign_key "activities", "departments"
   add_foreign_key "employee_details", "users"
   add_foreign_key "employee_trainings", "users"
+  add_foreign_key "guest_house_booking_guests", "guest_house_bookings"
+  add_foreign_key "guest_house_booking_guests", "users", column: "accepted_by_id"
+  add_foreign_key "guest_house_bookings", "guest_houses"
+  add_foreign_key "guest_house_bookings", "users"
+  add_foreign_key "guest_house_bookings", "users", column: "accepted_by_id"
+  add_foreign_key "guest_house_bookings", "users", column: "cancelled_by_id"
+  add_foreign_key "guest_house_facilities", "guest_houses"
+  add_foreign_key "guest_house_notifications", "guest_house_bookings"
+  add_foreign_key "guest_house_notifications", "guest_house_waitlists"
+  add_foreign_key "guest_house_notifications", "users"
+  add_foreign_key "guest_house_notifications", "users", column: "actor_id"
+  add_foreign_key "guest_house_waitlists", "guest_houses"
+  add_foreign_key "guest_house_waitlists", "users"
+  add_foreign_key "guest_houses", "users", column: "created_by_id"
+  add_foreign_key "guest_houses", "users", column: "manager_user_id"
   add_foreign_key "help_desk_question_masters", "departments"
   add_foreign_key "help_desk_requester_remarks", "help_desk_tickets"
   add_foreign_key "help_desk_requester_remarks", "users"

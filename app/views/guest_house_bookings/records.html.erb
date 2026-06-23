@@ -1,0 +1,59 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "guest_house", "data-turbo-track": "reload" %>
+<% end %>
+
+<% closed_count = %w[checked_out rejected cancelled].sum { |status| @record_status_counts.fetch(status, 0) } %>
+
+<div class="main-content sidebar-aware-content guest-house-page">
+  <div class="guest-house-shell">
+    <section class="guest-house-toolbar">
+      <div class="guest-house-toolbar__main">
+        <span class="guest-house-eyebrow">Booking Records</span>
+        <h1 class="guest-house-title"><%= @records_title %></h1>
+        <p class="guest-house-subtitle"><%= @records_subtitle %></p>
+      </div>
+      <div class="guest-house-stats">
+        <div class="guest-house-stat">
+          <span>Total</span>
+          <strong><%= @record_bookings.size %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Confirmed</span>
+          <strong><%= @record_status_counts.fetch("confirmed", 0) %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Checked In</span>
+          <strong><%= @record_status_counts.fetch("checked_in", 0) %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Closed</span>
+          <strong><%= closed_count %></strong>
+        </div>
+      </div>
+      <div class="guest-house-toolbar__actions">
+        <%= link_to "New Booking", guest_house_bookings_path, class: "guest-house-btn" %>
+        <% if current_user.hod? || current_user.managed_guest_houses.exists? %>
+          <%= link_to "Admin Bookings", admin_guest_house_bookings_path, class: "guest-house-btn secondary" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header">
+        <h2 class="guest-house-section-title">Bookings</h2>
+        <p class="guest-house-section-copy">Records are ordered from newest to oldest.</p>
+      </div>
+
+      <% if @record_bookings.present? %>
+        <div class="guest-house-admin-list">
+          <%= render partial: "admin_booking_card",
+                     collection: @record_bookings,
+                     as: :booking,
+                     locals: { facilities_by_house: @facilities_by_house, summary_only: true } %>
+        </div>
+      <% else %>
+        <div class="guest-house-empty">No booking records found.</div>
+      <% end %>
+    </section>
+  </div>
+</div>

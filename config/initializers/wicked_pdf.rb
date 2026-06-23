@@ -2,9 +2,19 @@
 #   sudo apt-get install -y wkhtmltopdf   # Debian/Ubuntu
 #   which wkhtmltopdf                     # e.g. /usr/bin/wkhtmltopdf
 # If the binary is elsewhere, set WKHTMLTOPDF_BINARY in your server environment.
-WickedPdf.config = {
-  exe_path: ENV.fetch("WKHTMLTOPDF_BINARY", "/usr/bin/wkhtmltopdf")
-}
+wkhtmltopdf_binary = ENV["WKHTMLTOPDF_BINARY"].presence
+
+if wkhtmltopdf_binary.blank?
+  wkhtmltopdf_binary = begin
+    Gem.bin_path("wkhtmltopdf-binary", "wkhtmltopdf")
+  rescue Gem::Exception
+    "/usr/bin/wkhtmltopdf"
+  end
+end
+
+WickedPdf.configure do |config|
+  config.exe_path = wkhtmltopdf_binary
+end
 
 ActiveSupport.on_load(:action_view) do
   include WickedPdf::WickedPdfHelper::Assets

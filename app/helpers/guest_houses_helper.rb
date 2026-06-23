@@ -1,0 +1,2 @@
+module GuestHousesHelper
+end

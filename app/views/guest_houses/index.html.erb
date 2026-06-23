@@ -1,0 +1,166 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "guest_house", "data-turbo-track": "reload" %>
+<% end %>
+
+<div class="main-content sidebar-aware-content guest-house-page">
+  <div class="guest-house-shell">
+    <section class="guest-house-toolbar">
+      <div class="guest-house-toolbar__main">
+        <span class="guest-house-eyebrow">Guest House</span>
+        <h1 class="guest-house-title">Guest House Master</h1>
+        <p class="guest-house-subtitle">Add guest houses, maintain room capacity and assign the admin who will manage bookings.</p>
+      </div>
+      <div class="guest-house-stats">
+        <div class="guest-house-stat">
+          <span>Total Houses</span>
+          <strong><%= @guest_houses.size %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Active Rooms</span>
+          <strong><%= @guest_houses.select(&:active?).sum(&:total_rooms) %></strong>
+        </div>
+      </div>
+      <div class="guest-house-toolbar__actions">
+        <%= link_to "Booking Form", guest_house_bookings_path, class: "guest-house-btn light" %>
+      </div>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header">
+        <h2 class="guest-house-section-title">Create Guest House</h2>
+        <p class="guest-house-section-copy">Keep the name short and assign a manager so booking approvals go to the right person.</p>
+      </div>
+      <%= form_with model: @guest_house, url: guest_houses_path, local: true, class: "guest-house-grid-3" do |form| %>
+        <div class="guest-house-field">
+          <%= form.label :name, "Guest House Name" %>
+          <%= form.text_field :name, class: "guest-house-input", placeholder: "Enter guest house name", required: true %>
+        </div>
+        <div class="guest-house-field">
+          <%= form.label :total_rooms, "Total Rooms" %>
+          <%= form.number_field :total_rooms, min: 1, value: 1, class: "guest-house-input", required: true %>
+        </div>
+        <div class="guest-house-field">
+          <%= form.label :room_charge_per_day, "Bed Charge / Person / Day" %>
+          <%= form.number_field :room_charge_per_day, min: 0, step: "0.01", value: 0, class: "guest-house-input", required: true %>
+        </div>
+        <div class="guest-house-field">
+          <%= form.label :manager_user_id, "Guest House Admin" %>
+          <%= form.select :manager_user_id, @manager_options, { include_blank: "Choose admin user" }, class: "guest-house-select" %>
+        </div>
+        <div class="guest-house-actions guest-house-actions--end">
+          <%= form.submit "Add Guest House", class: "guest-house-btn" %>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header guest-house-panel__header--split">
+        <div>
+          <h2 class="guest-house-section-title">Guest Houses</h2>
+          <p class="guest-house-section-copy">Update room count, manager assignment and active status from one place.</p>
+        </div>
+      </div>
+      <div class="guest-house-master-list">
+        <% @guest_houses.each do |house| %>
+          <article class="guest-house-master-card">
+            <%= form_with model: house, url: guest_house_path(house), method: :patch, local: true, class: "guest-house-master-form" do |form| %>
+              <div class="guest-house-field">
+                <%= form.label :name, "Name" %>
+                <%= form.text_field :name, class: "guest-house-input" %>
+              </div>
+              <div class="guest-house-field">
+                <%= form.label :total_rooms, "Rooms" %>
+                <%= form.number_field :total_rooms, min: 1, class: "guest-house-input" %>
+              </div>
+              <div class="guest-house-field">
+                <%= form.label :room_charge_per_day, "Bed / Person / Day" %>
+                <%= form.number_field :room_charge_per_day, min: 0, step: "0.01", class: "guest-house-input" %>
+              </div>
+              <div class="guest-house-field">
+                <%= form.label :manager_user_id, "Admin" %>
+                <%= form.select :manager_user_id, @manager_options, { include_blank: "Choose admin user" }, class: "guest-house-select" %>
+              </div>
+              <div class="guest-house-field guest-house-field--toggle">
+                <span class="guest-house-field-label">Active</span>
+                <label class="guest-house-toggle">
+                  <%= form.check_box :active %>
+                  <span></span>
+                </label>
+              </div>
+              <div class="guest-house-actions guest-house-actions--end">
+                <%= form.submit "Save", class: "guest-house-btn secondary" %>
+              </div>
+            <% end %>
+            <div class="guest-house-master-card__delete">
+              <%= button_to "Delete", guest_house_path(house), method: :delete, form: { data: { turbo_confirm: "Delete this guest house?" } }, class: "guest-house-btn danger" %>
+            </div>
+          </article>
+        <% end %>
+        <% if @guest_houses.blank? %>
+          <div class="guest-house-empty">No guest houses added yet.</div>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header">
+        <h2 class="guest-house-section-title">Other Facility Master</h2>
+        <p class="guest-house-section-copy">Add tea, water, food or other fixed-rate services. These rates appear in admin checkout dropdown.</p>
+      </div>
+      <%= form_with model: @guest_house_facility, url: guest_house_facilities_path, local: true, class: "guest-house-grid-3" do |form| %>
+        <div class="guest-house-field">
+          <%= form.label :guest_house_id, "Guest House" %>
+          <%= form.select :guest_house_id, @guest_houses.map { |house| [house.name, house.id] }, { include_blank: "Choose guest house" }, class: "guest-house-select", required: true %>
+        </div>
+        <div class="guest-house-field">
+          <%= form.label :name, "Facility" %>
+          <%= form.text_field :name, class: "guest-house-input", placeholder: "Tea / Water / Food", required: true %>
+        </div>
+        <div class="guest-house-field">
+          <%= form.label :rate, "Rate" %>
+          <%= form.number_field :rate, min: 0, step: "0.01", value: 0, class: "guest-house-input", required: true %>
+        </div>
+        <div class="guest-house-actions guest-house-actions--end">
+          <%= form.submit "Add Facility", class: "guest-house-btn" %>
+        </div>
+      <% end %>
+
+      <div class="guest-house-master-list guest-house-stack-top">
+        <% @guest_house_facilities.each do |facility| %>
+          <article class="guest-house-master-card">
+            <%= form_with model: facility, url: guest_house_facility_path(facility), method: :patch, local: true, class: "guest-house-master-form" do |form| %>
+              <div class="guest-house-field">
+                <%= form.label :guest_house_id, "Guest House" %>
+                <%= form.select :guest_house_id, @guest_houses.map { |house| [house.name, house.id] }, {}, class: "guest-house-select" %>
+              </div>
+              <div class="guest-house-field">
+                <%= form.label :name, "Facility" %>
+                <%= form.text_field :name, class: "guest-house-input" %>
+              </div>
+              <div class="guest-house-field">
+                <%= form.label :rate, "Rate" %>
+                <%= form.number_field :rate, min: 0, step: "0.01", class: "guest-house-input" %>
+              </div>
+              <div class="guest-house-field guest-house-field--toggle">
+                <span class="guest-house-field-label">Active</span>
+                <label class="guest-house-toggle">
+                  <%= form.check_box :active %>
+                  <span></span>
+                </label>
+              </div>
+              <div class="guest-house-actions guest-house-actions--end">
+                <%= form.submit "Save", class: "guest-house-btn secondary" %>
+              </div>
+            <% end %>
+            <div class="guest-house-master-card__delete">
+              <%= button_to "Delete", guest_house_facility_path(facility), method: :delete, form: { data: { turbo_confirm: "Delete this facility?" } }, class: "guest-house-btn danger" %>
+            </div>
+          </article>
+        <% end %>
+        <% if @guest_house_facilities.blank? %>
+          <div class="guest-house-empty">No facility rates added yet.</div>
+        <% end %>
+      </div>
+    </section>
+  </div>
+</div>

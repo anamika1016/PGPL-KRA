@@ -1,0 +1,54 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "guest_house", "data-turbo-track": "reload" %>
+<% end %>
+
+<div class="main-content sidebar-aware-content guest-house-page">
+  <div class="guest-house-shell">
+    <section class="guest-house-toolbar">
+      <div class="guest-house-toolbar__main">
+        <span class="guest-house-eyebrow">Admin Queue</span>
+        <h1 class="guest-house-title">Guest House Admin Bookings</h1>
+        <p class="guest-house-subtitle"><%= current_user.hod? ? "All employee and HOD bookings are shown here." : "All bookings assigned to your guest house are shown here." %> Complete booking details and the valid next action are available on each card.</p>
+      </div>
+      <div class="guest-house-stats">
+        <div class="guest-house-stat">
+          <span>Total</span>
+          <strong><%= @admin_bookings.size %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Check-in</span>
+          <strong><%= @checkin_bookings.size %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Checkout</span>
+          <strong><%= @checkout_bookings.size %></strong>
+        </div>
+        <div class="guest-house-stat">
+          <span>Payment</span>
+          <strong><%= @payment_bookings.size %></strong>
+        </div>
+      </div>
+      <div class="guest-house-toolbar__actions">
+        <%= link_to "Booking Form", guest_house_bookings_path, class: "guest-house-btn light" %>
+      </div>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header">
+        <h2 class="guest-house-section-title">Bookings</h2>
+        <p class="guest-house-section-copy">Complete booking records are shown across every status with guest, stay, room and billing details.</p>
+      </div>
+
+      <% if @admin_bookings.present? %>
+        <div class="guest-house-admin-list">
+          <%= render partial: "admin_booking_card",
+                     collection: @admin_bookings,
+                     as: :booking,
+                     locals: { facilities_by_house: @facilities_by_house } %>
+        </div>
+      <% else %>
+        <div class="guest-house-empty">No bookings assigned yet.</div>
+      <% end %>
+    </section>
+  </div>
+</div>

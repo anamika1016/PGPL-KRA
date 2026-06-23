@@ -1,0 +1,189 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "guest_house", "data-turbo-track": "reload" %>
+<% end %>
+
+<div class="main-content sidebar-aware-content guest-house-page">
+  <div class="guest-house-shell">
+    <section class="guest-house-toolbar">
+      <div class="guest-house-toolbar__main">
+        <span class="guest-house-eyebrow">Booking Desk</span>
+        <h1 class="guest-house-title">Guest House Booking</h1>
+        <p class="guest-house-subtitle">Select guest house, check-in/check-out date and time, then confirm room availability.</p>
+      </div>
+      <div class="guest-house-stats">
+        <div class="guest-house-stat">
+          <span>Available</span>
+          <strong><%= @guest_houses.size %></strong>
+        </div>
+        <% if current_user.hod? || current_user.managed_guest_houses.exists? %>
+          <div class="guest-house-stat">
+            <span>Admin Queue</span>
+            <strong><%= @admin_booking_count %></strong>
+          </div>
+        <% end %>
+      </div>
+      <div class="guest-house-toolbar__actions">
+        <% if current_user.hod? || current_user.managed_guest_houses.exists? %>
+          <%= link_to "Admin Bookings", admin_guest_house_bookings_path, class: "guest-house-btn secondary" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="guest-house-panel">
+      <div class="guest-house-panel__header">
+        <h2 class="guest-house-section-title">New Booking</h2>
+        <p class="guest-house-section-copy">Choose the stay window and number of rooms required.</p>
+      </div>
+      <% if @alternative_dates.present? %>
+        <% stay_days = (@guest_house_booking.checkout_date - @guest_house_booking.booking_date).to_i %>
+        <div class="guest-house-empty guest-house-empty--soft">
+          <strong>Available Alternative Dates</strong>
+          <p class="guest-house-subtitle">The requested slot is waitlisted. These matching slots are currently available:</p>
+          <div class="guest-house-actions guest-house-actions--card">
+            <% @alternative_dates.each do |date| %>
+              <span class="guest-house-badge is-success"><%= date.strftime("%d %b %Y") %> to <%= (date + stay_days.days).strftime("%d %b %Y") %></span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+      <% external_booking = @guest_house_booking.external_booking? %>
+      <% booking_type_selected = @guest_house_booking.booking_for.present? %>
+      <%= form_with model: @guest_house_booking, url: guest_house_bookings_path, local: true, class: "guest-house-grid" do |form| %>
+        <div class="guest-house-field">
+          <%= form.label :booking_for, "Booking For" %>
+          <%= form.select :booking_for, [ [ "Self", "self" ], [ "Guest", "guest" ], [ "Auditor", "auditor" ] ], { prompt: "Select" }, class: "guest-house-select guest-house-select--booking", required: true, data: { guest_house_booking_for: true } %>
+        </div>
+        <div class="guest-house-field">
+          <%= form.label :guest_house_id, "Guest House Name" %>
+          <%= form.select :guest_house_id, @guest_houses.map { |house| [house.display_name, house.id] }, { prompt: "Choose guest house" }, class: "guest-house-select", required: true %>
+        </div>
+        <div class="guest-house-field" data-guest-house-parent-schedule-field <%= "hidden" unless booking_type_selected && !external_booking %>>
+          <%= form.label :booking_date, "Check-in Date" %>
+          <%= form.date_field :booking_date, min: Date.current, class: "guest-house-input", required: booking_type_selected && !external_booking %>
+        </div>
+        <div class="guest-house-field" data-guest-house-parent-schedule-field <%= "hidden" unless booking_type_selected && !external_booking %>>
+          <%= form.label :checkin_time, "Check-in Time" %>
+          <%= form.time_field :checkin_time, class: "guest-house-input", required: booking_type_selected && !external_booking %>
+        </div>
+        <div class="guest-house-field" data-guest-house-parent-schedule-field <%= "hidden" unless booking_type_selected && !external_booking %>>
+          <%= form.label :checkout_date, "Check-out Date" %>
+          <%= form.date_field :checkout_date, min: Date.current, class: "guest-house-input", required: booking_type_selected && !external_booking %>
+        </div>
+        <div class="guest-house-field" data-guest-house-parent-schedule-field <%= "hidden" unless booking_type_selected && !external_booking %>>
+          <%= form.label :checkout_time, "Check-out Time" %>
+          <%= form.time_field :checkout_time, class: "guest-house-input", required: booking_type_selected && !external_booking %>
+        </div>
+        <div class="guest-house-field" data-guest-house-room-type-field <%= "hidden" unless booking_type_selected %>>
+          <%= form.label :room_type, "Room Type" %>
+          <div data-guest-house-self-room-type <%= "hidden" unless booking_type_selected && !external_booking %>>
+            <% if @single_room_eligible %>
+              <%= form.hidden_field :room_type, value: "single", disabled: external_booking, data: { guest_house_self_room_type_input: true } %>
+              <div class="guest-house-readonly-field">
+                <strong>Single Room</strong>
+                <span>Director, MD and CEO bookings are single-room only.</span>
+              </div>
+            <% else %>
+              <%= form.hidden_field :room_type, value: "sharing", disabled: external_booking, data: { guest_house_self_room_type_input: true } %>
+              <div class="guest-house-readonly-field">
+                <strong>Sharing Room</strong>
+                <span>Single room is reserved for Director, MD and CEO.</span>
+              </div>
+            <% end %>
+          </div>
+          <div data-guest-house-external-room-type <%= "hidden" unless external_booking %>>
+            <%= select_tag "guest_house_booking[room_type]",
+                           options_for_select([ [ "Sharing Room", "sharing" ] ], "sharing"),
+                           class: "guest-house-select",
+                           disabled: !external_booking,
+                           data: { guest_house_external_room_type_input: true } %>
+            <div class="guest-house-field-hint">Single room is enabled only when every guest or auditor is MD, Director or CEO.</div>
+          </div>
+        </div>
+        <div class="guest-house-field" data-guest-house-booking-gender-field <%= "hidden" unless booking_type_selected && !external_booking %>>
+          <%= form.label :guest_gender, "Guest Gender" %>
+          <%= form.select :guest_gender, [ [ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ] ], { prompt: "Choose gender" }, class: "guest-house-select", required: booking_type_selected && !external_booking, data: { guest_house_booking_gender: true } %>
+        </div>
+        <div class="guest-house-field" data-guest-house-count-field <%= "hidden" unless booking_type_selected %>>
+          <%= form.label :rooms_count, "Guests / Beds Required" %>
+          <%= form.number_field :rooms_count, min: 1, value: @guest_house_booking.rooms_count.presence || 1, class: "guest-house-input", required: booking_type_selected, data: { guest_house_guest_count: true } %>
+        </div>
+        <div class="guest-house-occupants guest-house-form-span" data-guest-house-occupants <%= "hidden" unless external_booking %>>
+          <div class="guest-house-panel__header guest-house-panel__header--compact">
+            <h3 class="guest-house-section-title" data-guest-house-occupant-title>Guest Details</h3>
+            <p class="guest-house-section-copy" data-guest-house-occupant-copy>Enter details for each guest included in this booking.</p>
+          </div>
+          <div class="guest-house-occupant-list" data-guest-house-occupant-list>
+            <%= form.fields_for :guest_house_booking_guests do |guest_form| %>
+              <div class="guest-house-occupant-row" data-guest-house-occupant-row>
+                <div class="guest-house-occupant-row__header">
+                  <strong data-guest-house-occupant-number>Guest</strong>
+                  <button type="button" class="guest-house-remove-btn" data-guest-house-remove-occupant>Remove</button>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :first_name, "First Name" %>
+                  <%= guest_form.text_field :first_name, class: "guest-house-input", data: { guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :last_name, "Last Name" %>
+                  <%= guest_form.text_field :last_name, class: "guest-house-input", data: { guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :aadhaar_number, "Aadhaar Number" %>
+                  <%= guest_form.text_field :aadhaar_number, maxlength: 12, inputmode: "numeric", class: "guest-house-input", data: { guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :mobile_number, "Mobile Number" %>
+                  <%= guest_form.text_field :mobile_number, maxlength: 15, inputmode: "tel", class: "guest-house-input" %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :email, "Email" %>
+                  <%= guest_form.email_field :email, class: "guest-house-input" %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :gender, "Gender" %>
+                  <%= guest_form.select :gender, [ [ "Male", "male" ], [ "Female", "female" ], [ "Other", "other" ] ], { include_blank: "Choose gender" }, class: "guest-house-select", data: { guest_house_occupant_gender: true, guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :age, "Age" %>
+                  <%= guest_form.number_field :age, min: 1, class: "guest-house-input" %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :organization, "Organization" %>
+                  <%= guest_form.text_field :organization, class: "guest-house-input" %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :designation, "Designation" %>
+                  <%= guest_form.text_field :designation, class: "guest-house-input", data: { guest_house_occupant_designation: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :checkin_date, "Individual Check-in Date" %>
+                  <%= guest_form.date_field :checkin_date, min: Date.current, class: "guest-house-input", data: { guest_house_occupant_checkin_date: true, guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :checkin_time, "Individual Check-in Time" %>
+                  <%= guest_form.time_field :checkin_time, class: "guest-house-input", data: { guest_house_occupant_checkin_time: true, guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :checkout_date, "Individual Check-out Date" %>
+                  <%= guest_form.date_field :checkout_date, min: Date.current, class: "guest-house-input", data: { guest_house_occupant_checkout_date: true, guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field">
+                  <%= guest_form.label :checkout_time, "Individual Check-out Time" %>
+                  <%= guest_form.time_field :checkout_time, class: "guest-house-input", data: { guest_house_occupant_checkout_time: true, guest_house_occupant_required: true } %>
+                </div>
+                <div class="guest-house-field guest-house-field--wide">
+                  <%= guest_form.label :purpose, "Purpose" %>
+                  <%= guest_form.text_field :purpose, class: "guest-house-input" %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+        <div class="guest-house-actions guest-house-actions--end">
+          <%= form.submit "Submit Booking", class: "guest-house-btn" %>
+        </div>
+      <% end %>
+    </section>
+
+  </div>
+</div>
