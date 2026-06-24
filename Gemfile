@@ -29,7 +29,6 @@ gem "roo-xls"
 gem "httparty"
 gem "rqrcode"
 gem "wicked_pdf", "~> 2.8"
-gem "wkhtmltopdf-binary", "~> 0.12.6"
 
 group :development, :test do
   gem "debug", platforms: %i[mri windows], require: "debug/prelude"
