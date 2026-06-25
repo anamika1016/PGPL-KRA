@@ -1,13 +1,13 @@
 <% guest = @receipt_guest %>
 <% booking = @receipt_booking %>
-<% receipt_number = guest ? guest.payment_receipt_number : booking.payment_receipt_number %>
+<% receipt_number = (guest ? guest.payment_receipt_number : booking.payment_receipt_number).presence || booking.booking_reference_label %>
 <% paid_at = guest ? guest.paid_at : booking.paid_at %>
-<% room_charge = guest ? guest.room_charge_amount : booking.room_charge_amount %>
-<% services_charge = guest ? guest.other_services_amount : booking.other_services_amount %>
+<% room_charge = (guest ? guest.room_charge_amount : booking.room_charge_amount).to_d %>
+<% services_charge = (guest ? guest.other_services_amount : booking.other_services_amount).to_d %>
 <% services_details = guest ? guest.other_services_details : booking.other_services_details %>
-<% gst = guest ? guest.gst_amount : booking.gst_amount %>
-<% total = guest ? guest.total_bill_amount : booking.invoice_total %>
-<% payment_status = guest ? guest.payment_status : booking.payment_status %>
+<% gst = (guest ? guest.gst_amount : booking.gst_amount).to_d %>
+<% total = (guest ? guest.total_bill_amount : booking.invoice_total).to_d %>
+<% payment_status = (guest ? guest.payment_status : booking.payment_status).to_s %>
 <% transaction_id = guest ? guest.transaction_id : booking.transaction_id %>
 <% payment_details = guest ? guest.payment_details : booking.payment_details %>
 <% bill_note = guest ? guest.bill_note : booking.payment_note %>
@@ -15,9 +15,9 @@
 <style>
   body { font-family: "DejaVu Sans", Arial, sans-serif; color: #172033; font-size: 12px; }
   .receipt { border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
-  .header { padding: 18px 22px; border-bottom: 3px solid #2563eb; display: table; width: 100%; box-sizing: border-box; }
+  .header { padding: 14px 22px; border-bottom: 3px solid #2563eb; display: table; width: 100%; box-sizing: border-box; }
   .brand, .receipt-meta { display: table-cell; vertical-align: middle; }
-  .brand img { width: 125px; max-height: 76px; object-fit: contain; }
+  .brand img { width: 155px; max-height: 72px; object-fit: contain; vertical-align: middle; }
   .brand h1 { display: inline-block; margin: 0 0 0 14px; vertical-align: middle; font-size: 20px; }
   .receipt-meta { text-align: right; }
   .receipt-meta strong { display: block; font-size: 18px; color: #1d4ed8; }
@@ -44,13 +44,13 @@
 <div class="receipt">
   <div class="header">
     <div class="brand">
-      <img src="<%= wicked_pdf_asset_base64('asa-removebg-preview.png') %>" alt="ASA Logo">
-      <h1>ASA Guest House</h1>
+      <img src="<%= wicked_pdf_asset_base64('Screenshot from 2026-03-17 16-16-06.png') %>" alt="PGPL Logo">
+      <h1>PGPL Guest House</h1>
     </div>
     <div class="receipt-meta">
       <strong><%= payment_status == "waived" ? "PAYMENT WAIVER RECEIPT" : "PAYMENT RECEIPT" %></strong>
       <span>Receipt No: <b><%= receipt_number %></b></span>
-      <span>Date: <b><%= paid_at&.strftime("%d %b %Y, %I:%M %p") %></b></span>
+      <span>Date: <b><%= paid_at&.strftime("%d %b %Y, %I:%M %p") || Time.current.strftime("%d %b %Y, %I:%M %p") %></b></span>
     </div>
   </div>
 
@@ -99,7 +99,7 @@
   </div>
 
   <div class="footer">
-    <div><b>Received by</b><br>ASA Guest House Administration<div class="computer">This is a computer-generated payment receipt.</div></div>
+    <div><b>Received by</b><br>PGPL Guest House Administration<div class="computer">This is a computer-generated payment receipt.</div></div>
     <div class="right"><b>Authorized Record</b><br><%= booking.accepted_by&.display_name || "Guest House Administrator" %></div>
   </div>
 </div>

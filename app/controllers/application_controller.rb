@@ -1,5 +1,5 @@
 class ApplicationController < ActionController::Base
-  before_action :authenticate_user!
+  before_action :authenticate_user_for_request!
   before_action :configure_permitted_parameters, if: :devise_controller?
 
   protected
@@ -138,6 +138,17 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  def authenticate_user_for_request!
+    return if devise_controller? || user_signed_in?
+
+    if request.format.pdf?
+      store_location_for(:user, request.fullpath)
+      redirect_to new_user_session_path, alert: "Please sign in to view or download this PDF."
+    else
+      authenticate_user!
+    end
+  end
 
   def sync_helpdesk_departments_from_employee_details(names)
     existing_names = Department.pluck(:department_type).map { |name| name.to_s.strip.downcase }

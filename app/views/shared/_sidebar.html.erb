@@ -34,6 +34,26 @@
       white-space: nowrap !important;
     }
 
+    #hs-application-sidebar .sidebar-notification-badge {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex: 0 0 auto !important;
+      min-width: 1.5rem !important;
+      height: 1.5rem !important;
+      padding: 0 0.45rem !important;
+      border-radius: 9999px !important;
+      background: #dc2626 !important;
+      color: #ffffff !important;
+      font-size: 0.75rem !important;
+      font-weight: 700 !important;
+      line-height: 1 !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      white-space: nowrap !important;
+      box-shadow: 0 1px 3px rgba(185, 28, 28, 0.25);
+    }
+
     #hs-application-sidebar nav {
       display: flex !important;
       flex-direction: column !important;
@@ -306,7 +326,7 @@
                 </svg>
                 <span class="font-semibold text-base">Guest House</span>
                 <% if guest_house_unread_count.positive? %>
-                  <span class="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white"><%= [ guest_house_unread_count, 99 ].min %><%= "+" if guest_house_unread_count > 99 %></span>
+                  <span class="sidebar-notification-badge"><%= [ guest_house_unread_count, 99 ].min %><%= "+" if guest_house_unread_count > 99 %></span>
                 <% end %>
                 <svg class="sidebar-menu-chevron ml-auto h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path d="M6 9l6 6 6-6" />
@@ -322,7 +342,7 @@
                   <%= link_to guest_house_notifications_path, class: "flex items-center justify-between gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'guest_house_notifications'} text-sm text-gray-800 rounded-lg" do %>
                     <span class="font-semibold">Notifications</span>
                     <% if guest_house_unread_count.positive? %>
-                      <span class="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white"><%= [ guest_house_unread_count, 99 ].min %><%= "+" if guest_house_unread_count > 99 %></span>
+                      <span class="sidebar-notification-badge"><%= [ guest_house_unread_count, 99 ].min %><%= "+" if guest_house_unread_count > 99 %></span>
                     <% end %>
                   <% end %>
                 </li>
@@ -373,7 +393,7 @@
                 </svg>
                 <span class="font-semibold text-base">Help Desk</span>
                 <% if help_desk_menu_badge_count.positive? %>
-                  <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                  <span class="sidebar-notification-badge ml-auto">
                     <%= help_desk_notification_label(help_desk_menu_badge_count) %>
                   </span>
                 <% end %>
@@ -387,7 +407,7 @@
                   <%= link_to help_desk_tickets_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'help_desk_tickets' && action_name != 'assigned_queue'} text-sm text-gray-800 rounded-lg" do %>
                     <span class="font-semibold">Help Desk Ticket</span>
                     <% if help_desk_user_badge_count.positive? %>
-                      <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white"
+                      <span class="sidebar-notification-badge ml-auto"
                             data-helpdesk-menu-badge="<%= help_desk_user_badge_count %>">
                         <%= help_desk_notification_label(help_desk_user_badge_count) %>
                       </span>
@@ -400,7 +420,7 @@
                     <%= link_to assigned_queue_help_desk_tickets_path, class: "flex items-center gap-x-2 py-1.5 px-2.5 #{'bg-gray-100' if controller_name == 'help_desk_tickets' && action_name == 'assigned_queue'} text-sm text-gray-800 rounded-lg" do %>
                       <span class="font-semibold">Assigned Queue</span>
                       <% if help_desk_assigned_badge_count.positive? %>
-                        <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                        <span class="sidebar-notification-badge ml-auto">
                           <%= help_desk_notification_label(help_desk_assigned_badge_count) %>
                         </span>
                       <% end %>
