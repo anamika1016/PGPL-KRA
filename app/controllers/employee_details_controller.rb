@@ -103,7 +103,13 @@ class EmployeeDetailsController < ApplicationController
 
   def export_quarterly_xlsx
     requested_financial_year = selected_financial_year
-    @employee_details = EmployeeDetail.includes(user_details: [ :activity, :department, { achievements: :achievement_remark } ]).all
+    user_details_by_employee = UserDetail
+      .assignment_consistent
+      .for_financial_year(requested_financial_year)
+      .where.not(employee_detail_id: nil)
+      .includes(:employee_detail, achievements: :achievement_remark)
+      .to_a
+      .group_by(&:employee_detail_id)
 
     package = Axlsx::Package.new
     workbook = package.workbook
@@ -127,9 +133,9 @@ class EmployeeDetailsController < ApplicationController
       }
 
       # Process each employee and quarter
-      @employee_details.each do |emp|
-        yearly_user_details = financial_year_user_details_for(emp)
-        next if yearly_user_details.blank?
+      user_details_by_employee.each_value do |yearly_user_details|
+        emp = yearly_user_details.first.employee_detail
+        next if emp.blank?
 
         quarters.each do |quarter_name, quarter_data|
           quarter_months = quarter_data[:months]
