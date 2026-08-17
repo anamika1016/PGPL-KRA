@@ -190,11 +190,10 @@ class EmployeeDetailsController < ApplicationController
       end
     end
 
-    tempfile = Tempfile.new([ "quarterly_l1_l2_data", ".xlsx" ])
-    package.serialize(tempfile.path)
-    send_file tempfile.path,
+    send_data package.to_stream.read,
               filename: "quarterly_l1_l2_data_#{requested_financial_year.tr('-', '_')}.xlsx",
-              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              disposition: "attachment"
   end
 
   def import

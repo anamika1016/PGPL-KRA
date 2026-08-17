@@ -646,6 +646,7 @@ class UserDetailsController < ApplicationController
             achievement.achievement = achievement_value
             achievement.employee_remarks = employee_remarks
             achievement.status = "pending"
+            achievement.financial_year = user_detail.financial_year
 
             if achievement.save
               success_count += 1
@@ -1158,12 +1159,6 @@ class UserDetailsController < ApplicationController
 
             row_financial_year = UserDetail.normalize_financial_year(row["financial_year"]).presence || requested_financial_year
 
-            department = Department.find_or_initialize_by(
-              department_type: department_type.to_s.strip,
-              financial_year: row_financial_year
-            )
-            department.save! if department.new_record? || department.changed?
-
             employee_attributes = {
               employee_name: employee_name.to_s.strip,
               employee_email: employee_email.to_s.strip,
@@ -1180,6 +1175,13 @@ class UserDetailsController < ApplicationController
             employee.assign_attributes(employee_attributes)
             employee.post = "Imported" if employee.post.blank?
             employee.save!
+
+            department = Department.find_or_initialize_by(
+              department_type: department_type.to_s.strip,
+              employee_reference: employee_reference_for_user_detail_import(employee),
+              financial_year: row_financial_year
+            )
+            department.save! if department.new_record? || department.changed?
 
             activity = Activity.find_or_initialize_by(
               activity_name: activity_name.strip,
@@ -1260,16 +1262,16 @@ class UserDetailsController < ApplicationController
         employeemobile employeemobileno mobile_number mobilenumber mobile_no mobileno mobile
       ],
       "employee_code" => %w[employee_code employeecode emp_code empcode],
-      "activity_name" => %w[activity_name activityname],
+      "activity_name" => %w[activity_name activityname key_result_indicator keyresultindicator kri],
       "theme_name" => %w[theme_name themename theme activity_theme activitytheme],
-      "unit" => %w[unit],
+      "unit" => %w[unit unit_of_measurement unitofmeasurement measurement],
       "l1_employer_name" => %w[l1_employer_name l1employername l1_name l1name],
       "l1_employer_code" => %w[l1_employer_code l1employercode l1_code l1code],
       "l1_mobile_number" => %w[l1_mobile_number l1mobilenumber l1_mobile l1_mobile_no l1mobile l1mobileno],
       "l2_employer_name" => %w[l2_employer_name l2employername l2_name l2name],
       "l2_employer_code" => %w[l2_employer_code l2employercode l2_code l2code],
       "l2_mobile_number" => %w[l2_mobile_number l2mobilenumber l2_mobile l2_mobile_no l2mobile l2mobileno],
-      "april" => %w[april],
+      "april" => %w[april annual_target annualtarget target],
       "may" => %w[may],
       "june" => %w[june],
       "july" => %w[july],
@@ -1476,6 +1478,10 @@ class UserDetailsController < ApplicationController
     end
 
     nil
+  end
+
+  def employee_reference_for_user_detail_import(employee)
+    employee&.employee_id.presence || employee&.employee_code
   end
 
   def set_user_detail
