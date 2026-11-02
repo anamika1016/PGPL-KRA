@@ -143,6 +143,8 @@ Rails.application.routes.draw do
   # Keep your other routes
   devise_scope :user do
     delete "/users/sign_out", to: "devise/sessions#destroy"
+    # ESS → IT Tools (Guest House / Help Desk / Training) signed one-click login
+    get "/users/sign_in/:employee_code", to: "users/sessions#employee_code_sign_in", as: :employee_code_user_session
   end
 
 
