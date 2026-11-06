@@ -60,101 +60,15 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <% 
-              row_index = 0 
-              processed_records = {}
-              
-              # Define quarters
-              quarters = {
-                'Q1' => ['april', 'may', 'june'],
-                'Q2' => ['july', 'august', 'september'], 
-                'Q3' => ['october', 'november', 'december'],
-                'Q4' => ['january', 'february', 'march']
-              }
-            %>
-            
-            <% @employee_details.each do |emp| %>
-              <% 
-                # Group all activities and achievements by employee and quarter
-                # ENHANCED: Only process achievements that are L1+ approved
-                employee_quarters = {}
-                
-                user_details_for_year = emp.user_details.select { |ud| ud.financial_year == selected_financial_year }
-
-                user_details_for_year.each do |ud|
-                  # ENHANCED: Only process user_details with L1+ approved achievements
-                  l1_plus_achievements = ud.achievements.select { |ach| 
-                    ['l1_approved', 'l2_approved', 'l2_returned'].include?(ach.status) 
-                  }
-                  next if l1_plus_achievements.empty?
-                  
-                  quarters.each do |quarter_name, quarter_months|
-                    # ENHANCED: Get only L1+ approved achievements for this quarter
-                    quarter_achievements = l1_plus_achievements.select { |ach| 
-                      quarter_months.include?(ach.month) 
-                    }
-                    next if quarter_achievements.empty?
-                    
-                    employee_quarters[quarter_name] ||= {
-                      achievements: [],
-                      activities: Set.new,
-                      user_details: []
-                    }
-                    
-                    employee_quarters[quarter_name][:achievements].concat(quarter_achievements)
-                    employee_quarters[quarter_name][:activities].add(ud.activity&.activity_name) if ud.activity&.activity_name
-                    employee_quarters[quarter_name][:user_details] << ud
-                  end
-                end
+            <% @l2_quarterly_rows.each_with_index do |row, index| %>
+              <%
+                emp = row[:employee]
+                quarter_name = row[:quarter_name]
+                quarter_months = row[:quarter_months]
+                current_status = row[:status]
+                row_index = index + 1
               %>
-              
-              <!-- ENHANCED: Show only quarters with L1+ approved achievements -->
-              <% employee_quarters.each do |quarter_name, quarter_data| %>
-                <% 
-                  # Create unique key for employee + quarter
-                  record_key = "#{emp.id}_#{quarter_name}"
-                  next if processed_records[record_key]
-                  
-                  # FIXED: Enhanced status calculation logic matching show_l2.html.erb
-                  all_statuses = quarter_data[:achievements].map { |ach| ach.status }
-                  
-                  # Check for L2 data (percentages and remarks) to determine if L2 has acted
-                  has_l2_data = false
-                  quarter_data[:achievements].each do |ach|
-                    if ach.achievement_remark.present?
-                      if ach.achievement_remark.l2_percentage.present? || ach.achievement_remark.l2_remarks.present?
-                        has_l2_data = true
-                        break
-                      end
-                    end
-                  end
-                  
-                  # FIXED: Corrected status logic with L2 data detection
-                  current_status = if has_l2_data
-                                    # L2 has provided data, check if approved or returned
-                                    if all_statuses.any? { |s| s == "l2_approved" }
-                                      "l2_approved"
-                                    elsif all_statuses.any? { |s| s == "l2_returned" }
-                                      "l2_returned"
-                                    else
-                                      "l2_approved" # Default when L2 data exists but status unclear
-                                    end
-                                  elsif all_statuses.any? { |s| s == "l2_returned" }
-                                    "l2_returned"
-                                  elsif all_statuses.all? { |s| s == "l1_approved" }
-                                    "l1_approved" # Ready for L2 review
-                                  else
-                                    "l1_approved" # Default for mixed L1+ statuses
-                                  end
-                  
-                  processed_records[record_key] = true
-                  row_index += 1
-                  
-                  # Get all unique activities for this quarter
-                  quarter_activities = quarter_data[:activities].to_a.compact
-                  quarter_months = quarters[quarter_name]
-                %>
-                
+
                 <% status_config = case current_status
                 when "l1_approved"
                   { color: "bg-yellow-100 text-yellow-800 border-yellow-300", text: "L1 Approved - Ready for L2 Review", icon: "fas fa-clock" }
@@ -202,7 +116,6 @@
                         class: "inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md transform hover:scale-105" %>
                   </td>
                 </tr>
-              <% end %>
             <% end %>
           </tbody>
         </table>
@@ -217,84 +130,14 @@
         <% end %>
       </div>
 
-      <!-- FIXED: Enhanced statistics calculation matching show_l2.html.erb logic -->
+      <!-- Counters come straight from the rows rendered above, so they always agree -->
       <%
-        total_quarters = 0
-        l1_approved_count = 0
-        l2_approved_count = 0
-        l2_returned_count = 0
-        processed_stats = {}
+        statuses = @l2_quarterly_rows.map { |row| row[:status] }
 
-        @employee_details.each do |emp|
-          employee_quarters = {}
-          
-          user_details_for_year = emp.user_details.select { |ud| ud.financial_year == selected_financial_year }
-
-          user_details_for_year.each do |ud|
-            # ENHANCED: Only consider achievements that are L1+ approved
-            l1_plus_achievements = ud.achievements.select { |ach| 
-              ['l1_approved', 'l2_approved', 'l2_returned'].include?(ach.status) 
-            }
-            next if l1_plus_achievements.empty?
-            
-            quarters.each do |quarter_name, quarter_months|
-              # Get L1+ approved achievements for this quarter
-              quarter_achievements = l1_plus_achievements.select { |ach| quarter_months.include?(ach.month) }
-              next if quarter_achievements.empty?
-              
-              employee_quarters[quarter_name] ||= []
-              employee_quarters[quarter_name].concat(quarter_achievements)
-            end
-          end
-          
-          employee_quarters.each do |quarter_name, quarter_achievements|
-            stats_key = "#{emp.id}_#{quarter_name}"
-            next if processed_stats[stats_key]
-            
-            # FIXED: Enhanced status calculation with L2 data detection
-            all_statuses = quarter_achievements.map { |ach| ach.status }
-            
-            # Check for L2 data
-            has_l2_data = false
-            quarter_achievements.each do |ach|
-              if ach.achievement_remark.present?
-                if ach.achievement_remark.l2_percentage.present? || ach.achievement_remark.l2_remarks.present?
-                  has_l2_data = true
-                  break
-                end
-              end
-            end
-            
-            # Calculate current status for this quarter
-            current_status = if has_l2_data
-                              if all_statuses.any? { |s| s == "l2_approved" }
-                                "l2_approved"
-                              elsif all_statuses.any? { |s| s == "l2_returned" }
-                                "l2_returned"
-                              else
-                                "l2_approved"
-                              end
-                            elsif all_statuses.any? { |s| s == "l2_returned" }
-                              "l2_returned"
-                            elsif all_statuses.all? { |s| s == "l1_approved" }
-                              "l1_approved"
-                            else
-                              "l1_approved"
-                            end
-            
-            processed_stats[stats_key] = true
-            total_quarters += 1
-            
-            case current_status
-            when "l1_approved"
-              l1_approved_count += 1
-            when "l2_approved"
-              l2_approved_count += 1
-            when "l2_returned"
-              l2_returned_count += 1
-            end
-          end
-        end
+        total_quarters = statuses.size
+        l1_approved_count = statuses.count("l1_approved")
+        l2_approved_count = statuses.count("l2_approved")
+        l2_returned_count = statuses.count("l2_returned")
       %>
 
       <!-- FIXED: Updated statistics cards with correct status descriptions -->

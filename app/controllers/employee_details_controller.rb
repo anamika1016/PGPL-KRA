@@ -553,15 +553,12 @@ def l2
                                    .order(created_at: :desc)
   end
 
-  # Filter to only include employees who have at least one L1+ approved achievement
-  @employee_details = employee_details.select do |emp|
-    financial_year_user_details_for(emp).any? do |ud|
-      ud.achievements.any? do |achievement|
-        # Only show records with L1 approved, L2 approved, or L2 returned status
-        [ "l1_approved", "l2_approved", "l2_returned" ].include?(achievement.status)
-      end
-    end
-  end
+  # Build the quarter rows here rather than in the view, the way the L1 page does.
+  # The view used to regroup raw user_details itself, which skipped the
+  # assignment-consistency filter and let the list, the rows and the counters
+  # disagree about which quarters exist.
+  @l2_quarterly_rows = build_l2_quarterly_rows(employee_details)
+  @employee_details = @l2_quarterly_rows.map { |row| row[:employee] }.uniq
 end
 
   def show_l2
@@ -1177,6 +1174,13 @@ end
     [ "Q1", "Q2", "Q3", "Q4" ]
   end
 
+  # True when L1 has already cleared this achievement, so an L1 approval should
+  # leave it alone. Everything else - including blank or unrecognised statuses -
+  # is fair game, otherwise the record never becomes visible to L2.
+  def already_l1_cleared?(achievement)
+    [ "l1_approved", "l2_approved" ].include?(achievement.status)
+  end
+
   # Group employees by quarters based on their activities (FIXED to show ALL activities)
   def group_employees_by_quarters(employee_details)
     quarterly_data = {}
@@ -1462,8 +1466,9 @@ end
           # FIXED: Update ALL achievements in the quarter to the same status
           quarter_achievements.each do |achievement|
             if is_approval
-              eligible_statuses = [ "pending", "l1_returned", "l2_returned" ]
-              next unless eligible_statuses.include?(achievement.status)
+              # Skip only what L1 has already cleared. Allow-listing instead left
+              # blank or unexpected statuses stuck below L1, invisible to L2.
+              next if already_l1_cleared?(achievement)
             end
 
             old_status = achievement.status
@@ -1503,8 +1508,7 @@ end
             achievement.save! if achievement.new_record?
 
             if is_approval
-              eligible_statuses = [ "pending", "l1_returned", "l2_returned" ]
-              next unless eligible_statuses.include?(achievement.status)
+              next if already_l1_cleared?(achievement)
             end
 
             # Update achievement status
@@ -1591,41 +1595,29 @@ def process_quarterly_l2_approval
       # FIXED: Now process the entire quarter as one unit
       if quarter_achievements.any?
 
-        # Update ALL achievements in the quarter to the same status
+        # L2 judges the quarter as a unit, the same way the L2 list decides a quarter
+        # is ready. Allow-listing each achievement's own status instead skipped the
+        # months L1 reviewed without their status column moving.
+        quarter_ready_for_l2 = helpers.quarter_reached_l1_approval?(quarter_achievements)
+
         quarter_achievements.each do |achievement|
-          # For L2 return, we should be able to return L1 approved achievements
-          # For L2 approve, we need L1 approved or L2 returned achievements
+          # A return processes every achievement regardless of its current status.
           if is_approval
-            # For approval, check eligibility
-            eligible_statuses = [ "l1_approved", "l2_returned" ]
-            if eligible_statuses.include?(achievement.status)
-              old_status = achievement.status
-              achievement.update!(status: new_status)
-              quarter_changed ||= old_status != new_status
-
-              # Create or update achievement remark with COMMON remarks for quarter
-              remark = achievement.achievement_remark || achievement.build_achievement_remark
-              remark.l2_remarks = params[:l2_remarks] || params[:remarks] if params[:l2_remarks].present? || params[:remarks].present?
-              remark.l2_percentage = params[:l2_percentage] || params[:percentage] if params[:l2_percentage].present? || params[:percentage].present?
-              remark.save!
-
-              approved_count += 1
-            else
-            end
-          else
-            # For return, process ALL achievements regardless of current status
-            old_status = achievement.status
-            achievement.update!(status: new_status)
-            quarter_changed ||= old_status != new_status || !is_approval
-
-            # Create or update achievement remark with COMMON remarks for quarter
-            remark = achievement.achievement_remark || achievement.build_achievement_remark
-            remark.l2_remarks = params[:l2_remarks] || params[:remarks] if params[:l2_remarks].present? || params[:remarks].present?
-            remark.l2_percentage = params[:l2_percentage] || params[:percentage] if params[:l2_percentage].present? || params[:percentage].present?
-            remark.save!
-
-            approved_count += 1
+            next unless quarter_ready_for_l2
+            next if achievement.status == "l2_approved"
           end
+
+          old_status = achievement.status
+          achievement.update!(status: new_status)
+          quarter_changed ||= old_status != new_status || !is_approval
+
+          # Create or update achievement remark with COMMON remarks for quarter
+          remark = achievement.achievement_remark || achievement.build_achievement_remark
+          remark.l2_remarks = params[:l2_remarks] || params[:remarks] if params[:l2_remarks].present? || params[:remarks].present?
+          remark.l2_percentage = params[:l2_percentage] || params[:percentage] if params[:l2_percentage].present? || params[:percentage].present?
+          remark.save!
+
+          approved_count += 1
         end
 
       else
@@ -1640,33 +1632,32 @@ def process_quarterly_l2_approval
         quarter_months = get_quarter_months(quarter)
         quarter_changed = false
 
-        quarter_months.each do |month|
-          # FIXED: Process ALL months in the quarter, not just those with targets
-          # This ensures the entire quarter gets approved when processing all quarters
-
-          # Find or create achievement for this month
+        # FIXED: Process ALL months in the quarter, not just those with targets
+        # This ensures the entire quarter gets approved when processing all quarters
+        quarter_achievements = quarter_months.map do |month|
           achievement = detail.achievements.find_or_create_by(month: month)
-
-          # Ensure achievement is saved and has an ID
           achievement.save! if achievement.new_record?
+          achievement
+        end
 
-          # For L2 return, we should be able to return L1 approved achievements
-          # For L2 approve, we need L1 approved or L2 returned achievements
-          eligible_statuses = is_approval ? [ "l1_approved", "l2_returned" ] : [ "l1_approved" ]
+        # Judge the quarter as a unit, matching the single-quarter path above.
+        quarter_ready_for_l2 = helpers.quarter_reached_l1_approval?(quarter_achievements)
 
-          if eligible_statuses.include?(achievement.status)
-            # Update achievement status
-            old_status = achievement.status
-            achievement.update!(status: new_status)
-            quarter_changed ||= old_status != new_status || !is_approval
+        quarter_achievements.each do |achievement|
+          # L2 can only act on quarters L1 has cleared.
+          next unless quarter_ready_for_l2
+          next if is_approval && achievement.status == "l2_approved"
 
-            remark = achievement.achievement_remark || achievement.build_achievement_remark
-            remark.l2_remarks = params[:l2_remarks] || params[:remarks] if params[:l2_remarks].present? || params[:remarks].present?
-            remark.l2_percentage = params[:l2_percentage] || params[:percentage] if params[:l2_percentage].present? || params[:percentage].present?
-            remark.save!
+          old_status = achievement.status
+          achievement.update!(status: new_status)
+          quarter_changed ||= old_status != new_status || !is_approval
 
-            approved_count += 1
-          end
+          remark = achievement.achievement_remark || achievement.build_achievement_remark
+          remark.l2_remarks = params[:l2_remarks] || params[:remarks] if params[:l2_remarks].present? || params[:remarks].present?
+          remark.l2_percentage = params[:l2_percentage] || params[:percentage] if params[:l2_percentage].present? || params[:percentage].present?
+          remark.save!
+
+          approved_count += 1
         end
         processed_quarters << quarter if quarter_changed && !processed_quarters.include?(quarter)
       end
@@ -1751,6 +1742,32 @@ end
   # PERFORMANCE FIX: Optimized status calculation method
   def calculate_quarter_status(quarter_achievements)
     helpers.calculate_overall_quarter_status_from_achievements(quarter_achievements)
+  end
+
+  # One quarter row per employee-quarter that L1 has signed off on. Built here so
+  # the employee list, the table rows and the summary counters all come from the
+  # same pass over the same assignment-consistent user details.
+  def build_l2_quarterly_rows(employee_details)
+    employee_details.flat_map do |emp|
+      fy_user_details = financial_year_user_details_for(emp)
+
+      get_all_quarters.filter_map do |quarter_name|
+        quarter_months = get_quarter_months(quarter_name)
+
+        quarter_achievements = fy_user_details.flat_map do |ud|
+          ud.achievements.select { |ach| quarter_months.include?(ach.month) }
+        end
+
+        next unless helpers.quarter_reached_l1_approval?(quarter_achievements)
+
+        {
+          employee: emp,
+          quarter_name: quarter_name,
+          quarter_months: quarter_months,
+          status: helpers.calculate_overall_quarter_status_from_achievements(quarter_achievements)
+        }
+      end
+    end
   end
 
   # Build the quarterly employee data structure expected by the view

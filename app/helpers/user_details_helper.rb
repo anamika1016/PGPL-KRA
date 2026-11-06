@@ -85,6 +85,22 @@ module UserDetailsHelper
     end
   end
 
+  # Quarter statuses that mean L1 has signed off, so the quarter belongs on the L2 page.
+  L1_PLUS_QUARTER_STATUSES = [ "l1_approved", "l2_approved", "l2_returned" ].freeze
+
+  # L2 visibility has to follow the same rule the L1 page uses. Checking the raw
+  # achievement status instead hides quarters where L1 saved remarks/percentage
+  # without the status column moving - those read "L1 Approved" on the L1 page
+  # but never reached L2.
+  def quarter_reached_l1_approval?(achievements)
+    achievements = Array(achievements).compact
+    return false if achievements.empty?
+
+    L1_PLUS_QUARTER_STATUSES.include?(
+      calculate_overall_quarter_status_from_achievements(achievements)
+    )
+  end
+
   def quarter_summary(user_detail, months)
     existing_achievements = user_detail.achievements.index_by(&:month)
 
